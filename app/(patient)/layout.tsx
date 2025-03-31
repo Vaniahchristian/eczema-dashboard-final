@@ -8,10 +8,7 @@ export default function PatientLayout({
   // In a real app, you would check authentication and authorization here
   // For now, we'll just render the children
 
-  // If there's any middleware or route protection in the patient layout,
-  // make sure it redirects away from the health tracking route.
-
-  // For example, if there's a section like:
+  // Protected routes that require patient authentication
   const protectedRoutes = [
     "/dashboard",
     "/diagnoses",
@@ -24,17 +21,5 @@ export default function PatientLayout({
     "/settings",
   ]
 
-  // Change it to:
-  const protectedRoutes = [
-    "/dashboard",
-    "/diagnoses",
-    "/appointments",
-    "/messages",
-    "/analytics",
-    "/profile",
-    "/support",
-    "/settings",
-  ]
   return <>{children}</>
 }
-
