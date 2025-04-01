@@ -24,24 +24,33 @@ export default function LoginForm() {
 
     try {
       const userData = await login(email, password)
+      console.log("Login successful, user data:", userData)
+      
+      let redirectPath = "/"
       
       // Navigate based on the user's role from the login response
       switch (userData.role) {
         case "patient":
-          router.push("/dashboard")
+          redirectPath = "/dashboard"
           break
         case "doctor":
-          router.push("/doctor")
+          redirectPath = "/doctor"
           break
         case "admin":
-          router.push("/admin")
+          redirectPath = "/admin"
           break
         default:
           toast.error("Invalid user role")
+          return
       }
-      
+
+      console.log("Redirecting to:", redirectPath)
       toast.success("Login successful!")
+      
+      // Use router.replace and wait for it to complete
+      await router.replace(redirectPath)
     } catch (err) {
+      console.error("Login error:", err)
       toast.error(error || "Login failed. Please try again.")
       clearError()
     } finally {
