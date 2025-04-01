@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, JSX } from "react"
+import { API_URL } from "./config"
 
 interface User {
   id: string
@@ -46,12 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        credentials: "include", 
       })
 
       if (!response.ok) {
@@ -74,12 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
+        credentials: "include", 
       })
 
       if (!response.ok) {
@@ -102,8 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
+        credentials: "include", 
       })
 
       if (!response.ok) {
