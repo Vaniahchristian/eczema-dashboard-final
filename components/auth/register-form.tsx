@@ -19,6 +19,7 @@ export default function RegisterForm() {
   const [password, setPassword] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [gender, setGender] = useState("")
+  const [role, setRole] = useState("")
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function RegisterForm() {
         lastName,
         dateOfBirth,
         gender,
-        role: "patient" // Default role for registration
+        role: role || "patient" // Default to patient if no role selected
       })
       
       toast.success("Registration successful!")
@@ -137,6 +138,21 @@ export default function RegisterForm() {
             <option value="male">Male</option>
             <option value="female">Female</option>
             <option value="other">Other</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="role">Role</Label>
+          <select
+            id="role"
+            className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-950"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            required
+          >
+            <option value="">Select role</option>
+            <option value="patient">Patient</option>
+            <option value="doctor">Doctor</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
         <div className="flex items-center space-x-2">
