@@ -26,7 +26,8 @@ interface AppointmentForm {
   doctorId: string
   date: Date | null
   timeSlotId: string
-  message?: string
+  reason: string
+  appointmentType: "in-person" | "virtual"
 }
 
 export default function AppointmentWidget() {
@@ -39,7 +40,8 @@ export default function AppointmentWidget() {
     doctorId: "",
     date: null,
     timeSlotId: "",
-    message: ""
+    reason: "",
+    appointmentType: "virtual"
   })
 
   // Fetch doctors on component mount
@@ -92,7 +94,7 @@ export default function AppointmentWidget() {
         if (!token) throw new Error("No authentication token found")
 
         const response = await fetch(
-          `${API_URL}/appointments/available-slots?doctorId=${formData.doctorId}&date=${format(formData.date, "yyyy-MM-dd")}`,
+          `${API_URL}/appointments/availability/${formData.doctorId}?date=${format(formData.date, "yyyy-MM-dd")}`,
           {
             headers: {
               "Authorization": `Bearer ${token}`
@@ -125,7 +127,7 @@ export default function AppointmentWidget() {
   }, [formData.doctorId, formData.date])
 
   const handleSubmit = async () => {
-    if (!formData.doctorId || !formData.date || !formData.timeSlotId) {
+    if (!formData.doctorId || !formData.date || !formData.timeSlotId || !formData.reason) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -143,9 +145,9 @@ export default function AppointmentWidget() {
         },
         body: JSON.stringify({
           doctorId: formData.doctorId,
-          date: format(formData.date, "yyyy-MM-dd"),
-          timeSlotId: formData.timeSlotId,
-          message: formData.message
+          appointmentDate: format(formData.date, "yyyy-MM-dd'T'HH:mm:ss"),
+          reason: formData.reason,
+          appointmentType: formData.appointmentType
         })
       })
 
@@ -163,7 +165,8 @@ export default function AppointmentWidget() {
         doctorId: "",
         date: null,
         timeSlotId: "",
-        message: ""
+        reason: "",
+        appointmentType: "virtual"
       })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to schedule appointment")
@@ -277,20 +280,39 @@ export default function AppointmentWidget() {
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <MessageSquare className="mr-2 h-4 w-4 text-indigo-500" />
-                Message (Optional)
+                Reason for Visit (Required)
               </label>
               <textarea
                 className="w-full min-h-[120px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Add any notes for your doctor..."
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="Please describe your symptoms or reason for the appointment..."
+                value={formData.reason}
+                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center">
+                <Video className="mr-2 h-4 w-4 text-indigo-500" />
+                Appointment Type
+              </label>
+              <Select
+                value={formData.appointmentType}
+                onValueChange={(value: "in-person" | "virtual") => setFormData({ ...formData, appointmentType: value })}
+              >
+                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
+                  <SelectValue placeholder="Choose appointment type" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="virtual">Virtual Consultation</SelectItem>
+                  <SelectItem value="in-person">In-Person Visit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <button
               className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSubmit}
-              disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlotId}
+              disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlotId || !formData.reason}
             >
               {loading ? "Scheduling..." : "Schedule Appointment"}
             </button>
