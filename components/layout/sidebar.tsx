@@ -44,7 +44,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
   }, [isMobile, open, setOpen])
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: Home },
+    { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Diagnoses", href: "/diagnoses", icon: Image },
     { name: "Appointments", href: "/appointments", icon: Calendar },
     { name: "Messages", href: "/messages", icon: MessageSquare },
@@ -79,9 +79,11 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200 dark:border-gray-800">
-            <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-              EczemaAI
-            </span>
+            <Link href="/dashboard">
+              <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
+                EczemaAI
+              </span>
+            </Link>
             {isMobile && (
               <button
                 className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -144,4 +146,3 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     </>
   )
 }
-
