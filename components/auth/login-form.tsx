@@ -7,35 +7,37 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { toast } from "sonner"
 
-
 export default function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  //const [role, setRole] = useState("patient")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { login, error, clearError } = useAuth()
-  const { user } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      await login(email, password)
+      const userData = await login(email, password)
       
-      // Navigate based on role
-      if (user?.role === "patient") {
-        router.push("/dashboard")
-      } else if (user?.role === "doctor") {
-        router.push("/doctor")
-      } else if (user?.role === "admin") {
-        router.push("/admin")
+      // Navigate based on the user's role from the login response
+      switch (userData.role) {
+        case "patient":
+          router.push("/dashboard")
+          break
+        case "doctor":
+          router.push("/doctor")
+          break
+        case "admin":
+          router.push("/admin")
+          break
+        default:
+          toast.error("Invalid user role")
       }
       
       toast.success("Login successful!")
@@ -84,19 +86,6 @@ export default function LoginForm() {
             required
           />
         </div>
-        {/* <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
-          <Select value={role} onValueChange={setRole}>
-            <SelectTrigger id="role">
-              <SelectValue placeholder="Select your role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="patient">Patient</SelectItem>
-              <SelectItem value="doctor">Doctor</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div> */}
         <Button className="w-full" type="submit" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>

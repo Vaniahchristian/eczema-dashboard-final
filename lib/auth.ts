@@ -25,7 +25,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   error: string | null
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   register: (data: RegisterData) => Promise<void>
   logout: () => Promise<void>
   clearError: () => void
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     setError(null)
   }, [])
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
     setLoading(true)
     setError(null)
 
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
-        credentials: "include", 
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
 
       const data = await response.json()
       setUser(data.user)
+      return data.user
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       throw err
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
-        credentials: "include", 
+        credentials: "include",
       })
 
       if (!response.ok) {
@@ -107,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     try {
       const response = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
-        credentials: "include", 
+        credentials: "include",
       })
 
       if (!response.ok) {
