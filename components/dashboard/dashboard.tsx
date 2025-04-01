@@ -7,9 +7,11 @@ import SummarySection from "@/components/dashboard/summary-section"
 import UploadSection from "@/components/dashboard/upload-section"
 import AnalyticsSection from "@/components/dashboard/analytics-section"
 import AppointmentWidget from "@/components/dashboard/appointment-widget"
+import { useAuth } from "@/lib/auth"
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth()
 
   return (
     <DashboardLayout>
@@ -22,7 +24,8 @@ export default function Dashboard() {
         >
           <div className="bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-900/20 dark:to-cyan-900/20 p-6 rounded-2xl shadow-sm mb-8">
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-              Welcome back, Sarah
+              Welcome back, {user?.firstName}
+
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2">
               Here's an overview of your eczema management journey
