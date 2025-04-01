@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, JSX } from "react"
 import { API_URL } from "./config"
+import { cookies } from "next/headers"
 
 interface User {
   id: string
@@ -34,6 +35,14 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+
+const setCookie = (name: string, value: string) => {
+  document.cookie = `${name}=${value}; path=/; max-age=604800; SameSite=Lax`
+}
+
+const deleteCookie = (name: string) => {
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`
+}
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
   const [user, setUser] = useState<User | null>(null)
@@ -69,6 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       }
 
       const userData = data.data.user
+      const token = data.data.token
+
+      // Set cookies for auth state
+      setCookie("token", token)
+      setCookie("userRole", userData.role)
+      
       setUser(userData)
       return userData
     } catch (err) {
@@ -103,7 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         throw new Error("Invalid response format")
       }
 
-      setUser(responseData.data.user)
+      const userData = responseData.data.user
+      const token = responseData.data.token
+
+      // Set cookies for auth state
+      setCookie("token", token)
+      setCookie("userRole", userData.role)
+
+      setUser(userData)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
       throw err
@@ -126,6 +148,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         throw new Error("Logout failed")
       }
 
+      // Clear auth cookies
+      deleteCookie("token")
+      deleteCookie("userRole")
+      
       setUser(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Logout failed")
