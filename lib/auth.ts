@@ -1,8 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, JSX } from "react"
+import React, { createContext, useContext, useState, useCallback, ReactNode, JSX, useEffect } from "react"
 import { API_URL } from "./config"
-import { cookies } from "next/headers"
 
 interface User {
   id: string
@@ -45,9 +44,25 @@ const deleteCookie = (name: string) => {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(() => {
+    // Try to get user from localStorage during initialization
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("user")
+      return savedUser ? JSON.parse(savedUser) : null
+    }
+    return null
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Persist user data to localStorage whenever it changes
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user))
+    } else {
+      localStorage.removeItem("user")
+    }
+  }, [user])
 
   const clearError = useCallback(() => {
     setError(null)
@@ -151,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       // Clear auth cookies
       deleteCookie("token")
       deleteCookie("userRole")
+      localStorage.removeItem("user")
       
       setUser(null)
     } catch (err) {
