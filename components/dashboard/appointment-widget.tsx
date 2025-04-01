@@ -16,16 +16,14 @@ interface Doctor {
 }
 
 interface TimeSlot {
-  id: string
-  startTime: string
-  endTime: string
+  time: string
   available: boolean
 }
 
 interface AppointmentForm {
   doctorId: string
   date: Date | null
-  timeSlotId: string
+  timeSlot: string
   reason: string
   appointmentType: "in-person" | "virtual"
 }
@@ -39,7 +37,7 @@ export default function AppointmentWidget() {
   const [formData, setFormData] = useState<AppointmentForm>({
     doctorId: "",
     date: null,
-    timeSlotId: "",
+    timeSlot: "",
     reason: "",
     appointmentType: "virtual"
   })
@@ -77,7 +75,7 @@ export default function AppointmentWidget() {
 
   // Reset time slot when doctor or date changes
   useEffect(() => {
-    setFormData(prev => ({ ...prev, timeSlotId: "" }))
+    setFormData(prev => ({ ...prev, timeSlot: "" }))
   }, [formData.doctorId, formData.date])
 
   // Fetch available time slots when doctor and date are selected
@@ -94,7 +92,7 @@ export default function AppointmentWidget() {
         if (!token) throw new Error("No authentication token found")
 
         const response = await fetch(
-          `${API_URL}/appointments/availability/${formData.doctorId}?date=${format(formData.date, "yyyy-MM-dd")}`,
+          `${API_URL}/doctors/${formData.doctorId}/available-slots?date=${format(formData.date, "yyyy-MM-dd")}`,
           {
             headers: {
               "Authorization": `Bearer ${token}`
@@ -111,8 +109,14 @@ export default function AppointmentWidget() {
           throw new Error(data.message || "Failed to fetch time slots")
         }
 
-        setTimeSlots(data.data)
-        if (data.data.length === 0) {
+        // Map the available slots to our format
+        const availableSlots = data.data.availableSlots.map((time: string) => ({
+          time,
+          available: true
+        }));
+
+        setTimeSlots(availableSlots)
+        if (availableSlots.length === 0) {
           toast.info("No available time slots for the selected date")
         }
       } catch (err) {
@@ -127,7 +131,7 @@ export default function AppointmentWidget() {
   }, [formData.doctorId, formData.date])
 
   const handleSubmit = async () => {
-    if (!formData.doctorId || !formData.date || !formData.timeSlotId || !formData.reason) {
+    if (!formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason) {
       toast.error("Please fill in all required fields")
       return
     }
@@ -145,7 +149,10 @@ export default function AppointmentWidget() {
         },
         body: JSON.stringify({
           doctorId: formData.doctorId,
-          appointmentDate: format(formData.date, "yyyy-MM-dd'T'HH:mm:ss"),
+          appointmentDate: format(
+            new Date(`${format(formData.date!, "yyyy-MM-dd")}T${formData.timeSlot}`),
+            "yyyy-MM-dd'T'HH:mm:ss"
+          ),
           reason: formData.reason,
           appointmentType: formData.appointmentType
         })
@@ -164,7 +171,7 @@ export default function AppointmentWidget() {
       setFormData({
         doctorId: "",
         date: null,
-        timeSlotId: "",
+        timeSlot: "",
         reason: "",
         appointmentType: "virtual"
       })
@@ -253,8 +260,8 @@ export default function AppointmentWidget() {
                 Select Time
               </label>
               <Select
-                value={formData.timeSlotId}
-                onValueChange={(value) => setFormData({ ...formData, timeSlotId: value })}
+                value={formData.timeSlot}
+                onValueChange={(value) => setFormData({ ...formData, timeSlot: value })}
                 disabled={!formData.doctorId || !formData.date || loadingSlots}
               >
                 <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
@@ -267,9 +274,8 @@ export default function AppointmentWidget() {
                     </SelectItem>
                   ) : (
                     timeSlots.map((slot) => (
-                      <SelectItem key={slot.id} value={slot.id} disabled={!slot.available}>
-                        {format(new Date(`2000-01-01T${slot.startTime}`), "h:mm a")} - 
-                        {format(new Date(`2000-01-01T${slot.endTime}`), "h:mm a")}
+                      <SelectItem key={slot.time} value={slot.time} disabled={!slot.available}>
+                        {slot.time}
                       </SelectItem>
                     ))
                   )}
@@ -312,7 +318,7 @@ export default function AppointmentWidget() {
             <button
               className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSubmit}
-              disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlotId || !formData.reason}
+              disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason}
             >
               {loading ? "Scheduling..." : "Schedule Appointment"}
             </button>
