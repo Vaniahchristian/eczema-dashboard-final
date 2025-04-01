@@ -40,40 +40,33 @@ export default function ProfilePage() {
               <TabsTrigger value="connections">Connections</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
-            <TabsContent value="achievements" className="mt-4">
-              <Achievements />
-            </TabsContent>
-            <TabsContent value="connections" className="mt-4">
-              <SocialConnections />
-            </TabsContent>
-            <TabsContent value="activity" className="mt-4">
-              <ActivityFeed />
-            </TabsContent>
+            
+            
           </Tabs>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <Achievements />
-            </motion.div>
-            <motion.div
+            </motion.div> */}
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
               className="md:col-span-2"
             >
               <ActivityFeed />
-            </motion.div>
-            <motion.div
+            </motion.div> */}
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <SocialConnections />
-            </motion.div>
+            </motion.div> */}
           </div>
         )}
 
