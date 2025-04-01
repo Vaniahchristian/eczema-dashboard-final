@@ -32,11 +32,23 @@ export default function ProfileHeader() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        // Get token from localStorage
+        const token = localStorage.getItem('token')
+        if (!token) {
+          throw new Error("No authentication token found")
+        }
+
         const response = await fetch(`${API_URL}/auth/profile`, {
           credentials: "include",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
         })
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error("Please log in again")
+          }
           throw new Error("Failed to fetch profile")
         }
 

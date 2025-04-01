@@ -95,15 +95,17 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const userData = data.data.user
       const token = data.data.token
 
-      // Set cookies for auth state
+      // Store token in localStorage and cookie
+      localStorage.setItem("token", token)
       setCookie("token", token)
       setCookie("userRole", userData.role)
       
+      // Set user data
       setUser(userData)
       return userData
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
-      throw err
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Login failed")
+      throw error
     } finally {
       setLoading(false)
     }
@@ -136,7 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const userData = responseData.data.user
       const token = responseData.data.token
 
-      // Set cookies for auth state
+      // Store token in localStorage and cookie
+      localStorage.setItem("token", token)
       setCookie("token", token)
       setCookie("userRole", userData.role)
 
@@ -150,30 +153,20 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   }, [])
 
   const logout = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-
     try {
-      const response = await fetch(`${API_URL}/auth/logout`, {
+      await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       })
-
-      if (!response.ok) {
-        throw new Error("Logout failed")
-      }
-
-      // Clear auth cookies
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      // Clear all auth data
+      setUser(null)
+      localStorage.removeItem("user")
+      localStorage.removeItem("token")
       deleteCookie("token")
       deleteCookie("userRole")
-      localStorage.removeItem("user")
-      
-      setUser(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Logout failed")
-      throw err
-    } finally {
-      setLoading(false)
     }
   }, [])
 
