@@ -12,13 +12,15 @@ import { ArrowLeft } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { toast } from "sonner"
 
+
 export default function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("patient")
+  //const [role, setRole] = useState("patient")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { login, error, clearError } = useAuth()
+  const { user } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,11 +30,11 @@ export default function LoginForm() {
       await login(email, password)
       
       // Navigate based on role
-      if (role === "patient") {
+      if (user?.role === "patient") {
         router.push("/dashboard")
-      } else if (role === "doctor") {
+      } else if (user?.role === "doctor") {
         router.push("/doctor")
-      } else if (role === "admin") {
+      } else if (user?.role === "admin") {
         router.push("/admin")
       }
       
@@ -82,7 +84,7 @@ export default function LoginForm() {
             required
           />
         </div>
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
           <Select value={role} onValueChange={setRole}>
             <SelectTrigger id="role">
@@ -94,7 +96,7 @@ export default function LoginForm() {
               <SelectItem value="admin">Admin</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
         <Button className="w-full" type="submit" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
