@@ -24,13 +24,24 @@ export default function LoginForm() {
 
     try {
       const userData = await login(email, password)
+      console.log("Login successful, userData:", userData)
       
-      // Let the middleware handle the redirection based on role
-      // This will trigger a page refresh which is what we want
-      window.location.href = "/"
+      // Wait a moment for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Navigate based on role
+      const redirectPath = userData.role === "patient" 
+        ? "/dashboard"
+        : userData.role === "doctor"
+        ? "/doctor"
+        : "/admin"
+
+      console.log("Redirecting to:", redirectPath)
+      window.location.href = redirectPath
       
       toast.success("Login successful!")
     } catch (err) {
+      console.error("Login error:", err)
       toast.error(error || "Login failed. Please try again.")
       clearError()
     } finally {
