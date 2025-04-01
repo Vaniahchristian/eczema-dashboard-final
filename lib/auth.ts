@@ -9,6 +9,8 @@ interface User {
   firstName: string
   lastName: string
   role: "patient" | "doctor" | "admin"
+  dateOfBirth?: string
+  gender?: string
 }
 
 interface RegisterData {
@@ -56,14 +58,19 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         credentials: "include",
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.message || "Login failed")
       }
 
-      const data = await response.json()
-      setUser(data.user)
-      return data.user
+      if (!data.success || !data.data?.user) {
+        throw new Error("Invalid response format")
+      }
+
+      const userData = data.data.user
+      setUser(userData)
+      return userData
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       throw err
@@ -86,13 +93,17 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         credentials: "include",
       })
 
+      const responseData = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Registration failed")
+        throw new Error(responseData.message || "Registration failed")
       }
 
-      const responseData = await response.json()
-      setUser(responseData.user)
+      if (!responseData.success || !responseData.data?.user) {
+        throw new Error("Invalid response format")
+      }
+
+      setUser(responseData.data.user)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
       throw err
