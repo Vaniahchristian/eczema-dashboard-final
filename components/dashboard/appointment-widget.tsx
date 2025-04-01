@@ -34,6 +34,7 @@ export default function AppointmentWidget() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [formData, setFormData] = useState<AppointmentForm>({
     doctorId: "",
     date: null,
@@ -72,11 +73,20 @@ export default function AppointmentWidget() {
     fetchDoctors()
   }, [])
 
+  // Reset time slot when doctor or date changes
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, timeSlotId: "" }))
+  }, [formData.doctorId, formData.date])
+
   // Fetch available time slots when doctor and date are selected
   useEffect(() => {
     const fetchTimeSlots = async () => {
-      if (!formData.doctorId || !formData.date) return
+      if (!formData.doctorId || !formData.date) {
+        setTimeSlots([])
+        return
+      }
 
+      setLoadingSlots(true)
       try {
         const token = localStorage.getItem("token")
         if (!token) throw new Error("No authentication token found")
@@ -100,8 +110,14 @@ export default function AppointmentWidget() {
         }
 
         setTimeSlots(data.data)
+        if (data.data.length === 0) {
+          toast.info("No available time slots for the selected date")
+        }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Failed to fetch time slots")
+        setTimeSlots([])
+      } finally {
+        setLoadingSlots(false)
       }
     }
 
@@ -236,18 +252,24 @@ export default function AppointmentWidget() {
               <Select
                 value={formData.timeSlotId}
                 onValueChange={(value) => setFormData({ ...formData, timeSlotId: value })}
-                disabled={!formData.doctorId || !formData.date}
+                disabled={!formData.doctorId || !formData.date || loadingSlots}
               >
                 <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
-                  <SelectValue placeholder="Choose a time" />
+                  <SelectValue placeholder={loadingSlots ? "Loading time slots..." : "Choose a time"} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {timeSlots.map((slot) => (
-                    <SelectItem key={slot.id} value={slot.id} disabled={!slot.available}>
-                      {format(new Date(`2000-01-01T${slot.startTime}`), "h:mm a")} - 
-                      {format(new Date(`2000-01-01T${slot.endTime}`), "h:mm a")}
+                  {timeSlots.length === 0 ? (
+                    <SelectItem value="no-slots" disabled>
+                      {loadingSlots ? "Loading..." : "No available time slots"}
                     </SelectItem>
-                  ))}
+                  ) : (
+                    timeSlots.map((slot) => (
+                      <SelectItem key={slot.id} value={slot.id} disabled={!slot.available}>
+                        {format(new Date(`2000-01-01T${slot.startTime}`), "h:mm a")} - 
+                        {format(new Date(`2000-01-01T${slot.endTime}`), "h:mm a")}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
