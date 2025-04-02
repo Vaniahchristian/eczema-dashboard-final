@@ -17,6 +17,7 @@ import {
   X,
   HelpCircle,
   Stethoscope,
+  User,
 } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -52,6 +53,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     { name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },
     { name: "Messages", href: "/doctor/messages", icon: MessageSquare },
     { name: "Analytics", href: "/doctor/analytics", icon: PieChart },
+    { name: "Profile", href: "/doctor/profile", icon: User },
     { name: "Settings", href: "/doctor/settings", icon: Settings },
   ]
 
@@ -146,4 +148,3 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     </>
   )
 }
-

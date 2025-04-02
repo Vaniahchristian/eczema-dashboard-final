@@ -7,7 +7,7 @@ const publicPaths = ["/", "/login", "/register"]
 // Define role-specific paths
 const roleBasedPaths = {
   patient: ["/dashboard", "/diagnoses", "/appointments", "/messages", "/analytics", "/profile", "/settings", "/support"],
-  doctor: ["/doctor"],
+  doctor: ["/doctor", "/doctor/profile", "/doctor/patients", "/doctor/appointments", "/doctor/records", "/doctor/treatments", "/doctor/messages", "/doctor/analytics", "/doctor/settings"],
   admin: ["/admin"],
 }
 
