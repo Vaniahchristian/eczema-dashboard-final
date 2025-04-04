@@ -15,40 +15,46 @@ import {
   XCircle,
   AlertCircle,
 } from "lucide-react"
-import type { Appointment } from "./appointments-page"
+import type { PatientAppointment } from "@/services/patientAppointmentService"
 
 interface AppointmentsListProps {
-  appointments: Appointment[]
+  appointments: PatientAppointment[]
+  onCancel: (appointmentId: string) => Promise<void>
+  onReschedule: (appointmentId: string, newDate: string) => Promise<void>
+  loading: boolean
 }
 
-export default function AppointmentsList({ appointments }: AppointmentsListProps) {
+export default function AppointmentsList({ appointments, onCancel, onReschedule, loading }: AppointmentsListProps) {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all")
 
   const filteredAppointments = appointments.filter((appointment) => {
     if (filter === "all") return true
-    if (filter === "upcoming") return appointment.status === "Upcoming"
-    if (filter === "past") return appointment.status === "Completed"
+    if (filter === "upcoming") return ["pending", "confirmed", "rescheduled"].includes(appointment.status)
+    if (filter === "past") return ["completed", "cancelled"].includes(appointment.status)
     return true
   })
 
   // Sort appointments by date (newest first for past, oldest first for upcoming)
   const sortedAppointments = [...filteredAppointments].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`)
-    const dateB = new Date(`${b.date}T${b.time}`)
+    const dateA = new Date(`${a.appointmentDate}T${a.time}`)
+    const dateB = new Date(`${b.appointmentDate}T${b.time}`)
 
-    if (a.status === "Upcoming" && b.status === "Upcoming") {
+    const isUpcomingA = ["pending", "confirmed", "rescheduled"].includes(a.status)
+    const isUpcomingB = ["pending", "confirmed", "rescheduled"].includes(b.status)
+
+    if (isUpcomingA && isUpcomingB) {
       return dateA.getTime() - dateB.getTime() // Ascending for upcoming
-    } else if (a.status === "Completed" && b.status === "Completed") {
+    } else if (!isUpcomingA && !isUpcomingB) {
       return dateB.getTime() - dateA.getTime() // Descending for past
-    } else if (a.status === "Upcoming" && b.status === "Completed") {
-      return -1 // Upcoming before completed
+    } else if (isUpcomingA && !isUpcomingB) {
+      return -1 // Upcoming before completed/cancelled
     } else {
-      return 1 // Completed after upcoming
+      return 1 // Completed/cancelled after upcoming
     }
   })
 
-  const getAppointmentTypeIcon = (type: string) => {
-    switch (type) {
+  const getAppointmentTypeIcon = (mode: 'In-person' | 'Video' | 'Phone') => {
+    switch (mode) {
       case "Video":
         return <Video className="h-5 w-5 text-indigo-500" />
       case "Phone":
@@ -142,9 +148,9 @@ export default function AppointmentsList({ appointments }: AppointmentsListProps
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-64 p-4 bg-slate-100 dark:bg-slate-700/50 flex flex-col justify-center items-center">
                     <div className="text-center">
-                      <div className="flex justify-center mb-2">{getAppointmentTypeIcon(appointment.type)}</div>
+                      <div className="flex justify-center mb-2">{getAppointmentTypeIcon(appointment.mode)}</div>
                       <div className="text-lg font-bold text-slate-900 dark:text-white">
-                        {new Date(appointment.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(appointment.appointmentDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
                         {appointment.time} • {appointment.duration} min
@@ -184,17 +190,23 @@ export default function AppointmentsList({ appointments }: AppointmentsListProps
                     </div>
 
                     <div className="mt-4 flex justify-end space-x-3">
-                      {appointment.status === "Upcoming" && (
+                      {["pending", "confirmed", "rescheduled"].includes(appointment.status) && (
                         <>
-                          <button className="px-3 py-1.5 text-sm rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                          <button 
+                            onClick={() => onReschedule(appointment.id, appointment.appointmentDate)}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                          >
                             Reschedule
                           </button>
-                          <button className="px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                          <button 
+                            onClick={() => onCancel(appointment.id)}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                          >
                             Cancel
                           </button>
                         </>
                       )}
-                      {appointment.status === "Completed" && (
+                      {appointment.status === "completed" && (
                         <button className="px-3 py-1.5 text-sm rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors">
                           View Summary
                         </button>
@@ -225,4 +237,3 @@ export default function AppointmentsList({ appointments }: AppointmentsListProps
     </div>
   )
 }
-

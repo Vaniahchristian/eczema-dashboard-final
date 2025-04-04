@@ -5,11 +5,11 @@ import { Calendar, List, Plus, Filter } from "lucide-react"
 
 interface AppointmentsHeaderProps {
   activeView: "calendar" | "list"
-  setActiveView: (view: "calendar" | "list") => void
-  onSchedule: () => void
+  onViewChange: (view: "calendar" | "list") => void
+  onScheduleClick: () => void
 }
 
-export default function AppointmentsHeader({ activeView, setActiveView, onSchedule }: AppointmentsHeaderProps) {
+export default function AppointmentsHeader({ activeView, onViewChange, onScheduleClick }: AppointmentsHeaderProps) {
   return (
     <div className="space-y-6">
       <motion.div
@@ -27,7 +27,7 @@ export default function AppointmentsHeader({ activeView, setActiveView, onSchedu
         <div className="flex space-x-3 mt-4 md:mt-0">
           <div className="flex bg-white dark:bg-slate-800 rounded-xl shadow-sm p-1 border border-slate-200 dark:border-slate-700">
             <button
-              onClick={() => setActiveView("calendar")}
+              onClick={() => onViewChange("calendar")}
               className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                 activeView === "calendar"
                   ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
@@ -38,7 +38,7 @@ export default function AppointmentsHeader({ activeView, setActiveView, onSchedu
               <span>Calendar</span>
             </button>
             <button
-              onClick={() => setActiveView("list")}
+              onClick={() => onViewChange("list")}
               className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                 activeView === "list"
                   ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
@@ -54,7 +54,7 @@ export default function AppointmentsHeader({ activeView, setActiveView, onSchedu
             <span>Filter</span>
           </button>
           <button
-            onClick={onSchedule}
+            onClick={onScheduleClick}
             className="flex items-center px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -87,4 +87,3 @@ export default function AppointmentsHeader({ activeView, setActiveView, onSchedu
     </div>
   )
 }
-

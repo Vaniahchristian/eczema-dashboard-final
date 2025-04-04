@@ -2,15 +2,16 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Star } from "lucide-react"
-import type { Doctor } from "./appointments-page"
+import { Star, Loader2 } from "lucide-react"
+import type { Doctor } from "@/services/patientAppointmentService"
 
 interface DoctorProfilesProps {
   doctors: Doctor[]
-  onSchedule: () => void
+  onSchedule: (doctorId: string) => void
+  loading?: boolean
 }
 
-export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesProps) {
+export default function DoctorProfiles({ doctors, onSchedule, loading = false }: DoctorProfilesProps) {
   const [expandedDoctor, setExpandedDoctor] = useState<string | null>(null)
 
   const toggleExpand = (doctorId: string) => {
@@ -19,6 +20,14 @@ export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesPr
     } else {
       setExpandedDoctor(doctorId)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30 min-h-[400px] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-sky-500 animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -77,12 +86,12 @@ export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesPr
                         <div className="mt-4 flex justify-between">
                           <button
                             onClick={() => toggleExpand(doctor.id)}
-                            className="text-sm text-sky-600 dark:text-sky-400 hover:underline"
+                            className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
                           >
                             View Profile
                           </button>
                           <button
-                            onClick={onSchedule}
+                            onClick={() => onSchedule(doctor.id)}
                             className="px-3 py-1 text-sm rounded-lg bg-gradient-to-r from-sky-500 to-teal-500 text-white"
                           >
                             Book
@@ -115,7 +124,7 @@ export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesPr
                           key={idx}
                           className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700"
                         >
-                          <div className="font-medium text-sm">{avail.day}</div>
+                          <div className="font-medium text-sm capitalize">{avail.day}</div>
                           <div className="mt-1 flex flex-wrap gap-1">
                             {avail.slots.map((slot, slotIdx) => (
                               <span
@@ -132,7 +141,7 @@ export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesPr
 
                     <div className="mt-6 flex justify-end">
                       <button
-                        onClick={onSchedule}
+                        onClick={() => onSchedule(doctor.id)}
                         className="px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
                       >
                         Schedule Appointment
@@ -148,4 +157,3 @@ export default function DoctorProfiles({ doctors, onSchedule }: DoctorProfilesPr
     </div>
   )
 }
-

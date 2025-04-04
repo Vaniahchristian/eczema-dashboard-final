@@ -3,21 +3,28 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Calendar, Clock, User, Video, Phone, MapPin, ChevronRight, Check } from "lucide-react"
-import type { Doctor } from "./appointments-page"
+import type { Doctor } from "@/services/patientAppointmentService"
 
 interface ScheduleAppointmentProps {
-  isOpen: boolean
+  isOpen?: boolean
   onClose: () => void
   doctors: Doctor[]
-  selectedDate: Date
+  selectedDate?: Date
+  onSchedule: (data: {
+    doctorId: string
+    appointmentDate: string
+    reason: string
+    mode: "Video" | "Phone" | "In-person"
+    appointmentType: string
+  }) => Promise<void>
 }
 
 type AppointmentStep = "doctor" | "date" | "time" | "type" | "reason" | "confirm"
 
-export default function ScheduleAppointment({ isOpen, onClose, doctors, selectedDate }: ScheduleAppointmentProps) {
+export default function ScheduleAppointment({ isOpen, onClose, doctors, selectedDate, onSchedule }: ScheduleAppointmentProps) {
   const [step, setStep] = useState<AppointmentStep>("doctor")
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
-  const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate)
+  const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate || new Date())
   const [appointmentTime, setAppointmentTime] = useState<string>("")
   const [appointmentType, setAppointmentType] = useState<"In-person" | "Video" | "Phone">("In-person")
   const [appointmentReason, setAppointmentReason] = useState<string>("")
@@ -26,7 +33,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
   const resetForm = () => {
     setStep("doctor")
     setSelectedDoctor(null)
-    setAppointmentDate(selectedDate)
+    setAppointmentDate(selectedDate || new Date())
     setAppointmentTime("")
     setAppointmentType("In-person")
     setAppointmentReason("")
@@ -40,22 +47,32 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
 
   const handleSubmit = () => {
     setIsSubmitting(true)
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
-      handleClose()
-      // Show success message
-      alert("Appointment scheduled successfully!")
-    }, 1500)
+    onSchedule({
+      doctorId: selectedDoctor?.id || "",
+      appointmentDate: appointmentDate.toISOString().split("T")[0],
+      reason: appointmentReason,
+      mode: appointmentType,
+      appointmentType: appointmentType,
+    })
+      .then(() => {
+        setIsSubmitting(false)
+        handleClose()
+        // Show success message
+        alert("Appointment scheduled successfully!")
+      })
+      .catch((error) => {
+        setIsSubmitting(false)
+        console.error(error)
+      })
   }
 
   const getAvailableTimes = () => {
-    if (!selectedDoctor) return []
-
-    const dayOfWeek = appointmentDate.toLocaleDateString("en-US", { weekday: "long" })
-    const availability = selectedDoctor.availability.find((a) => a.day === dayOfWeek)
-
-    return availability ? availability.slots : []
+    const times: string[] = []
+    for (let i = 9; i <= 17; i++) {
+      times.push(`${i}:00`)
+      times.push(`${i}:30`)
+    }
+    return times.sort((a: string, b: string) => a.localeCompare(b))
   }
 
   const availableTimes = getAvailableTimes()
@@ -158,6 +175,26 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
       default:
         return false
     }
+  }
+
+  const renderTimeSlots = () => {
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        {availableTimes.map((time: string, idx: number) => (
+          <button
+            key={idx}
+            onClick={() => setAppointmentTime(time)}
+            className={`p-3 rounded-xl border text-center transition-all ${
+              appointmentTime === time
+                ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400"
+                : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
+            }`}
+          >
+            {time}
+          </button>
+        ))}
+      </div>
+    )
   }
 
   if (!isOpen) return null
@@ -294,38 +331,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                   {appointmentDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}:
                 </p>
 
-                {availableTimes.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-3">
-                    {availableTimes.map((time, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setAppointmentTime(time)}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          appointmentTime === time
-                            ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400"
-                            : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <Clock className="h-12 w-12 mx-auto text-slate-400" />
-                    <h3 className="mt-4 font-medium text-slate-700 dark:text-slate-300">No Available Times</h3>
-                    <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      {selectedDoctor?.name} is not available on{" "}
-                      {appointmentDate.toLocaleDateString("en-US", { weekday: "long" })}.
-                    </p>
-                    <button
-                      onClick={() => setStep("date")}
-                      className="mt-4 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg"
-                    >
-                      Select Another Date
-                    </button>
-                  </div>
-                )}
+                {renderTimeSlots()}
               </div>
             )}
 
@@ -568,4 +574,3 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
     </div>
   )
 }
-
