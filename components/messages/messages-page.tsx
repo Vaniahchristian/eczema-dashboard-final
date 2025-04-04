@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { messageService, type Conversation, type Message } from '@/services/messageService';
