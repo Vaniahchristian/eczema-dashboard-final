@@ -29,12 +29,37 @@ interface AppointmentForm {
   appointmentType: "in-person" | "virtual"
 }
 
+interface Message {
+  id: string
+  conversationId: string
+  senderId: string
+  content: string
+  type: 'text' | 'image' | 'file'
+  status: 'sent' | 'delivered' | 'read'
+  createdAt: string
+  attachments?: string[]
+}
+
+interface Conversation {
+  id: string
+  participants: {
+    userId: string
+    role: string
+    name: string
+  }[]
+  lastMessage?: Message
+  updatedAt: string
+}
+
 export default function AppointmentWidget() {
   const [activeTab, setActiveTab] = useState("appointment")
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [selectedDoctor, setSelectedDoctor] = useState("")
+  const [messageContent, setMessageContent] = useState("")
+  const [sendingMessage, setSendingMessage] = useState(false)
   const [formData, setFormData] = useState<AppointmentForm>({
     doctorId: "",
     date: null,
@@ -180,6 +205,49 @@ export default function AppointmentWidget() {
       toast.error(err instanceof Error ? err.message : "Failed to schedule appointment")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!selectedDoctor || !messageContent.trim()) {
+      toast.error("Please select a doctor and enter a message")
+      return
+    }
+
+    setSendingMessage(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) throw new Error("No authentication token found")
+
+      // First check if conversation exists or create new one
+      const conversationResponse = await fetch(`${API_URL}/messages/conversations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantId: selectedDoctor,
+          message: messageContent
+        })
+      })
+
+      if (!conversationResponse.ok) {
+        throw new Error("Failed to send message")
+      }
+
+      const data = await conversationResponse.json()
+      if (!data.success) {
+        throw new Error(data.message || "Failed to send message")
+      }
+
+      toast.success("Message sent successfully")
+      setMessageContent("")
+      setSelectedDoctor("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send message")
+    } finally {
+      setSendingMessage(false)
     }
   }
 
@@ -340,7 +408,10 @@ export default function AppointmentWidget() {
                 <User className="mr-2 h-4 w-4 text-indigo-500" />
                 Select Recipient
               </label>
-              <Select>
+              <Select
+                value={selectedDoctor}
+                onValueChange={setSelectedDoctor}
+              >
                 <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
                   <SelectValue placeholder="Choose a doctor" />
                 </SelectTrigger>
@@ -362,11 +433,17 @@ export default function AppointmentWidget() {
               <textarea
                 className="w-full min-h-[120px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Type your message here..."
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
               />
             </div>
 
-            <button className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5">
-              Send Message
+            <button 
+              className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSendMessage}
+              disabled={sendingMessage || !selectedDoctor || !messageContent.trim()}
+            >
+              {sendingMessage ? "Sending..." : "Send Message"}
             </button>
           </motion.div>
         )}
