@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -30,340 +30,267 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/auth"
+import { useToast } from "@/components/ui/use-toast"
 
-// Sample conversations data
-const conversations = [
-  {
-    id: "conv-1",
-    patient: {
-      id: "P-1002",
-      name: "Michael Chen",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "Thank you for the information, doctor. I'll follow the new treatment plan.",
-      timestamp: "10:32 AM",
-      isRead: true,
-      sender: "patient",
-    },
-    unread: 0,
-    status: "active",
-  },
-  {
-    id: "conv-2",
-    patient: {
-      id: "P-1001",
-      name: "Sarah Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "I've been experiencing increased itching since yesterday. Should I adjust my medication?",
-      timestamp: "Yesterday",
-      isRead: false,
-      sender: "patient",
-    },
-    unread: 1,
-    status: "active",
-  },
-  {
-    id: "conv-3",
-    patient: {
-      id: "P-1003",
-      name: "Emily Rodriguez",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "Your prescription has been sent to your pharmacy. Let me know if you have any questions.",
-      timestamp: "Yesterday",
-      isRead: true,
-      sender: "doctor",
-    },
-    unread: 0,
-    status: "active",
-  },
-  {
-    id: "conv-4",
-    patient: {
-      id: "P-1004",
-      name: "David Kim",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "I'll send you the photos of the affected area tomorrow morning.",
-      timestamp: "Monday",
-      isRead: true,
-      sender: "patient",
-    },
-    unread: 0,
-    status: "active",
-  },
-  {
-    id: "conv-5",
-    patient: {
-      id: "P-1005",
-      name: "Jennifer Lee",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "Please schedule a follow-up appointment for next week.",
-      timestamp: "06/05/2023",
-      isRead: true,
-      sender: "doctor",
-    },
-    unread: 0,
-    status: "active",
-  },
-  {
-    id: "conv-6",
-    patient: {
-      id: "P-1008",
-      name: "Thomas Wilson",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    lastMessage: {
-      content: "I've reviewed your lab results. Everything looks good.",
-      timestamp: "05/28/2023",
-      isRead: true,
-      sender: "doctor",
-    },
-    unread: 0,
-    status: "archived",
-  },
-]
 
-// Sample messages for a conversation
-const sampleMessages = [
-  {
-    id: "msg-1",
-    content: "Good morning Dr. Johnson. I've been experiencing increased itching on my arms since yesterday.",
-    timestamp: "10:15 AM",
-    sender: "patient",
-    isRead: true,
-  },
-  {
-    id: "msg-2",
-    content: "Hello Michael. I'm sorry to hear that. Have you been exposed to any new potential triggers recently?",
-    timestamp: "10:18 AM",
-    sender: "doctor",
-    isRead: true,
-  },
-  {
-    id: "msg-3",
-    content: "Not that I'm aware of. I've been following the treatment plan strictly.",
-    timestamp: "10:20 AM",
-    sender: "patient",
-    isRead: true,
-  },
-  {
-    id: "msg-4",
-    content: "I see. Have you been applying the hydrocortisone cream as prescribed?",
-    timestamp: "10:22 AM",
-    sender: "doctor",
-    isRead: true,
-  },
-  {
-    id: "msg-5",
-    content: "Yes, twice daily as instructed. Should I increase the frequency?",
-    timestamp: "10:25 AM",
-    sender: "patient",
-    isRead: true,
-  },
-  {
-    id: "msg-6",
-    content:
-      "Let's adjust your treatment plan slightly. Please apply the cream three times daily for the next three days and monitor if there's any improvement. Also, try to keep the affected areas moisturized.",
-    timestamp: "10:28 AM",
-    sender: "doctor",
-    isRead: true,
-  },
-  {
-    id: "msg-7",
-    content: "Thank you for the information, doctor. I'll follow the new treatment plan.",
-    timestamp: "10:32 AM",
-    sender: "patient",
-    isRead: true,
-  },
-]
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+
+interface Message {
+  id: string
+  content: string
+  timestamp: string
+  sender: string
+  isRead: boolean
+  senderId: string
+  senderName: string
+  senderImage?: string
+  status: string
+  type: string
+  attachments?: any[]
+}
+
+interface Conversation {
+  id: string
+  participantId: string
+  participantName: string
+  participantRole: string
+  participantImage?: string
+  unreadCount: number
+  lastMessage?: {
+    id: string
+    content: string
+    timestamp: string
+    senderId: string
+    status: string
+    type: string
+    attachments?: any[]
+  }
+  updatedAt: string
+  status?: string
+}
 
 export default function DoctorMessaging() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [activeConversation, setActiveConversation] = useState(conversations[0])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("active")
+  const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
 
-  // Filter conversations based on search term and active tab
-  const filteredConversations = conversations.filter((conversation) => {
-    const matchesSearch = conversation.patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Fetch conversations
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`${API_URL}/messages/conversations`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        const data = await response.json()
+        if (data.success) {
+          setConversations(data.data)
+        }
+      } catch (error) {
+        console.error('Error fetching conversations:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    if (activeTab === "all") return matchesSearch
-    if (activeTab === "unread") return matchesSearch && conversation.unread > 0
-    if (activeTab === "archived") return matchesSearch && conversation.status === "archived"
+    fetchConversations()
+  }, [])
 
-    return matchesSearch
-  })
+  // Fetch messages when conversation is selected
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!activeConversationId) return
 
-  const handleSendMessage = () => {
-    if (messageText.trim() === "") return
+      try {
+        setLoading(true)
+        const response = await fetch(`${API_URL}/messages/conversations/${activeConversationId}/messages`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        const data = await response.json()
+        if (data.success) {
+          setMessages(data.data)
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    // In a real app, you would send the message to the backend
-    // and update the conversation with the new message
-    console.log("Sending message:", messageText)
+    fetchMessages()
+  }, [activeConversationId])
 
-    // Clear the input field
-    setMessageText("")
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !activeConversationId) return
+
+    try {
+      const response = await fetch(`${API_URL}/messages/conversations/${activeConversationId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          content: messageText,
+          type: 'text'
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setMessages(prev => [...prev, data.data])
+        setMessageText("")
+
+        // Update conversation list with new last message
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === activeConversationId 
+              ? {
+                  ...conv,
+                  lastMessage: {
+                    id: data.data.id,
+                    content: data.data.content,
+                    timestamp: data.data.timestamp,
+                    senderId: data.data.senderId,
+                    status: data.data.status,
+                    type: data.data.type
+                  }
+                }
+              : conv
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
   }
 
-  return (
-    <div className="container px-4 py-6 md:px-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <Link href="/doctor">
-          <Button variant="outline" size="sm" className="mb-2">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold text-indigo-800 dark:text-indigo-300">Secure Messaging</h1>
-        <p className="text-slate-600 dark:text-slate-400">Communicate securely with your patients</p>
-      </div>
+  const filteredConversations = conversations.filter(conv => 
+    (activeTab === "active" ? conv.status !== "archived" : conv.status === "archived") &&
+    (searchQuery === "" || conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()))
+  )
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
-        <Card className="md:col-span-1 flex flex-col">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <CardTitle>Conversations</CardTitle>
-              <Button size="sm" variant="ghost">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="relative mt-2">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
-              <Input
-                type="search"
-                placeholder="Search conversations..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </CardHeader>
-          <Tabs defaultValue="all" className="px-4 mt-2" onValueChange={setActiveTab}>
+  const activeConversation = conversations.find(conv => conv.id === activeConversationId)
+
+  return (
+    <div className="flex h-[calc(100vh-4rem)]">
+      <div className="w-[300px] border-r">
+        <div className="p-4 border-b">
+          <Input
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="mb-4"
+          />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full">
-              <TabsTrigger value="all" className="flex-1">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="unread" className="flex-1">
-                Unread
-                <Badge variant="destructive" className="ml-1">
-                  {conversations.reduce((count, conv) => count + conv.unread, 0)}
-                </Badge>
+              <TabsTrigger value="active" className="flex-1">
+                Active
               </TabsTrigger>
               <TabsTrigger value="archived" className="flex-1">
                 Archived
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          <CardContent className="flex-1 overflow-y-auto pt-4">
-            {filteredConversations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                <User className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
-                <h3 className="font-medium mb-1">No conversations found</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {searchTerm
-                    ? "Try a different search term"
-                    : activeTab === "unread"
-                      ? "No unread messages"
-                      : activeTab === "archived"
-                        ? "No archived conversations"
-                        : "Start a new conversation"}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredConversations.map((conversation) => (
-                  <div
-                    key={conversation.id}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      activeConversation.id === conversation.id
-                        ? "bg-indigo-50 dark:bg-indigo-900/20"
-                        : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
-                    onClick={() => setActiveConversation(conversation)}
-                  >
-                    <div className="flex items-start">
-                      <Avatar className="h-10 w-10 mr-3">
-                        <AvatarImage src={conversation.patient.avatar} alt={conversation.patient.name} />
-                        <AvatarFallback>
-                          {conversation.patient.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <h4 className="font-medium truncate">{conversation.patient.name}</h4>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap ml-2">
-                            {conversation.lastMessage.timestamp}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          {conversation.lastMessage.sender === "doctor" && (
-                            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center">
-                              <span className="mr-1">You:</span>
-                              {conversation.lastMessage.isRead && <CheckCheck className="h-3 w-3 text-indigo-500" />}
-                            </span>
-                          )}
-                          <p
-                            className={`text-sm truncate ${
-                              conversation.unread > 0
-                                ? "font-medium text-slate-900 dark:text-slate-100"
-                                : "text-slate-500 dark:text-slate-400"
-                            }`}
-                          >
-                            {conversation.lastMessage.content}
-                          </p>
-                          {conversation.unread > 0 && (
-                            <Badge variant="destructive" className="ml-2">
-                              {conversation.unread}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+        </div>
+        <div className="overflow-auto h-[calc(100vh-10rem)]">
+          {loading && !conversations.length ? (
+            <div className="flex items-center justify-center h-full">
+              <p>Loading conversations...</p>
+            </div>
+          ) : (
+            filteredConversations.map((conversation) => (
+              <div
+                key={conversation.id}
+                onClick={() => setActiveConversationId(conversation.id)}
+                className={`p-4 border-b cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 ${
+                  activeConversationId === conversation.id ? "bg-slate-100 dark:bg-slate-800" : ""
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <Avatar>
+                    <AvatarImage src={conversation.participantImage} />
+                    <AvatarFallback>
+                      {conversation.participantName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-medium truncate">{conversation.participantName}</h4>
+                      {conversation.lastMessage && (
+                        <span className="text-xs text-slate-500">
+                          {new Date(conversation.lastMessage.timestamp).toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {conversation.lastMessage && (
+                      <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                        {conversation.lastMessage.content}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={conversation.unreadCount > 0 ? "default" : "secondary"}>
+                        {conversation.participantRole}
+                      </Badge>
+                      {conversation.unreadCount > 0 && (
+                        <Badge>{conversation.unreadCount}</Badge>
+                      )}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2 flex flex-col">
+            ))
+          )}
+        </div>
+      </div>
+      <div className="flex-1">
+        <Card className="h-full flex flex-col rounded-none border-t-0 border-r-0 border-b-0">
           {activeConversation ? (
             <>
-              <CardHeader className="pb-2 border-b">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={activeConversation.patient.avatar} alt={activeConversation.patient.name} />
+              <CardHeader className="border-b px-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Link href="/messages" className="lg:hidden">
+                      <Button variant="ghost" size="icon">
+                        <ArrowLeft className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Avatar>
+                      <AvatarImage src={activeConversation.participantImage} />
                       <AvatarFallback>
-                        {activeConversation.patient.name
+                        {activeConversation.participantName
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-medium">{activeConversation.patient.name}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Patient ID: {activeConversation.patient.id}
+                      <CardTitle className="text-base">{activeConversation.participantName}</CardTitle>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {activeConversation.participantRole}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon">
                       <Phone className="h-4 w-4" />
                     </Button>
@@ -380,56 +307,71 @@ export default function DoctorMessaging() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Conversation</DropdownMenuLabel>
+                        <DropdownMenuItem>View Profile</DropdownMenuItem>
+                        <DropdownMenuItem>Clear Chat</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>View Patient Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Schedule Appointment</DropdownMenuItem>
-                        <DropdownMenuItem>Mark as Unread</DropdownMenuItem>
-                        <DropdownMenuItem>Archive Conversation</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">Block User</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-4">
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full text-slate-500 dark:text-slate-400">
-                      Today
-                    </span>
+              <CardContent className="flex-1 overflow-auto p-4">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p>Loading messages...</p>
                   </div>
-
-                  {sampleMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.sender === "doctor" ? "justify-end" : "justify-start"}`}
-                    >
-                      {message.sender === "patient" && (
-                        <Avatar className="h-8 w-8 mr-2 mt-1">
-                          <AvatarImage src={activeConversation.patient.avatar} alt={activeConversation.patient.name} />
-                          <AvatarFallback>
-                            {activeConversation.patient.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message) => (
                       <div
-                        className={`max-w-[70%] ${message.sender === "doctor" ? "bg-indigo-500 text-white" : "bg-slate-100 dark:bg-slate-800"} rounded-lg p-3`}
+                        key={message.id}
+                        className={`flex items-start gap-3 ${
+                          message.senderId === user?.id ? "flex-row-reverse" : ""
+                        }`}
                       >
-                        <p className="text-sm">{message.content}</p>
+                        {message.senderId !== user?.id && (
+                          <Avatar>
+                            <AvatarImage src={message.senderImage} />
+                            <AvatarFallback>
+                              {message.senderName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div
-                          className={`flex items-center justify-end mt-1 text-xs ${message.sender === "doctor" ? "text-indigo-200" : "text-slate-500 dark:text-slate-400"}`}
+                          className={`max-w-[70%] ${
+                            message.senderId === user?.id
+                              ? "bg-indigo-500 text-white"
+                              : "bg-slate-100 dark:bg-slate-800"
+                          } rounded-lg p-3`}
                         >
-                          <Clock className="h-3 w-3 mr-1" />
-                          <span>{message.timestamp}</span>
-                          {message.sender === "doctor" && message.isRead && <CheckCheck className="h-3 w-3 ml-1" />}
+                          <p className="text-sm">{message.content}</p>
+                          <div
+                            className={`flex items-center justify-end mt-1 text-xs ${
+                              message.senderId === user?.id
+                                ? "text-indigo-200"
+                                : "text-slate-500 dark:text-slate-400"
+                            }`}
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>
+                              {new Date(message.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                            {message.senderId === user?.id && message.status === 'read' && (
+                              <CheckCheck className="h-3 w-3 ml-1" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
               <div className="p-4 border-t">
                 <div className="flex items-end gap-2">
@@ -497,4 +439,3 @@ export default function DoctorMessaging() {
     </div>
   )
 }
-
