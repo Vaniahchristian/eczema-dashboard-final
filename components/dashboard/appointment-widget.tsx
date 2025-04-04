@@ -219,7 +219,7 @@ export default function AppointmentWidget() {
       const token = localStorage.getItem("token")
       if (!token) throw new Error("No authentication token found")
 
-      // First check if conversation exists or create new one
+      // First create or get existing conversation
       const conversationResponse = await fetch(`${API_URL}/messages/conversations`, {
         method: 'POST',
         headers: {
@@ -227,18 +227,39 @@ export default function AppointmentWidget() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          participantId: selectedDoctor,
-          message: messageContent
+          participantId: selectedDoctor
         })
       })
 
       if (!conversationResponse.ok) {
+        throw new Error("Failed to create conversation")
+      }
+
+      const conversationData = await conversationResponse.json()
+      if (!conversationData.success) {
+        throw new Error(conversationData.message || "Failed to create conversation")
+      }
+
+      // Then send the message in that conversation
+      const messageResponse = await fetch(`${API_URL}/messages/conversations/${conversationData.data.id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          content: messageContent,
+          type: 'text'
+        })
+      })
+
+      if (!messageResponse.ok) {
         throw new Error("Failed to send message")
       }
 
-      const data = await conversationResponse.json()
-      if (!data.success) {
-        throw new Error(data.message || "Failed to send message")
+      const messageData = await messageResponse.json()
+      if (!messageData.success) {
+        throw new Error(messageData.message || "Failed to send message")
       }
 
       toast.success("Message sent successfully")

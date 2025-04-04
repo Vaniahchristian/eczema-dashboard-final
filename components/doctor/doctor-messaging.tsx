@@ -95,10 +95,11 @@ export default function DoctorMessaging() {
         })
         const data = await response.json()
         if (data.success) {
-          setConversations(data.data)
+          setConversations(data.data || []) // Ensure we always have an array
         }
       } catch (error) {
         console.error('Error fetching conversations:', error)
+        setConversations([]) // Set empty array on error
       } finally {
         setLoading(false)
       }
@@ -121,10 +122,11 @@ export default function DoctorMessaging() {
         })
         const data = await response.json()
         if (data.success) {
-          setMessages(data.data)
+          setMessages(data.data || []) // Ensure we always have an array
         }
       } catch (error) {
         console.error('Error fetching messages:', error)
+        setMessages([]) // Set empty array on error
       } finally {
         setLoading(false)
       }
