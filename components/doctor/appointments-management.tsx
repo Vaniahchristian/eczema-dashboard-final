@@ -42,7 +42,7 @@ export default function AppointmentsManagement() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [view, setView] = useState<"day" | "week" | "month">("day")
   const [activeTab, setActiveTab] = useState("calendar")
-  const [statusFilter, setStatusFilter] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
 
   useEffect(() => {
     loadAppointments()
@@ -67,7 +67,7 @@ export default function AppointmentsManagement() {
         endDate: endDate.toISOString()
       }
 
-      if (statusFilter) {
+      if (statusFilter !== "all") {
         filters.status = statusFilter
       }
 
@@ -161,7 +161,7 @@ export default function AppointmentsManagement() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
