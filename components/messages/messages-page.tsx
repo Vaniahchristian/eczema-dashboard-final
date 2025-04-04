@@ -24,6 +24,11 @@ export function MessagesPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
+    // Add filtered conversations computation
+    const filteredConversations = conversations.filter(conversation =>
+        conversation.participantName.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     useEffect(() => {
         loadConversations();
     }, []);
@@ -119,10 +124,6 @@ export function MessagesPage() {
             });
         }
     };
-
-    const filteredConversations = conversations.filter(conv =>
-        conv.participantName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
 
     return (
         <div className="container mx-auto p-4">
