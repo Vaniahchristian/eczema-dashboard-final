@@ -42,10 +42,11 @@ export default function AppointmentsManagement() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [view, setView] = useState<"day" | "week" | "month">("day")
   const [activeTab, setActiveTab] = useState("calendar")
+  const [statusFilter, setStatusFilter] = useState<string>("")
 
   useEffect(() => {
     loadAppointments()
-  }, [selectedDate, view])
+  }, [selectedDate, view, statusFilter])
 
   const loadAppointments = async () => {
     try {
@@ -61,10 +62,16 @@ export default function AppointmentsManagement() {
         endDate.setDate(endDate.getDate() + 1)
       }
 
-      const response = await appointmentService.getAppointments({
+      const filters: any = {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
-      })
+      }
+
+      if (statusFilter) {
+        filters.status = statusFilter
+      }
+
+      const response = await appointmentService.getAppointments(filters)
       setAppointments(response.data)
     } catch (error) {
       console.error("Error loading appointments:", error)
@@ -96,409 +103,201 @@ export default function AppointmentsManagement() {
     }
   }
 
-  // Get appointments for the selected date
-  const appointmentsForDate = appointments.filter(
-    (appointment) => appointment.appointmentDate.split("T")[0] === selectedDate.toISOString().split("T")[0],
-  )
-
-  // Get appointments for the selected week
-  const appointmentsForWeek = appointments.filter((appointment) => {
-    const appointmentDate = new Date(appointment.appointmentDate)
-    const weekStart = new Date(selectedDate)
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-    const weekEnd = new Date(selectedDate)
-    weekEnd.setDate(weekEnd.getDate() - weekEnd.getDay() + 6)
-    return appointmentDate >= weekStart && appointmentDate <= weekEnd
-  })
-
-  // Get appointments for the selected month
-  const appointmentsForMonth = appointments.filter((appointment) => {
-    const appointmentDate = new Date(appointment.appointmentDate)
-    return (
-      appointmentDate.getMonth() === selectedDate.getMonth() &&
-      appointmentDate.getFullYear() === selectedDate.getFullYear()
-    )
-  })
-
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    })
-  }
-
-  // Navigate to previous day
-  const goToPreviousDay = () => {
-    const newDate = new Date(selectedDate)
-    newDate.setDate(newDate.getDate() - 1)
-    setSelectedDate(newDate)
-  }
-
-  // Navigate to next day
-  const goToNextDay = () => {
-    const newDate = new Date(selectedDate)
-    newDate.setDate(newDate.getDate() + 1)
-    setSelectedDate(newDate)
-  }
-
-  // Get appointment status badge variant
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "Confirmed":
-        return "default"
-      case "Pending":
-        return "secondary"
-      case "Cancelled":
-        return "destructive"
-      default:
-        return "outline"
+  const handleReschedule = async (appointmentId: string, newDate: string) => {
+    try {
+      await appointmentService.rescheduleAppointment(appointmentId, newDate)
+      toast({
+        title: "Success",
+        description: "Appointment rescheduled successfully."
+      })
+      loadAppointments()
+    } catch (error) {
+      console.error("Error rescheduling appointment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to reschedule appointment. Please try again.",
+        variant: "destructive"
+      })
     }
   }
 
-  // Get appointment mode icon
-  const getModeIcon = (mode: string) => {
-    switch (mode) {
-      case "Video":
-        return <Video className="h-4 w-4" />
-      case "Phone":
-        return <Phone className="h-4 w-4" />
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "confirmed":
+        return "default"
+      case "pending":
+        return "secondary"
+      case "cancelled":
+        return "destructive"
+      case "completed":
+        return "outline"
+      case "rescheduled":
+        return "secondary"
       default:
-        return <User className="h-4 w-4" />
+        return "default"
     }
   }
 
   return (
-    <div className="container px-4 py-6 md:px-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <Link href="/doctor">
-            <Button variant="outline" size="sm" className="mb-2">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold text-indigo-800 dark:text-indigo-300">Appointments</h1>
-          <p className="text-slate-600 dark:text-slate-400">Manage your patient appointments</p>
+    <div className="flex flex-col space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Appointments</h2>
+          <p className="text-sm text-muted-foreground">Manage your appointments and schedule</p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Schedule Appointment
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Select value={view} onValueChange={(value: "day" | "week" | "month") => setView(value)}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Select view" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Day</SelectItem>
+              <SelectItem value="week">Week</SelectItem>
+              <SelectItem value="month">Month</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="rescheduled">Rescheduled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <Tabs defaultValue="calendar" className="space-y-4" onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="calendar">
-            <Calendar className="h-4 w-4 mr-2" />
-            Calendar View
-          </TabsTrigger>
-          <TabsTrigger value="list">
-            <CalendarDays className="h-4 w-4 mr-2" />
-            List View
-          </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            <CalendarClock className="h-4 w-4 mr-2" />
-            Upcoming
-          </TabsTrigger>
-          <TabsTrigger value="pending">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            Pending
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="calendar" className="space-y-4">
+      <div className="grid gap-4">
+        {loading ? (
           <Card>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>Daily Schedule</CardTitle>
-                  <CardDescription>Manage your appointments for the day</CardDescription>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="icon" onClick={goToPreviousDay}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="text-center min-w-[180px]">
-                    <p className="font-medium">{formatDate(selectedDate)}</p>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center h-[200px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            </CardContent>
+          </Card>
+        ) : appointments.length === 0 ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center justify-center h-[200px] space-y-4">
+                <Calendar className="h-8 w-8 text-muted-foreground" />
+                <p className="text-lg font-medium text-muted-foreground">No appointments found</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          appointments.map((appointment) => (
+            <Card key={appointment.id}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={appointment.patient.imageUrl} alt={appointment.patient.name} />
+                    <AvatarFallback>{appointment.patient.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-base">{appointment.patient.name}</CardTitle>
+                    <CardDescription>{appointment.patient.email}</CardDescription>
                   </div>
-                  <Button variant="outline" size="icon" onClick={goToNextDay}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
                 </div>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Appointments</SelectItem>
-                    <SelectItem value="follow-up">Follow-up</SelectItem>
-                    <SelectItem value="new-patient">New Patient</SelectItem>
-                    <SelectItem value="treatment">Treatment Review</SelectItem>
-                    <SelectItem value="consultation">Consultation</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Morning</h3>
-                  {appointmentsForDate.map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className={`p-3 rounded-lg border bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
-                          <span className="font-medium">{appointment.time}</span>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(appointment.status)}>{appointment.status}</Badge>
-                      </div>
-
-                      <div className="mt-2">
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={appointment.patient.avatar} alt={appointment.patient.name} />
-                            <AvatarFallback>
-                              {appointment.patient.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{appointment.patient.name}</p>
-                            <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
-                              <span>{appointment.appointmentType}</span>
-                              <span className="mx-1">•</span>
-                              <span>{appointment.duration} min</span>
-                              <span className="mx-1">•</span>
-                              <span className="flex items-center">
-                                {getModeIcon(appointment.mode)}
-                                <span className="ml-1">{appointment.mode}</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex justify-end mt-2 space-x-1">
-                          <Button variant="outline" size="sm" className="h-7 px-2">
-                            <Check className="h-3 w-3 mr-1" />
-                            Check In
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 px-2">
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Appointment</DropdownMenuItem>
-                              <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600 dark:text-red-400">
-                                <X className="h-4 w-4 mr-2" />
-                                Cancel Appointment
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <Badge variant={getStatusBadgeVariant(appointment.status)}>
+                  {appointment.status}
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center text-muted-foreground">
+                    <Calendar className="mr-1 h-4 w-4" />
+                    {new Date(appointment.appointmentDate).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    <Clock className="mr-1 h-4 w-4" />
+                    {new Date(appointment.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="flex items-center text-muted-foreground">
+                    {appointment.mode === "Video" ? (
+                      <Video className="mr-1 h-4 w-4" />
+                    ) : appointment.mode === "Phone" ? (
+                      <Phone className="mr-1 h-4 w-4" />
+                    ) : (
+                      <User className="mr-1 h-4 w-4" />
+                    )}
+                    {appointment.mode}
+                  </div>
                 </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Afternoon</h3>
-                  {appointmentsForDate.map((appointment) => (
-                    <div
-                      key={appointment.id}
-                      className={`p-3 rounded-lg border bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center">
-                          <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
-                          <span className="font-medium">{appointment.time}</span>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(appointment.status)}>{appointment.status}</Badge>
-                      </div>
-
-                      <div className="mt-2">
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2">
-                            <AvatarImage src={appointment.patient.avatar} alt={appointment.patient.name} />
-                            <AvatarFallback>
-                              {appointment.patient.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{appointment.patient.name}</p>
-                            <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
-                              <span>{appointment.appointmentType}</span>
-                              <span className="mx-1">•</span>
-                              <span>{appointment.duration} min</span>
-                              <span className="mx-1">•</span>
-                              <span className="flex items-center">
-                                {getModeIcon(appointment.mode)}
-                                <span className="ml-1">{appointment.mode}</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex justify-end mt-2 space-x-1">
-                          <Button variant="outline" size="sm" className="h-7 px-2">
-                            <Check className="h-3 w-3 mr-1" />
-                            Check In
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-7 px-2">
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Appointment</DropdownMenuItem>
-                              <DropdownMenuItem>Send Reminder</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-red-600 dark:text-red-400">
-                                <X className="h-4 w-4 mr-2" />
-                                Cancel Appointment
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <p className="mt-2 text-sm text-muted-foreground">{appointment.reason}</p>
+              </CardContent>
+              <CardFooter>
+                <div className="flex justify-between w-full">
+                  <div className="flex space-x-2">
+                    {appointment.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600"
+                          onClick={() => handleStatusUpdate(appointment.id, "confirmed")}
+                        >
+                          <Check className="mr-1 h-4 w-4" />
+                          Confirm
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600"
+                          onClick={() => handleStatusUpdate(appointment.id, "cancelled")}
+                        >
+                          <X className="mr-1 h-4 w-4" />
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                    {appointment.status === "confirmed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStatusUpdate(appointment.id, "completed")}
+                      >
+                        <Check className="mr-1 h-4 w-4" />
+                        Mark as Completed
+                      </Button>
+                    )}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const tomorrow = new Date()
+                          tomorrow.setDate(tomorrow.getDate() + 1)
+                          handleReschedule(appointment.id, tomorrow.toISOString())
+                        }}
+                      >
+                        <CalendarClock className="mr-2 h-4 w-4" />
+                        Reschedule
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        View Details
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                {appointmentsForDate.length} appointments scheduled for today
-              </div>
-              <Button variant="outline">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                View Full Calendar
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Appointments List</CardTitle>
-              <CardDescription>View and manage all scheduled appointments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {appointments.map((appointment) => (
-                  <Card key={appointment.id} className="overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
-                      <div className="p-4 md:p-6 flex-1">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-center">
-                            <Avatar className="h-10 w-10 mr-3">
-                              <AvatarImage src={appointment.patient.avatar} alt={appointment.patient.name} />
-                              <AvatarFallback>
-                                {appointment.patient.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <h3 className="font-medium">{appointment.patient.name}</h3>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
-                                Patient ID: {appointment.patient.id}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 items-center">
-                            <div className="flex items-center mr-4">
-                              <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
-                              <span className="text-sm">{new Date(appointment.appointmentDate).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center mr-4">
-                              <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
-                              <span className="text-sm">
-                                {appointment.time} ({appointment.duration} min)
-                              </span>
-                            </div>
-                            <Badge variant={getStatusBadgeVariant(appointment.status)}>{appointment.status}</Badge>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="flex items-center">
-                              {getModeIcon(appointment.mode)}
-                              <span className="ml-1">{appointment.mode}</span>
-                            </Badge>
-                            <Badge variant="secondary">{appointment.appointmentType}</Badge>
-                          </div>
-                        </div>
-
-                        {appointment.notes && (
-                          <div className="mt-4 text-sm">
-                            <p className="text-slate-500 dark:text-slate-400">{appointment.notes}</p>
-                          </div>
-                        )}
-
-                        <div className="flex justify-end mt-4 space-x-2">
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
-                          <Button size="sm">
-                            <Check className="mr-2 h-4 w-4" />
-                            Check In
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="upcoming" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Appointments</CardTitle>
-              <CardDescription>View your upcoming schedule</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Upcoming appointments content will go here</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="pending" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Appointments</CardTitle>
-              <CardDescription>Appointments requiring confirmation</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Pending appointments content will go here</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardFooter>
+            </Card>
+          ))
+        )}
+      </div>
     </div>
   )
 }

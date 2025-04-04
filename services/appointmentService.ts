@@ -16,7 +16,8 @@ const getAuthHeaders = () => {
 interface Patient {
   id: string;
   name: string;
-  avatar: string;
+  imageUrl: string;
+  email: string;
 }
 
 export interface Appointment {
@@ -25,18 +26,19 @@ export interface Appointment {
   patientId: string;
   appointmentDate: string;
   reason: string;
-  appointmentType: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  appointmentType: 'regular' | 'initial' | 'follow-up' | 'emergency';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rescheduled';
   mode: 'In-person' | 'Video' | 'Phone';
   duration: number;
   notes?: string;
-  patient: Patient; 
-  time: string; 
+  patient: Patient;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const appointmentService = {
   // Create new appointment
-  createAppointment: async (data: Omit<Appointment, 'id' | 'status'>) => {
+  createAppointment: async (data: Omit<Appointment, 'id' | 'status' | 'patient' | 'createdAt' | 'updatedAt'>) => {
     try {
       const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders());
       return response.data;
@@ -48,17 +50,17 @@ export const appointmentService = {
 
   // Get all appointments
   getAppointments: async (filters?: {
-    status?: string;
     startDate?: string;
     endDate?: string;
+    status?: string;
   }) => {
     try {
       const params = new URLSearchParams();
-      if (filters?.status) params.append('status', filters.status);
       if (filters?.startDate) params.append('startDate', filters.startDate);
       if (filters?.endDate) params.append('endDate', filters.endDate);
+      if (filters?.status) params.append('status', filters.status);
 
-      const response = await axios.get(`${API_URL}/appointments?${params}`, getAuthHeaders());
+      const response = await axios.get(`${API_URL}/appointments?${params.toString()}`, getAuthHeaders());
       return response.data;
     } catch (error) {
       console.error('Error getting appointments:', error);
@@ -81,7 +83,7 @@ export const appointmentService = {
   getDoctorAvailability: async (doctorId: string, date: string) => {
     try {
       const response = await axios.get(
-        `${API_URL}/appointments/availability/${doctorId}?date=${date}`,
+        `${API_URL}/doctors/${doctorId}/available-slots?date=${date}`,
         getAuthHeaders()
       );
       return response.data;
@@ -102,6 +104,21 @@ export const appointmentService = {
       return response.data;
     } catch (error) {
       console.error('Error updating appointment status:', error);
+      throw error;
+    }
+  },
+
+  // Reschedule appointment
+  rescheduleAppointment: async (appointmentId: string, newDate: string) => {
+    try {
+      const response = await axios.put(
+        `${API_URL}/appointments/${appointmentId}/reschedule`,
+        { newDate },
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
       throw error;
     }
   }
