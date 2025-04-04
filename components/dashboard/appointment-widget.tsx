@@ -10,8 +10,9 @@ import { format } from "date-fns"
 
 interface Doctor {
   id: string
-  firstName: string
-  lastName: string
+  // firstName: string
+  // lastName: string
+  name:string
   specialty: string
 }
 
@@ -235,7 +236,8 @@ export default function AppointmentWidget() {
                 <SelectContent className="rounded-xl">
                   {doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.firstName} {doctor.lastName} 
+                      Dr. {doctor.name} - {doctor.specialty}
+                       {/* {doctor.lastName}  */}
                       {/* - {doctor.specialty} */}
                     </SelectItem>
                   ))}
@@ -345,7 +347,7 @@ export default function AppointmentWidget() {
                 <SelectContent className="rounded-xl">
                   {doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialty}
+                      Dr. {doctor.name} - {doctor.specialty}
                     </SelectItem>
                   ))}
                 </SelectContent>
