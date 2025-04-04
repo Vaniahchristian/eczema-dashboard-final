@@ -235,7 +235,8 @@ export default function AppointmentWidget() {
                 <SelectContent className="rounded-xl">
                   {doctors.map((doctor) => (
                     <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialty}
+                      Dr. {doctor.firstName} {doctor.lastName} 
+                      {/* - {doctor.specialty} */}
                     </SelectItem>
                   ))}
                 </SelectContent>
