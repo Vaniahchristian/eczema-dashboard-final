@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { messageService, type Conversation, type Message } from '@/services/messageService';
+import { useAuth } from '@/lib/auth';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/lib/auth';
 
 export function MessagesPage() {
     const { user } = useAuth();
