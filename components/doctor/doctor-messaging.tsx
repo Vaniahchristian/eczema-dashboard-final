@@ -15,12 +15,12 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -37,11 +37,15 @@ export default function DoctorMessaging() {
 
   useEffect(() => {
     fetchConversations()
+    const interval = setInterval(fetchConversations, 10000) // Poll every 10 seconds
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.id)
+      const interval = setInterval(() => fetchMessages(selectedConversation.id), 5000) // Poll every 5 seconds
+      return () => clearInterval(interval)
     }
   }, [selectedConversation])
 
@@ -58,7 +62,7 @@ export default function DoctorMessaging() {
       console.error("Error fetching conversations:", error)
       toast({
         title: "Error",
-        description: "Failed to load conversations",
+        description: error instanceof Error ? error.message : "Failed to load conversations",
         variant: "destructive"
       })
     } finally {
@@ -75,7 +79,7 @@ export default function DoctorMessaging() {
       console.error("Error fetching messages:", error)
       toast({
         title: "Error",
-        description: "Failed to load messages",
+        description: error instanceof Error ? error.message : "Failed to load messages",
         variant: "destructive"
       })
     } finally {
@@ -92,19 +96,16 @@ export default function DoctorMessaging() {
       const message = await messageService.sendMessage(
         selectedConversation.id,
         newMessage,
-        'text',
-        true, // fromDoctor is true since this is the doctor component
-        selectedConversation.participantId, // patient's ID
-        user.id // doctor's ID
+        'text' // Only content, type, and optional attachments are needed
       )
-
       setMessages((prev) => [...prev, message])
       setNewMessage("")
+      await fetchConversations() // Refresh conversations to update lastMessage and unreadCount
     } catch (error) {
       console.error("Error sending message:", error)
       toast({
         title: "Error",
-        description: "Failed to send message",
+        description: error instanceof Error ? error.message : "Failed to send message",
         variant: "destructive"
       })
     } finally {
@@ -117,7 +118,7 @@ export default function DoctorMessaging() {
   }
 
   const filteredConversations = conversations.filter(
-    (conv) => conv.status === activeTab
+    (conv) => (activeTab === 'active' ? conv.updatedAt : !conv.updatedAt) // Adjust based on backend's isActive
   )
 
   return (
@@ -128,7 +129,7 @@ export default function DoctorMessaging() {
           <Input
             placeholder="Search conversations..."
             value={""}
-            onChange={(e) => {}}
+            onChange={(e) => { }}
             className="mb-4"
           />
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'archived')}>
@@ -142,9 +143,8 @@ export default function DoctorMessaging() {
           {filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
-              className={`p-4 cursor-pointer hover:bg-gray-100 ${
-                selectedConversation?.id === conversation.id ? "bg-gray-100" : ""
-              }`}
+              className={`p-4 cursor-pointer hover:bg-gray-100 ${selectedConversation?.id === conversation.id ? "bg-gray-100" : ""
+                }`}
               onClick={() => setSelectedConversation(conversation)}
             >
               <div className="flex items-center gap-3">
@@ -235,56 +235,53 @@ export default function DoctorMessaging() {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${
-                          message.fromDoctor ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        {message.fromDoctor ? (
-                          <Avatar>
-                            <AvatarImage src={user?.profileImage} />
-                            <AvatarFallback>
-                              {user?.firstName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : (
-                          <Avatar>
-                            <AvatarImage src={message.senderImage} />
-                            <AvatarFallback>
-                              {message.senderName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            message.fromDoctor
-                              ? "bg-indigo-500 text-white"
-                              : "bg-slate-100 dark:bg-slate-800"
+                        className={`flex ${message.fromDoctor ? "justify-end" : "justify-start"
                           }`}
-                        >
-                          <p>{message.content}</p>
-                          <div
-                            className={`flex items-center justify-end mt-1 text-xs ${
-                              message.fromDoctor
-                                ? "text-indigo-200"
-                                : "text-slate-500 dark:text-slate-400"
+                      >
+                        <div
+                          className={`flex items-end gap-2 ${message.fromDoctor ? "flex-row-reverse" : "flex-row"
                             }`}
+                        >
+                          {message.fromDoctor ? (
+                            <Avatar>
+                              <AvatarImage src={user?.profileImage} /> {/* Adjust to match your user object */}
+                              <AvatarFallback>
+                                {user?.firstName
+                                  ?.split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                          ) : (
+                            <Avatar>
+                              <AvatarImage src={message.senderImage} />
+                              <AvatarFallback>
+                                {message.senderName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                          <div
+                            className={`max-w-[70%] rounded-lg p-3 ${message.fromDoctor
+                                ? "bg-indigo-500 text-white"
+                                : "bg-slate-100 dark:bg-slate-800"
+                              }`}
                           >
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span>
-                              {new Date(message.timestamp).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                            {message.fromDoctor && message.status === 'read' && (
-                              <CheckCheck className="h-3 w-3 ml-1" />
-                            )}
+                            <p>{message.content}</p>
+                            <div
+                              className={`flex items-center justify-end mt-1 text-xs ${message.fromDoctor
+                                  ? "text-indigo-200"
+                                  : "text-slate-500 dark:text-slate-400"
+                                }`}
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{messageService.formatTimestamp(message.timestamp)}</span>
+                              {message.fromDoctor && message.status === 'read' && (
+                                <CheckCheck className="h-3 w-3 ml-1" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

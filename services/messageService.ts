@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export interface Message {
     id: string;
@@ -8,16 +8,16 @@ export interface Message {
     doctorId: string;
     fromDoctor: boolean;
     senderName: string;
-    senderRole: string;
-    senderImage?: string;
+    senderImage?: string; // Matches image_url from MySQL
     status: 'sent' | 'delivered' | 'read';
-    type: 'text' | 'image' | 'file' | 'voice';
+    type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion'; // Added ai-suggestion
     attachments?: Array<{
         url: string;
         type: string;
         name: string;
         size: number;
     }>;
+    reaction?: 'thumbs_up' | 'thumbs_down';
 }
 
 export interface Conversation {
@@ -25,50 +25,58 @@ export interface Conversation {
     participantId: string;
     participantName: string;
     participantImage?: string;
-    participantRole: string;
-    status: 'active' | 'archived';
+    participantRole: string; // Matches 'role' from MySQL
     unreadCount: number;
     lastMessage?: {
         id: string;
         content: string;
         timestamp: string;
-        status: string;
+        senderId: string;
+        status: 'sent' | 'delivered' | 'read'; // Consistent with Message.status
+        type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion';
+        attachments?: Array<{
+            url: string;
+            type: string;
+            name: string;
+            size: number;
+        }>;
     };
+    updatedAt: string; // Matches backend schema
 }
 
 class MessageService {
-    private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+    private getHeaders() {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('No authentication token found');
+        return { Authorization: `Bearer ${token}` };
+    }
 
     async getConversations(): Promise<Conversation[]> {
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.get(`${this.baseUrl}/messages/conversations`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                headers: this.getHeaders(),
             });
             return response.data.data;
         } catch (error) {
-            console.error('Error fetching conversations:', error);
-            throw error;
+            const err = error as AxiosError<{ success: boolean; message: string }>;
+            console.error('Error fetching conversations:', err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || 'Failed to fetch conversations');
         }
     }
 
-    async getMessages(conversationId: string): Promise<Message[]> {
+    async getMessages(conversationId: string, page: number = 1, limit: number = 20): Promise<Message[]> {
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${this.baseUrl}/messages/conversations/${conversationId}/messages`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+                `${this.baseUrl}/messages/conversations/${conversationId}/messages?page=${page}&limit=${limit}`,
+                { headers: this.getHeaders() }
             );
             return response.data.data;
         } catch (error) {
-            console.error('Error fetching messages:', error);
-            throw error;
+            const err = error as AxiosError<{ success: boolean; message: string }>;
+            console.error('Error fetching messages:', err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || 'Failed to fetch messages');
         }
     }
 
@@ -76,74 +84,51 @@ class MessageService {
         conversationId: string,
         content: string,
         type: Message['type'] = 'text',
-        fromDoctor: boolean,
-        patientId: string,
-        doctorId: string,
         attachments?: Message['attachments']
     ): Promise<Message> {
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.post(
                 `${this.baseUrl}/messages/conversations/${conversationId}/messages`,
-                {
-                    content,
-                    type,
-                    fromDoctor,
-                    patientId,
-                    doctorId,
-                    attachments
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+                { content, type, attachments },
+                { headers: this.getHeaders() }
             );
             return response.data.data;
         } catch (error) {
-            console.error('Error sending message:', error);
-            throw error;
+            const err = error as AxiosError<{ success: boolean; message: string }>;
+            console.error('Error sending message:', err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || 'Failed to send message');
         }
     }
 
     async createConversation(participantId: string): Promise<{ id: string }> {
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.post(
                 `${this.baseUrl}/messages/conversations`,
                 { participantId },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+                { headers: this.getHeaders() }
             );
             return response.data.data;
         } catch (error) {
-            console.error('Error creating conversation:', error);
-            throw error;
+            const err = error as AxiosError<{ success: boolean; message: string }>;
+            console.error('Error creating conversation:', err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || 'Failed to create conversation');
         }
     }
 
     async updateMessageStatus(messageId: string, status: Message['status']): Promise<void> {
         try {
-            const token = localStorage.getItem('token');
             await axios.put(
                 `${this.baseUrl}/messages/${messageId}/status`,
                 { status },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
-                }
+                { headers: this.getHeaders() }
             );
         } catch (error) {
-            console.error('Error updating message status:', error);
-            throw error;
+            const err = error as AxiosError<{ success: boolean; message: string }>;
+            console.error('Error updating message status:', err.response?.data || err.message);
+            throw new Error(err.response?.data?.message || 'Failed to update message status');
         }
     }
 
-    // Helper method to format timestamp
     formatTimestamp(timestamp: string): string {
         const date = new Date(timestamp);
         const now = new Date();

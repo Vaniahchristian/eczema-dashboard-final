@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
     Send,
     Paperclip,
-    ImageIcon,
+    Image as ImageIcon,
     File,
     Smile,
     MoreVertical,
@@ -21,16 +21,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip } from "@/components/ui/tooltip"
 import { useAuth } from "@/lib/auth"
-import { type Message, type Conversation } from "@/services/messageService"
+import { messageService, type Message, type Conversation } from "@/services/messageService"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
 
 interface MessageThreadProps {
     conversation: Conversation
     messages: Message[]
-    onSendMessage: (content: string, type?: Message['type'], attachments?: Message['attachments']) => void
-    onReaction: (messageId: string, reaction: string) => void
+    onSendMessage: (content: string, type?: Message['type'], attachments?: Message['attachments']) => Promise<void>
+    onReaction?: (messageId: string, reaction: string) => Promise<void> // Optional until backend supports it
 }
 
 export function MessageThread({
@@ -39,13 +39,12 @@ export function MessageThread({
     onSendMessage,
     onReaction,
 }: MessageThreadProps) {
-    const auth = useAuth()
-    const user = auth?.user
+    const { user } = useAuth()
     const [newMessage, setNewMessage] = useState("")
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false)
     const [isAttaching, setIsAttaching] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const { toast } = useToast()
 
     useEffect(() => {
         scrollToBottom()
@@ -55,10 +54,18 @@ export function MessageThread({
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!newMessage.trim()) return
-        onSendMessage(newMessage)
-        setNewMessage("")
+        try {
+            await onSendMessage(newMessage, 'text')
+            setNewMessage("")
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to send message",
+                variant: "destructive"
+            })
+        }
     }
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -72,21 +79,38 @@ export function MessageThread({
         const file = e.target.files?.[0]
         if (!file) return
 
-        const type = file.type.startsWith('image/') ? 'image' : 'file'
-        const attachment = {
-            url: URL.createObjectURL(file),
-            type: file.type,
-            name: file.name,
-            size: file.size
+        try {
+            const type = file.type.startsWith('image/') ? 'image' : 'file'
+            // Simulate upload (replace with actual backend upload logic)
+            const attachment = {
+                url: URL.createObjectURL(file), // Temporary; replace with backend URL
+                type: file.type,
+                name: file.name,
+                size: file.size
+            }
+            await onSendMessage('', type, [attachment])
+            setIsAttaching(false)
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to upload attachment",
+                variant: "destructive"
+            })
         }
-
-        onSendMessage('', type, [attachment])
-        setIsAttaching(false)
     }
 
-    const formatTimestamp = (timestamp: string) => {
-        const date = new Date(timestamp)
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const handleReaction = async (messageId: string, reaction: string) => {
+        if (onReaction) {
+            try {
+                await onReaction(messageId, reaction)
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "Failed to add reaction",
+                    variant: "destructive"
+                })
+            }
+        }
     }
 
     if (!user) return null
@@ -122,8 +146,8 @@ export function MessageThread({
             <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                     {messages.map((message, index) => {
-                        const isUser = message.senderId === user.id
-                        const showAvatar = index === 0 || messages[index - 1]?.senderId !== message.senderId
+                        const isUser = message.fromDoctor === (user.role === 'doctor')
+                        const showAvatar = index === 0 || messages[index - 1]?.fromDoctor !== message.fromDoctor
 
                         return (
                             <motion.div
@@ -141,17 +165,21 @@ export function MessageThread({
                                         <AvatarFallback>{message.senderName?.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                 )}
-                                <div className={cn(
-                                    "flex flex-col space-y-2 max-w-[70%]",
-                                    isUser && "items-end"
-                                )}>
+                                <div
+                                    className={cn(
+                                        "flex flex-col space-y-2 max-w-[70%]",
+                                        isUser && "items-end"
+                                    )}
+                                >
                                     {showAvatar && !isUser && (
                                         <span className="text-sm font-medium">{message.senderName}</span>
                                     )}
-                                    <div className={cn(
-                                        "rounded-lg p-3",
-                                        isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-                                    )}>
+                                    <div
+                                        className={cn(
+                                            "rounded-lg p-3",
+                                            isUser ? "bg-primary text-primary-foreground" : "bg-muted"
+                                        )}
+                                    >
                                         {message.type === 'text' && (
                                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                                         )}
@@ -173,30 +201,31 @@ export function MessageThread({
                                         )}
                                         <div className="mt-1 flex items-center space-x-2">
                                             <span className="text-xs opacity-70">
-                                                {formatTimestamp(message.timestamp)}
+                                                {messageService.formatTimestamp(message.timestamp)}
                                             </span>
                                             {isUser && (
                                                 message.status === 'read' ? (
-                                                    <CheckCircle className="h-3 w-3 text-primary" />
+                                                    <CheckCircle className="h-3 w-3 text-primary-foreground" />
                                                 ) : (
-                                                    <Clock className="h-3 w-3" />
+                                                    <Clock className="h-3 w-3 opacity-70" />
                                                 )
                                             )}
                                         </div>
                                     </div>
+                                    {/* Placeholder for reaction UI until backend supports it */}
                                     {message.reaction && (
                                         <span className="text-xl">
                                             {message.reaction === 'thumbs_up' ? '👍' : '👎'}
                                         </span>
                                     )}
                                 </div>
-                                {!message.reaction && !isUser && (
+                                {!message.reaction && !isUser && onReaction && (
                                     <div className="flex space-x-1">
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-6 w-6"
-                                            onClick={() => onReaction(message.id, 'thumbs_up')}
+                                            onClick={() => handleReaction(message.id, 'thumbs_up')}
                                         >
                                             <ThumbsUp className="h-4 w-4" />
                                         </Button>
@@ -204,7 +233,7 @@ export function MessageThread({
                                             variant="ghost"
                                             size="icon"
                                             className="h-6 w-6"
-                                            onClick={() => onReaction(message.id, 'thumbs_down')}
+                                            onClick={() => handleReaction(message.id, 'thumbs_down')}
                                         >
                                             <ThumbsDown className="h-4 w-4" />
                                         </Button>
@@ -220,11 +249,7 @@ export function MessageThread({
             {/* Input */}
             <div className="p-4 border-t">
                 <div className="flex items-center space-x-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    >
+                    <Button variant="ghost" size="icon" disabled>
                         <Smile className="h-4 w-4" />
                     </Button>
                     <Button
@@ -236,16 +261,6 @@ export function MessageThread({
                         }}
                     >
                         <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                            setIsAttaching(true)
-                            fileInputRef.current?.click()
-                        }}
-                    >
-                        <ImageIcon className="h-4 w-4" />
                     </Button>
                     <input
                         type="file"

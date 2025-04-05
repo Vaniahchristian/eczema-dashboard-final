@@ -7,15 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Send, Paperclip, Image as ImageIcon, File, Clock,
-  CheckCheck, Search, Plus, MessageSquare
+  Send, Paperclip, Image as ImageIcon, File, Clock, CheckCheck, Search, Plus, MessageSquare
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function MessagesPage() {
   const { user } = useAuth()
@@ -26,14 +24,19 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchConversations()
+    const interval = setInterval(fetchConversations, 10000) // Poll every 10s
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.id)
+      const interval = setInterval(() => fetchMessages(selectedConversation.id), 5000) // Poll every 5s
+      return () => clearInterval(interval)
     }
   }, [selectedConversation])
 
@@ -46,28 +49,28 @@ export default function MessagesPage() {
       const updateUnreadMessages = async () => {
         try {
           const unreadMessages = messages.filter(
-            msg => !msg.fromDoctor && msg.status !== 'read' && user.role === 'doctor'
+            (msg) => !msg.fromDoctor && msg.status !== 'read' && user.role === 'doctor'
           )
-          
           for (const msg of unreadMessages) {
             await messageService.updateMessageStatus(msg.id, 'read')
           }
-
           if (unreadMessages.length > 0) {
-            setMessages(prev =>
-              prev.map(msg =>
-                unreadMessages.some(u => u.id === msg.id)
-                  ? { ...msg, status: 'read' }
-                  : msg
+            setMessages((prev) =>
+              prev.map((msg) =>
+                unreadMessages.some((u) => u.id === msg.id) ? { ...msg, status: 'read' } : msg
               )
             )
-            fetchConversations() // Update unread counts
+            await fetchConversations() // Update unreadCount
           }
         } catch (error) {
           console.error('Error updating message status:', error)
+          toast({
+            title: "Error",
+            description: "Failed to update message status",
+            variant: "destructive"
+          })
         }
       }
-
       updateUnreadMessages()
     }
   }, [selectedConversation, messages, user])
@@ -79,6 +82,11 @@ export default function MessagesPage() {
       setConversations(data)
     } catch (error) {
       console.error("Error fetching conversations:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load conversations",
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
@@ -91,6 +99,11 @@ export default function MessagesPage() {
       setMessages(data)
     } catch (error) {
       console.error("Error fetching messages:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load messages",
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
@@ -102,23 +115,21 @@ export default function MessagesPage() {
 
     try {
       setLoading(true)
-      const fromDoctor = user.role === 'doctor'
-      const patientId = fromDoctor ? selectedConversation.participantId : user.id
-      const doctorId = fromDoctor ? user.id : selectedConversation.participantId
-
       const message = await messageService.sendMessage(
         selectedConversation.id,
         newMessage,
-        'text',
-        fromDoctor,
-        patientId,
-        doctorId
+        'text' // Backend derives fromDoctor, patientId, doctorId
       )
-
       setMessages((prev) => [...prev, message])
       setNewMessage("")
+      await fetchConversations() // Update lastMessage and unreadCount
     } catch (error) {
       console.error("Error sending message:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send message",
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
@@ -128,8 +139,9 @@ export default function MessagesPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Adjust filtering since backend uses updatedAt, not status
   const filteredConversations = conversations.filter(
-    (conv) => conv.status === activeTab
+    (conv) => (activeTab === 'active' ? !!conv.updatedAt : !conv.updatedAt)
   )
 
   return (
@@ -149,7 +161,7 @@ export default function MessagesPage() {
               placeholder="Search conversations..."
               className="pl-8"
               value={""}
-              onChange={(e) => {}}
+              onChange={(e) => { }}
             />
           </div>
         </CardHeader>
@@ -160,13 +172,12 @@ export default function MessagesPage() {
               <TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger>
             </TabsList>
           </Tabs>
-          <ScrollArea className="h-[calc(100vh-8rem)]">
+          <ScrollArea className="h-[calc(100vh-12rem)]">
             {filteredConversations.map((conversation) => (
               <div
                 key={conversation.id}
-                className={`p-4 cursor-pointer hover:bg-gray-100 ${
-                  selectedConversation?.id === conversation.id ? "bg-gray-100" : ""
-                }`}
+                className={`p-4 cursor-pointer hover:bg-gray-100 ${selectedConversation?.id === conversation.id ? "bg-gray-100" : ""
+                  }`}
                 onClick={() => setSelectedConversation(conversation)}
               >
                 <div className="flex items-center gap-3">
@@ -213,12 +224,8 @@ export default function MessagesPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="font-semibold">
-                    {selectedConversation.participantName}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    {selectedConversation.participantRole}
-                  </p>
+                  <h2 className="font-semibold">{selectedConversation.participantName}</h2>
+                  <p className="text-sm text-gray-500">{selectedConversation.participantRole}</p>
                 </div>
               </div>
             </div>
@@ -228,23 +235,37 @@ export default function MessagesPage() {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex ${
-                      message.fromDoctor === (user?.role === 'doctor')
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
+                    className={`flex ${message.fromDoctor === (user?.role === 'doctor') ? "justify-end" : "justify-start"
+                      }`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
-                        message.fromDoctor === (user?.role === 'doctor')
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary"
-                      }`}
+                      className={`flex items-end gap-2 ${message.fromDoctor === (user?.role === 'doctor') ? "flex-row-reverse" : "flex-row"
+                        }`}
                     >
-                      <p>{message.content}</p>
-                      <span className="text-xs opacity-70">
-                        {messageService.formatTimestamp(message.timestamp)}
-                      </span>
+                      <Avatar>
+                        <AvatarImage src={message.fromDoctor === (user?.role === 'doctor') ? user?.profileImage : message.senderImage} />
+                        <AvatarFallback>
+                          {(message.fromDoctor === (user?.role === 'doctor') ? user?.firstName : message.senderName)
+                            ?.split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div
+                        className={`max-w-[70%] rounded-lg p-3 ${message.fromDoctor === (user?.role === 'doctor')
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary"
+                          }`}
+                      >
+                        <p>{message.content}</p>
+                        <div className="flex items-center justify-end mt-1 text-xs opacity-70">
+                          <Clock className="h-3 w-3 mr-1" />
+                          <span>{messageService.formatTimestamp(message.timestamp)}</span>
+                          {message.fromDoctor === (user?.role === 'doctor') && message.status === 'read' && (
+                            <CheckCheck className="h-3 w-3 ml-1" />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -262,7 +283,7 @@ export default function MessagesPage() {
                 />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" disabled={loading}>
                       <Paperclip className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -286,6 +307,7 @@ export default function MessagesPage() {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500">
+            <MessageSquare className="h-8 w-8 mr-2" />
             Select a conversation to start messaging
           </div>
         )}

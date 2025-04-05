@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Search, Plus, CheckCircle, Clock, Filter } from "lucide-react"
+import { Search, Plus, CheckCircle, Clock } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,9 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { useAuth } from "@/lib/auth"
-import { type Conversation } from "@/services/messageService"
+import { messageService, type Conversation } from "@/services/messageService"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/use-toast"
 
 interface ConversationsListProps {
     activeConversationId: string | null
@@ -26,62 +27,49 @@ export function ConversationsList({
     activeConversationId,
     onSelectConversation,
 }: ConversationsListProps) {
-    const auth = useAuth()
+    const { user } = useAuth()
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
-    const [filter, setFilter] = useState<"all" | "unread" | "doctors" | "support">("all")
+    const [filter, setFilter] = useState<"all" | "unread" | "doctors" | "patients">("all")
+    const { toast } = useToast()
 
     useEffect(() => {
         fetchConversations()
+        const interval = setInterval(fetchConversations, 10000) // Poll every 10s
+        return () => clearInterval(interval)
     }, [])
 
     const fetchConversations = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/conversations`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
+            setLoading(true)
+            const data = await messageService.getConversations()
+            setConversations(data)
+        } catch (error) {
+            console.error("Error fetching conversations:", error)
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to load conversations",
+                variant: "destructive"
             })
-            if (!response.ok) throw new Error('Failed to fetch conversations')
-            const data = await response.json()
-            setConversations(data.data)
-            setLoading(false)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred')
+        } finally {
             setLoading(false)
         }
     }
 
     // Apply filters and search
     const filteredConversations = conversations.filter((conv) => {
-        const matchesSearch = conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            conv.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesSearch =
+            conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (conv.lastMessage?.content || "").toLowerCase().includes(searchQuery.toLowerCase())
 
         if (!matchesSearch) return false
 
         if (filter === "unread") return conv.unreadCount > 0
-        if (filter === "doctors") return conv.participantRole.toLowerCase().includes("doctor")
-        if (filter === "support") return conv.participantRole.toLowerCase().includes("support")
+        if (filter === "doctors") return conv.participantRole === "doctor"
+        if (filter === "patients") return conv.participantRole === "patient"
         return true
     })
-
-    const formatTimestamp = (timestamp: string) => {
-        const date = new Date(timestamp)
-        const now = new Date()
-        const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-
-        if (diffInDays === 0) {
-            return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        } else if (diffInDays === 1) {
-            return "Yesterday"
-        } else if (diffInDays < 7) {
-            return date.toLocaleDateString([], { weekday: "short" })
-        } else {
-            return date.toLocaleDateString([], { month: "short", day: "numeric" })
-        }
-    }
 
     if (loading) {
         return (
@@ -91,27 +79,20 @@ export function ConversationsList({
         )
     }
 
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                <p className="text-destructive mb-4">{error}</p>
-                <Button onClick={fetchConversations}>Try Again</Button>
-            </div>
-        )
-    }
-
     return (
         <div className="h-full flex flex-col">
             {/* Header */}
             <div className="p-4 border-b">
                 <div className="flex items-center space-x-2 mb-4">
-                    <Input
-                        placeholder="Search conversations..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1"
-                        prefix={<Search className="h-4 w-4 text-muted-foreground" />}
-                    />
+                    <div className="relative flex-1">
+                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-8" // Padding-left to accommodate icon
+                        />
+                    </div>
                     <Button variant="outline" size="icon">
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -124,7 +105,7 @@ export function ConversationsList({
                         <SelectItem value="all">All Messages</SelectItem>
                         <SelectItem value="unread">Unread</SelectItem>
                         <SelectItem value="doctors">Doctors</SelectItem>
-                        <SelectItem value="support">Support</SelectItem>
+                        <SelectItem value="patients">Patients</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -157,7 +138,7 @@ export function ConversationsList({
                                 <div className="flex items-center justify-between">
                                     <h3 className="font-medium truncate">{conversation.participantName}</h3>
                                     <span className="text-xs text-muted-foreground">
-                                        {conversation.lastMessage && formatTimestamp(conversation.lastMessage.timestamp)}
+                                        {conversation.lastMessage && messageService.formatTimestamp(conversation.lastMessage.timestamp)}
                                     </span>
                                 </div>
                                 <p className="text-sm text-muted-foreground truncate">
