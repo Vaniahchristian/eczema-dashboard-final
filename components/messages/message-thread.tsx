@@ -30,7 +30,7 @@ interface MessageThreadProps {
     conversation: Conversation
     messages: Message[]
     onSendMessage: (content: string, type?: Message['type'], attachments?: Message['attachments']) => Promise<void>
-    onReaction?: (messageId: string, reaction: string) => Promise<void> // Optional until backend supports it
+    onReaction: (messageId: string, reaction: string) => Promise<void>
 }
 
 export function MessageThread({
@@ -41,7 +41,6 @@ export function MessageThread({
 }: MessageThreadProps) {
     const { user } = useAuth()
     const [newMessage, setNewMessage] = useState("")
-    const [isAttaching, setIsAttaching] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { toast } = useToast()
@@ -62,7 +61,7 @@ export function MessageThread({
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to send message",
+                description: error instanceof Error ? error.message : "Failed to send message",
                 variant: "destructive"
             })
         }
@@ -80,36 +79,45 @@ export function MessageThread({
         if (!file) return
 
         try {
+            const formData = new FormData()
+            formData.append('file', file)
+            const token = localStorage.getItem('token')
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/upload`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            })
+            if (!response.ok) throw new Error('File upload failed')
+            const { url } = await response.json()
+
             const type = file.type.startsWith('image/') ? 'image' : 'file'
-            // Simulate upload (replace with actual backend upload logic)
             const attachment = {
-                url: URL.createObjectURL(file), // Temporary; replace with backend URL
+                url,
                 type: file.type,
                 name: file.name,
-                size: file.size
+                size: file.size,
             }
             await onSendMessage('', type, [attachment])
-            setIsAttaching(false)
         } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to upload attachment",
+                description: error instanceof Error ? error.message : "Failed to upload file",
                 variant: "destructive"
             })
         }
     }
 
     const handleReaction = async (messageId: string, reaction: string) => {
-        if (onReaction) {
-            try {
-                await onReaction(messageId, reaction)
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "Failed to add reaction",
-                    variant: "destructive"
-                })
-            }
+        try {
+            await onReaction(messageId, reaction)
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to add reaction",
+                variant: "destructive"
+            })
         }
     }
 
@@ -130,13 +138,13 @@ export function MessageThread({
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" disabled>
                         <Phone className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" disabled>
                         <Video className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" disabled>
                         <MoreVertical className="h-4 w-4" />
                     </Button>
                 </div>
@@ -193,7 +201,13 @@ export function MessageThread({
                                         {message.type === 'file' && message.attachments?.[0] && (
                                             <div className="flex items-center space-x-2">
                                                 <File className="h-4 w-4" />
-                                                <span className="text-sm">{message.attachments[0].name}</span>
+                                                <a
+                                                    href={message.attachments[0].url}
+                                                    download={message.attachments[0].name}
+                                                    className="text-sm hover:underline"
+                                                >
+                                                    {message.attachments[0].name}
+                                                </a>
                                                 <Button variant="ghost" size="icon">
                                                     <Download className="h-4 w-4" />
                                                 </Button>
@@ -212,14 +226,13 @@ export function MessageThread({
                                             )}
                                         </div>
                                     </div>
-                                    {/* Placeholder for reaction UI until backend supports it */}
                                     {message.reaction && (
                                         <span className="text-xl">
                                             {message.reaction === 'thumbs_up' ? '👍' : '👎'}
                                         </span>
                                     )}
                                 </div>
-                                {!message.reaction && !isUser && onReaction && (
+                                {!message.reaction && !isUser && (
                                     <div className="flex space-x-1">
                                         <Button
                                             variant="ghost"
@@ -255,10 +268,7 @@ export function MessageThread({
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                            setIsAttaching(true)
-                            fileInputRef.current?.click()
-                        }}
+                        onClick={() => fileInputRef.current?.click()}
                     >
                         <Paperclip className="h-4 w-4" />
                     </Button>

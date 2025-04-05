@@ -57,6 +57,35 @@ export function ConversationsList({
         }
     }
 
+    const handleCreateConversation = async () => {
+        try {
+            const participantId = prompt("Enter participant ID (e.g., UUID from users table):")
+            if (!participantId) return
+            const { id } = await messageService.createConversation(participantId)
+            await fetchConversations()
+            const newConversation = conversations.find(conv => conv.id === id)
+            if (newConversation) {
+                onSelectConversation(newConversation)
+                toast({ title: "Success", description: "Conversation created" })
+            } else {
+                // If not immediately available, fetch explicitly
+                const updatedConversations = await messageService.getConversations()
+                const fetchedNewConversation = updatedConversations.find(conv => conv.id === id)
+                if (fetchedNewConversation) {
+                    onSelectConversation(fetchedNewConversation)
+                    toast({ title: "Success", description: "Conversation created" })
+                }
+            }
+        } catch (error) {
+            console.error("Error creating conversation:", error)
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to create conversation",
+                variant: "destructive"
+            })
+        }
+    }
+
     // Apply filters and search
     const filteredConversations = conversations.filter((conv) => {
         const matchesSearch =
@@ -90,10 +119,10 @@ export function ConversationsList({
                             placeholder="Search conversations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8" // Padding-left to accommodate icon
+                            className="pl-8"
                         />
                     </div>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" onClick={handleCreateConversation}>
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
