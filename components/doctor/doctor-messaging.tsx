@@ -3,22 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
-  ArrowLeft,
-  Search,
-  Send,
-  Paperclip,
-  Image,
-  File,
-  Mic,
-  MoreVertical,
-  Phone,
-  Video,
-  Info,
-  Clock,
-  CheckCheck,
-  User,
-  Plus,
-  MessageSquare,
+  ArrowLeft, Search, Send, Paperclip, Image, File, Mic, MoreVertical,
+  Phone, Video, Info, Clock, CheckCheck, User, Plus, MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,15 +13,11 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth"
 import { useToast } from "@/components/ui/use-toast"
-
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
@@ -43,10 +25,11 @@ interface Message {
   id: string
   content: string
   timestamp: string
-  sender: string
-  isRead: boolean
-  senderId: string
+  patientId: string
+  doctorId: string
+  fromDoctor: boolean
   senderName: string
+  senderRole: string
   senderImage?: string
   status: string
   type: string
@@ -60,83 +43,93 @@ interface Conversation {
   participantRole: string
   participantImage?: string
   unreadCount: number
+  status: 'active' | 'archived'
   lastMessage?: {
     id: string
     content: string
     timestamp: string
-    senderId: string
     status: string
-    type: string
-    attachments?: any[]
   }
-  updatedAt: string
-  status?: string
 }
 
 export default function DoctorMessaging() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null)
   const [messageText, setMessageText] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("active")
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
+  const { toast } = useToast()
 
   // Fetch conversations
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`${API_URL}/messages/conversations`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        const data = await response.json()
-        if (data.success) {
-          setConversations(data.data || []) // Ensure we always have an array
+  const fetchConversations = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/messages/conversations`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
-      } catch (error) {
-        console.error('Error fetching conversations:', error)
-        setConversations([]) // Set empty array on error
-      } finally {
-        setLoading(false)
+      })
+      const data = await response.json()
+      if (data.success) {
+        setConversations(data.data || [])
       }
+    } catch (error) {
+      console.error('Error fetching conversations:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load conversations",
+        variant: "destructive"
+      })
+      setConversations([])
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchConversations()
   }, [])
 
   // Fetch messages when conversation is selected
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!activeConversationId) return
+  const fetchMessages = async () => {
+    if (!activeConversationId) return
 
-      try {
-        setLoading(true)
-        const response = await fetch(`${API_URL}/messages/conversations/${activeConversationId}/messages`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        const data = await response.json()
-        if (data.success) {
-          setMessages(data.data || []) // Ensure we always have an array
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/messages/conversations/${activeConversationId}/messages`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
-      } catch (error) {
-        console.error('Error fetching messages:', error)
-        setMessages([]) // Set empty array on error
-      } finally {
-        setLoading(false)
+      })
+      const data = await response.json()
+      if (data.success) {
+        setMessages(data.data || [])
       }
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive"
+      })
+      setMessages([])
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchMessages()
+    const conversation = conversations.find(c => c.id === activeConversationId)
+    setActiveConversation(conversation || null)
   }, [activeConversationId])
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !activeConversationId) return
+    if (!messageText.trim() || !activeConversationId || !activeConversation) return
 
     try {
       const response = await fetch(`${API_URL}/messages/conversations/${activeConversationId}/messages`, {
@@ -147,36 +140,28 @@ export default function DoctorMessaging() {
         },
         body: JSON.stringify({
           content: messageText,
-          type: 'text'
+          type: 'text',
+          fromDoctor: true,
+          patientId: activeConversation.participantId,
+          doctorId: user?.id
         })
       })
 
       const data = await response.json()
       if (data.success) {
-        setMessages(prev => [...prev, data.data])
         setMessageText("")
-
-        // Update conversation list with new last message
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === activeConversationId 
-              ? {
-                  ...conv,
-                  lastMessage: {
-                    id: data.data.id,
-                    content: data.data.content,
-                    timestamp: data.data.timestamp,
-                    senderId: data.data.senderId,
-                    status: data.data.status,
-                    type: data.data.type
-                  }
-                }
-              : conv
-          )
-        )
+        setMessages(prev => [...prev, data.data])
+        fetchConversations() // Refresh conversations to update last message
+      } else {
+        throw new Error(data.message || 'Failed to send message')
       }
     } catch (error) {
       console.error('Error sending message:', error)
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive"
+      })
     }
   }
 
@@ -184,8 +169,6 @@ export default function DoctorMessaging() {
     (activeTab === "active" ? conv.status !== "archived" : conv.status === "archived") &&
     (searchQuery === "" || conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()))
   )
-
-  const activeConversation = conversations.find(conv => conv.id === activeConversationId)
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
@@ -329,10 +312,20 @@ export default function DoctorMessaging() {
                       <div
                         key={message.id}
                         className={`flex items-start gap-3 ${
-                          message.senderId === user?.id ? "flex-row-reverse" : ""
+                          message.fromDoctor ? "flex-row-reverse" : ""
                         }`}
                       >
-                        {message.senderId !== user?.id && (
+                        {message.fromDoctor ? (
+                          <Avatar>
+                            <AvatarImage src={user?.profileImage} />
+                            <AvatarFallback>
+                              {user?.firstName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
                           <Avatar>
                             <AvatarImage src={message.senderImage} />
                             <AvatarFallback>
@@ -345,7 +338,7 @@ export default function DoctorMessaging() {
                         )}
                         <div
                           className={`max-w-[70%] ${
-                            message.senderId === user?.id
+                            message.fromDoctor
                               ? "bg-indigo-500 text-white"
                               : "bg-slate-100 dark:bg-slate-800"
                           } rounded-lg p-3`}
@@ -353,7 +346,7 @@ export default function DoctorMessaging() {
                           <p className="text-sm">{message.content}</p>
                           <div
                             className={`flex items-center justify-end mt-1 text-xs ${
-                              message.senderId === user?.id
+                              message.fromDoctor
                                 ? "text-indigo-200"
                                 : "text-slate-500 dark:text-slate-400"
                             }`}
@@ -365,7 +358,7 @@ export default function DoctorMessaging() {
                                 minute: '2-digit'
                               })}
                             </span>
-                            {message.senderId === user?.id && message.status === 'read' && (
+                            {message.fromDoctor && message.status === 'read' && (
                               <CheckCheck className="h-3 w-3 ml-1" />
                             )}
                           </div>

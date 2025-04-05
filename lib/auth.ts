@@ -11,6 +11,7 @@ interface User {
   role: "patient" | "doctor" | "admin"
   dateOfBirth?: string
   gender?: string
+  profileImage?: string
 }
 
 interface RegisterData {
