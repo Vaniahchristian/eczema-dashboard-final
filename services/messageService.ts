@@ -2,22 +2,22 @@ import axios from 'axios';
 
 export interface Message {
     id: string;
-    senderId: string;
-    receiverId: string;
     content: string;
     timestamp: string;
+    patientId: string;
+    doctorId: string;
+    fromDoctor: boolean;
+    senderName: string;
+    senderRole: string;
+    senderImage?: string;
     status: 'sent' | 'delivered' | 'read';
-    type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion';
+    type: 'text' | 'image' | 'file' | 'voice';
     attachments?: Array<{
         url: string;
         type: string;
         name: string;
         size: number;
     }>;
-    reaction?: string;
-    isAiSuggestion?: boolean;
-    senderName?: string;
-    senderImage?: string;
 }
 
 export interface Conversation {
@@ -26,23 +26,26 @@ export interface Conversation {
     participantName: string;
     participantImage?: string;
     participantRole: string;
+    status: 'active' | 'archived';
+    unreadCount: number;
     lastMessage?: {
+        id: string;
         content: string;
         timestamp: string;
-        senderId: string;
         status: string;
     };
-    unreadCount: number;
-    isOnline: boolean;
 }
 
 class MessageService {
-    private baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
     async getConversations(): Promise<Conversation[]> {
         try {
-            const response = await axios.get(`${this.baseUrl}/api/messages/conversations`, {
-                withCredentials: true
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${this.baseUrl}/messages/conversations`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
             });
             return response.data.data;
         } catch (error) {
@@ -53,9 +56,14 @@ class MessageService {
 
     async getMessages(conversationId: string): Promise<Message[]> {
         try {
+            const token = localStorage.getItem('token');
             const response = await axios.get(
-                `${this.baseUrl}/api/messages/conversations/${conversationId}/messages`,
-                { withCredentials: true }
+                `${this.baseUrl}/messages/conversations/${conversationId}/messages`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
             return response.data.data;
         } catch (error) {
@@ -64,12 +72,32 @@ class MessageService {
         }
     }
 
-    async sendMessage(conversationId: string, content: string, type: Message['type'] = 'text', attachments?: Message['attachments']): Promise<Message> {
+    async sendMessage(
+        conversationId: string,
+        content: string,
+        type: Message['type'] = 'text',
+        fromDoctor: boolean,
+        patientId: string,
+        doctorId: string,
+        attachments?: Message['attachments']
+    ): Promise<Message> {
         try {
+            const token = localStorage.getItem('token');
             const response = await axios.post(
-                `${this.baseUrl}/api/messages/conversations/${conversationId}/messages`,
-                { content, type, attachments },
-                { withCredentials: true }
+                `${this.baseUrl}/messages/conversations/${conversationId}/messages`,
+                {
+                    content,
+                    type,
+                    fromDoctor,
+                    patientId,
+                    doctorId,
+                    attachments
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
             return response.data.data;
         } catch (error) {
@@ -80,10 +108,15 @@ class MessageService {
 
     async createConversation(participantId: string): Promise<{ id: string }> {
         try {
+            const token = localStorage.getItem('token');
             const response = await axios.post(
-                `${this.baseUrl}/api/messages/conversations`,
+                `${this.baseUrl}/messages/conversations`,
                 { participantId },
-                { withCredentials: true }
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
             return response.data.data;
         } catch (error) {
@@ -94,37 +127,20 @@ class MessageService {
 
     async updateMessageStatus(messageId: string, status: Message['status']): Promise<void> {
         try {
+            const token = localStorage.getItem('token');
             await axios.put(
-                `${this.baseUrl}/api/messages/messages/${messageId}/status`,
+                `${this.baseUrl}/messages/${messageId}/status`,
                 { status },
-                { withCredentials: true }
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
         } catch (error) {
             console.error('Error updating message status:', error);
             throw error;
         }
-    }
-
-    async addReaction(messageId: string, reaction: string): Promise<void> {
-        try {
-            await axios.post(
-                `${this.baseUrl}/api/messages/messages/${messageId}/reactions`,
-                { reaction },
-                { withCredentials: true }
-            );
-        } catch (error) {
-            console.error('Error adding reaction:', error);
-            throw error;
-        }
-    }
-
-    // Helper method to format message preview
-    formatMessagePreview(content: string, type: Message['type']): string {
-        if (type === 'text') return content.length > 50 ? `${content.slice(0, 47)}...` : content;
-        if (type === 'image') return '📷 Image';
-        if (type === 'file') return '📎 File';
-        if (type === 'voice') return '🎤 Voice Message';
-        return 'New message';
     }
 
     // Helper method to format timestamp
