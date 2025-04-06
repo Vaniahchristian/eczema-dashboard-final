@@ -26,9 +26,9 @@ export default function LandingHeader() {
             <Link href="#testimonials" className="text-sm font-medium hover:text-teal-600 dark:hover:text-teal-400">
               Testimonials
             </Link>
-            <Link href="#pricing" className="text-sm font-medium hover:text-teal-600 dark:hover:text-teal-400">
+            {/* <Link href="#pricing" className="text-sm font-medium hover:text-teal-600 dark:hover:text-teal-400">
               Pricing
-            </Link>
+            </Link> */}
           </nav>
         </div>
         <div className="flex items-center gap-4">
