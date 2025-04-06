@@ -37,7 +37,7 @@ export default function TestimonialsSection() {
             <div className="flex items-center space-x-4">
               <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
               <div>
-                <p className="text-sm font-medium">Sarah Johnson</p>
+                <p className="text-sm font-medium">Baluku AbdulSalam</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Living with eczema for 15 years</p>
               </div>
             </div>
@@ -67,7 +67,7 @@ export default function TestimonialsSection() {
             <div className="flex items-center space-x-4">
               <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
               <div>
-                <p className="text-sm font-medium">Michael Rodriguez</p>
+                <p className="text-sm font-medium">Devote Boniface</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Parent of a child with eczema</p>
               </div>
             </div>
@@ -97,7 +97,7 @@ export default function TestimonialsSection() {
             <div className="flex items-center space-x-4">
               <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700"></div>
               <div>
-                <p className="text-sm font-medium">Emily Chen</p>
+                <p className="text-sm font-medium">Kato Lubwama</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Severe eczema patient</p>
               </div>
             </div>
