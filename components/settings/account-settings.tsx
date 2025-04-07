@@ -52,11 +52,22 @@ export default function AccountSettings() {
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-md">
-                <Avatar>
-                  <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
-                  <AvatarFallback>AN</AvatarFallback>
+                <Avatar className="w-full h-full">
+                  <AvatarImage
+                    className="object-cover w-full h-full"
+                    src={
+                      user?.profileImage ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`
+                    }
+                    alt="User avatar"
+                  />
+                  <AvatarFallback className="w-full h-full flex items-center justify-center text-xl">
+                    {user?.firstName?.[0]}
+                    {user?.lastName?.[0]}
+                  </AvatarFallback>
                 </Avatar>
               </div>
+
               {isEditing && (
                 <div className="absolute bottom-0 right-0">
                   <Button size="icon" variant="default" className="rounded-full h-8 w-8">
@@ -65,6 +76,7 @@ export default function AccountSettings() {
                 </div>
               )}
             </div>
+
             {isEditing && (
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm">
