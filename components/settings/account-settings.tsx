@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
 import { Camera, Pencil, Save, Trash2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -51,13 +52,10 @@ export default function AccountSettings() {
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-md">
-                <Image
-                  src={user?.profileImage || "/placeholder.svg?height=128&width=128"}
-                  alt="Profile"
-                  width={128}
-                  height={128}
-                  className="object-cover"
-                />
+                <Avatar>
+                  <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+                  <AvatarFallback>AN</AvatarFallback>
+                </Avatar>
               </div>
               {isEditing && (
                 <div className="absolute bottom-0 right-0">
