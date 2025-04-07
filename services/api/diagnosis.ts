@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api/eczema';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
 
 export interface Diagnosis {
   _id: string;
@@ -38,33 +38,40 @@ export interface DiagnosisResponse {
   message?: string;
 }
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  };
+};
+
 export const diagnosisApi = {
   // Upload image and get diagnosis
   uploadImage: async (imageFile: File): Promise<DiagnosisResponse> => {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const response = await axios.post<DiagnosisResponse>(`${API_BASE_URL}/diagnose`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
+    const response = await axios.post<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnose`, formData, {
+      ...getAuthHeaders()
     });
     return response.data;
   },
 
   // Get all diagnoses
   getAllDiagnoses: async (): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses`, {
-      withCredentials: true,
+    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnoses`, {
+      ...getAuthHeaders()
     });
     return response.data;
   },
 
   // Get specific diagnosis
   getDiagnosis: async (diagnosisId: string): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses/${diagnosisId}`, {
-      withCredentials: true,
+    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnoses/${diagnosisId}`, {
+      ...getAuthHeaders()
     });
     return response.data;
   },
@@ -76,10 +83,10 @@ export const diagnosisApi = {
     treatmentPlan: string;
   }): Promise<DiagnosisResponse> => {
     const response = await axios.post<DiagnosisResponse>(
-      `${API_BASE_URL}/diagnoses/${diagnosisId}/review`,
+      `${API_BASE_URL}/eczema/diagnoses/${diagnosisId}/review`,
       reviewData,
       {
-        withCredentials: true,
+        ...getAuthHeaders()
       }
     );
     return response.data;
