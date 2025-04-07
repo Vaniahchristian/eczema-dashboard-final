@@ -9,9 +9,18 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useAuth } from "@/lib/auth" // 👈 adjust path as needed
 
 export default function AccountSettings() {
+  const { user } = useAuth() // 👈 get user from Auth Context
   const [isEditing, setIsEditing] = useState(false)
 
   return (
@@ -43,7 +52,7 @@ export default function AccountSettings() {
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-md">
                 <Image
-                  src="/placeholder.svg?height=128&width=128"
+                  src={user?.profileImage || "/placeholder.svg?height=128&width=128"}
                   alt="Profile"
                   width={128}
                   height={128}
@@ -73,27 +82,27 @@ export default function AccountSettings() {
           </div>
         </div>
 
-        {/* Profile Information */}
+        {/* Profile Info */}
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" defaultValue="Sarah" disabled={!isEditing} />
+              <Input id="firstName" defaultValue={user?.firstName || ""} disabled={!isEditing} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" defaultValue="Johnson" disabled={!isEditing} />
+              <Input id="lastName" defaultValue={user?.lastName || ""} disabled={!isEditing} />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
-            <Input id="email" type="email" defaultValue="sarah.johnson@example.com" disabled={!isEditing} />
+            <Input id="email" type="email" defaultValue={user?.email || ""} disabled />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" defaultValue="+1 (555) 123-4567" disabled={!isEditing} />
+            <Input id="phone" type="tel" placeholder="+ (256)75 123-4567" disabled={!isEditing} />
           </div>
 
           <div className="space-y-2">
@@ -101,7 +110,7 @@ export default function AccountSettings() {
             <Textarea
               id="bio"
               rows={3}
-              defaultValue="Living with eczema for 15 years. Passionate about helping others manage their skin conditions through technology and community support."
+              placeholder="Tell us something about yourself"
               disabled={!isEditing}
               className="resize-none"
             />
@@ -110,11 +119,16 @@ export default function AccountSettings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth">Date of Birth</Label>
-              <Input id="dateOfBirth" type="date" defaultValue="1990-05-15" disabled={!isEditing} />
+              <Input
+                id="dateOfBirth"
+                type="date"
+                defaultValue={user?.dateOfBirth || ""}
+                disabled={!isEditing}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
-              <Select disabled={!isEditing} defaultValue="female">
+              <Select disabled={!isEditing} defaultValue={user?.gender || ""}>
                 <SelectTrigger id="gender">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
@@ -133,7 +147,7 @@ export default function AccountSettings() {
 
       <Separator className="my-8" />
 
-      {/* Account Preferences */}
+      {/* Preferences */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Account Preferences</h3>
         <div className="space-y-4">
@@ -150,7 +164,9 @@ export default function AccountSettings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Profile Visibility</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Allow other users to see your profile</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Allow other users to see your profile
+              </p>
             </div>
             <Switch id="profile-visibility" defaultChecked disabled={!isEditing} />
           </div>
@@ -187,4 +203,3 @@ export default function AccountSettings() {
     </div>
   )
 }
-
