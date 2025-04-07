@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api/eczema';
 
 export interface Diagnosis {
   _id: string;
@@ -18,7 +18,7 @@ export interface Diagnosis {
     doctorId: string;
     review: string;
     reviewedAt: string;
-    updatedSeverity: string;
+    updatedSeverity: 'Mild' | 'Moderate' | 'Severe';
     treatmentPlan: string;
   };
   metadata?: {
@@ -48,31 +48,39 @@ export const diagnosisApi = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      withCredentials: true,
     });
     return response.data;
   },
 
   // Get all diagnoses
   getAllDiagnoses: async (): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses`);
+    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses`, {
+      withCredentials: true,
+    });
     return response.data;
   },
 
   // Get specific diagnosis
   getDiagnosis: async (diagnosisId: string): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses/${diagnosisId}`);
+    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/diagnoses/${diagnosisId}`, {
+      withCredentials: true,
+    });
     return response.data;
   },
 
   // Add doctor's review
   addDoctorReview: async (diagnosisId: string, reviewData: {
     review: string;
-    updatedSeverity?: string;
+    updatedSeverity?: 'Mild' | 'Moderate' | 'Severe';
     treatmentPlan: string;
   }): Promise<DiagnosisResponse> => {
     const response = await axios.post<DiagnosisResponse>(
       `${API_BASE_URL}/diagnoses/${diagnosisId}/review`,
-      reviewData
+      reviewData,
+      {
+        withCredentials: true,
+      }
     );
     return response.data;
   }
