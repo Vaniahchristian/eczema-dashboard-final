@@ -1,12 +1,32 @@
 "use client"
 import { MapPin, Calendar, User, Clock, AlertTriangle, Pill, FileText, ImageIcon } from "lucide-react"
-import type { Diagnosis } from "./diagnoses-page"
+import { useState, useEffect } from "react"
+import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis"
 
 interface DiagnosisDetailProps {
-  diagnosis: Diagnosis
+  diagnosisId: string
 }
 
-export default function DiagnosisDetail({ diagnosis }: DiagnosisDetailProps) {
+export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDiagnosis = async () => {
+      try {
+        const response = await diagnosisApi.getDiagnosis(diagnosisId)
+        setDiagnosis(response.data as Diagnosis)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch diagnosis')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDiagnosis()
+  }, [diagnosisId])
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Mild":
@@ -20,16 +40,38 @@ export default function DiagnosisDetail({ diagnosis }: DiagnosisDetailProps) {
     }
   }
 
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading...</div>
+  }
+
+  if (error || !diagnosis) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-500">
+        {error || 'Diagnosis not found'}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{diagnosis.condition}</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            {diagnosis.isEczema ? 'Eczema Diagnosis' : 'Skin Condition Analysis'}
+          </h2>
           <div className="flex items-center mt-2">
             <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
-            <span className="text-sm text-slate-500 dark:text-slate-400 mr-3">{diagnosis.date}</span>
-            <User className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
-            <span className="text-sm text-slate-500 dark:text-slate-400">{diagnosis.doctor}</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400 mr-3">
+              {new Date(diagnosis.createdAt).toLocaleDateString()}
+            </span>
+            {diagnosis.doctorReview && (
+              <>
+                <User className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  Reviewed by Doctor
+                </span>
+              </>
+            )}
           </div>
         </div>
         <div className="mt-4 md:mt-0">
@@ -46,42 +88,27 @@ export default function DiagnosisDetail({ diagnosis }: DiagnosisDetailProps) {
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center mb-2">
               <MapPin className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Affected Areas</h3>
+              <h3 className="font-medium">Affected Area</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300">{diagnosis.location}</p>
+            <p className="text-slate-700 dark:text-slate-300">{diagnosis.bodyPart}</p>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center mb-2">
-              <AlertTriangle className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Symptoms</h3>
+          {diagnosis.doctorReview && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center mb-2">
+                <FileText className="h-4 w-4 text-sky-500 mr-2" />
+                <h3 className="font-medium">Doctor's Review</h3>
+              </div>
+              <p className="text-slate-700 dark:text-slate-300 text-sm">{diagnosis.doctorReview.review}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {diagnosis.symptoms.map((symptom, index) => (
-                <span
-                  key={index}
-                  className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300"
-                >
-                  {symptom}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center mb-2">
-              <FileText className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Clinical Notes</h3>
-            </div>
-            <p className="text-slate-700 dark:text-slate-300 text-sm">{diagnosis.notes}</p>
-          </div>
+          )}
 
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center mb-2">
               <Clock className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Follow-up Appointment</h3>
+              <h3 className="font-medium">Status</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300">{diagnosis.followUp}</p>
+            <p className="text-slate-700 dark:text-slate-300 capitalize">{diagnosis.status.replace('_', ' ')}</p>
           </div>
         </div>
 
@@ -89,65 +116,54 @@ export default function DiagnosisDetail({ diagnosis }: DiagnosisDetailProps) {
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center mb-2">
               <ImageIcon className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Images</h3>
+              <h3 className="font-medium">Image</h3>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {diagnosis.images.map((image, index) => (
-                <div key={index} className="relative rounded-lg overflow-hidden aspect-video">
-                  <img
-                    src={image || "/placeholder.svg"}
-                    alt={`Eczema condition ${index + 1}`}
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-              ))}
+            <div className="mt-2">
+              <div className="relative rounded-lg overflow-hidden aspect-video">
+                <img
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${diagnosis.imageUrl}`}
+                  alt="Skin condition"
+                  className="object-cover w-full h-full"
+                />
+              </div>
             </div>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center mb-2">
               <Pill className="h-4 w-4 text-sky-500 mr-2" />
-              <h3 className="font-medium">Treatment Plan</h3>
+              <h3 className="font-medium">Recommendations</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 text-sm">{diagnosis.treatment}</p>
+            <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 text-sm space-y-2">
+              {diagnosis.recommendations.map((rec, index) => (
+                <li key={index}>{rec}</li>
+              ))}
+            </ul>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center mb-2">
-              <h3 className="font-medium">Treatment Progress</h3>
-            </div>
-            <div className="mt-2">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-slate-500 dark:text-slate-400">Progress</span>
-                <span className="font-medium">{diagnosis.progress}%</span>
+          {diagnosis.doctorReview?.treatmentPlan && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center mb-2">
+                <h3 className="font-medium">Treatment Plan</h3>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
-                <div
-                  className="bg-gradient-to-r from-sky-500 to-teal-500 h-2.5 rounded-full"
-                  style={{ width: `${diagnosis.progress}%` }}
-                ></div>
-              </div>
+              <p className="text-slate-700 dark:text-slate-300 text-sm">
+                {diagnosis.doctorReview.treatmentPlan}
+              </p>
             </div>
-            <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-              {diagnosis.progress < 30 && "Treatment just started. Continue following the prescribed plan."}
-              {diagnosis.progress >= 30 &&
-                diagnosis.progress < 70 &&
-                "Treatment is progressing well. Keep following the prescribed plan."}
-              {diagnosis.progress >= 70 && "Treatment is almost complete. Continue maintenance as prescribed."}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       <div className="mt-6 flex justify-end space-x-3">
+        {diagnosis.needsDoctorReview && diagnosis.status !== 'reviewed' && (
+          <div className="px-4 py-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded-xl">
+            Pending Doctor Review
+          </div>
+        )}
         <button className="px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700">
           Print Report
-        </button>
-        <button className="px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          Request Follow-up
         </button>
       </div>
     </div>
   )
 }
-

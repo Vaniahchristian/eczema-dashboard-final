@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   LineChart,
@@ -17,46 +17,65 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import type { Diagnosis } from "./diagnoses-page"
+import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis"
 
-interface DiagnosisTrendsProps {
-  diagnoses: Diagnosis[]
-}
-
-export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
+export default function DiagnosisTrends() {
   const [activeChart, setActiveChart] = useState<"severity" | "symptoms" | "progress">("severity")
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDiagnoses = async () => {
+      try {
+        const response = await diagnosisApi.getAllDiagnoses()
+        setDiagnoses(response.data as Diagnosis[])
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch diagnoses')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDiagnoses()
+  }, [])
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading...</div>
+  }
+
+  if (error || !diagnoses.length) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-500">
+        {error || 'No diagnoses found'}
+      </div>
+    )
+  }
 
   // Sort diagnoses by date (oldest first for charts)
   const sortedDiagnoses = [...diagnoses].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   })
 
   // Prepare data for severity chart
   const severityData = sortedDiagnoses.map((d) => ({
-    date: d.date,
+    date: new Date(d.createdAt).toLocaleDateString(),
     severity: d.severity === "Mild" ? 1 : d.severity === "Moderate" ? 2 : 3,
     severityLabel: d.severity,
   }))
 
-  // Prepare data for symptoms chart
-  const symptomsData = sortedDiagnoses.map((d) => ({
-    date: d.date,
-    symptoms: d.symptoms.length,
+  // Prepare data for confidence chart
+  const confidenceData = sortedDiagnoses.map((d) => ({
+    date: new Date(d.createdAt).toLocaleDateString(),
+    confidence: d.confidenceScore * 100,
   }))
 
-  // Prepare data for progress chart
-  const progressData = sortedDiagnoses.map((d) => ({
-    date: d.date,
-    progress: d.progress,
-  }))
-
-  // Prepare data for symptom distribution pie chart
-  const allSymptoms = diagnoses.flatMap((d) => d.symptoms)
-  const symptomCounts: Record<string, number> = {}
-  allSymptoms.forEach((symptom) => {
-    symptomCounts[symptom] = (symptomCounts[symptom] || 0) + 1
+  // Prepare data for body part distribution pie chart
+  const bodyPartCounts: Record<string, number> = {}
+  diagnoses.forEach((d) => {
+    bodyPartCounts[d.bodyPart] = (bodyPartCounts[d.bodyPart] || 0) + 1
   })
-  const symptomDistribution = Object.entries(symptomCounts).map(([name, value]) => ({
+  const bodyPartDistribution = Object.entries(bodyPartCounts).map(([name, value]) => ({
     name,
     value,
   }))
@@ -99,7 +118,7 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             }`}
           >
-            Symptoms
+            Confidence
           </button>
           <button
             onClick={() => setActiveChart("progress")}
@@ -109,7 +128,7 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             }`}
           >
-            Progress
+            Distribution
           </button>
         </div>
       </div>
@@ -129,17 +148,11 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
                 <LineChart data={severityData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                   <XAxis dataKey="date" />
-                  <YAxis
-                    domain={[0, 4]}
-                    ticks={[1, 2, 3]}
-                    tickFormatter={(value) => {
-                      return value === 1 ? "Mild" : value === 2 ? "Moderate" : value === 3 ? "Severe" : ""
-                    }}
-                  />
+                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} tickFormatter={(value) => {
+                    return value === 1 ? 'Mild' : value === 2 ? 'Moderate' : 'Severe'
+                  }} />
                   <Tooltip
-                    formatter={(value, name) => {
-                      return [value === 1 ? "Mild" : value === 2 ? "Moderate" : "Severe", "Severity"]
-                    }}
+                    formatter={(value) => [value === 1 ? 'Mild' : value === 2 ? 'Moderate' : 'Severe', "Severity"]}
                     contentStyle={{
                       backgroundColor: "white",
                       borderColor: "#e2e8f0",
@@ -152,12 +165,7 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
                     dataKey="severity"
                     stroke="#0ea5e9"
                     strokeWidth={2}
-                    dot={{
-                      r: 6,
-                      strokeWidth: 2,
-                      fill: "white",
-                      stroke: (entry) => getSeverityColor(entry.severity),
-                    }}
+                    dot={{ r: 6, strokeWidth: 2, fill: "white", stroke: "#0ea5e9" }}
                     activeDot={{ r: 8 }}
                   />
                 </LineChart>
@@ -167,64 +175,7 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
 
           {activeChart === "symptoms" && (
             <motion.div
-              key="symptoms"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="h-full"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RechartsBarChart data={symptomsData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderColor: "#e2e8f0",
-                        borderRadius: "0.5rem",
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="symptoms" name="Number of Symptoms" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                  </RechartsBarChart>
-                </ResponsiveContainer>
-
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={symptomDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    >
-                      {symptomDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "white",
-                        borderColor: "#e2e8f0",
-                        borderRadius: "0.5rem",
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </motion.div>
-          )}
-
-          {activeChart === "progress" && (
-            <motion.div
-              key="progress"
+              key="confidence"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -232,12 +183,12 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
               className="h-full"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={progressData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <LineChart data={confidenceData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                   <XAxis dataKey="date" />
                   <YAxis domain={[0, 100]} />
                   <Tooltip
-                    formatter={(value) => [`${value}%`, "Progress"]}
+                    formatter={(value) => [`${value}%`, "Confidence"]}
                     contentStyle={{
                       backgroundColor: "white",
                       borderColor: "#e2e8f0",
@@ -247,13 +198,45 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="progress"
+                    dataKey="confidence"
                     stroke="#10b981"
                     strokeWidth={2}
                     dot={{ r: 6, strokeWidth: 2, fill: "white", stroke: "#10b981" }}
                     activeDot={{ r: 8 }}
                   />
                 </LineChart>
+              </ResponsiveContainer>
+            </motion.div>
+          )}
+
+          {activeChart === "progress" && (
+            <motion.div
+              key="distribution"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="h-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={bodyPartDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {bodyPartDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
               </ResponsiveContainer>
             </motion.div>
           )}
@@ -275,22 +258,21 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-            <h4 className="font-medium text-sky-600 dark:text-sky-400">Symptom Management</h4>
+            <h4 className="font-medium text-sky-600 dark:text-sky-400">Confidence Analysis</h4>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              {symptomDistribution.length > 0 &&
-                `Your most common symptom is "${symptomDistribution.sort((a, b) => b.value - a.value)[0].name}". 
-                Focus on managing this symptom with targeted treatments and lifestyle adjustments.`}
+              {confidenceData[confidenceData.length - 1].confidence >= 80
+                ? "Recent diagnoses show high confidence in the analysis. Continue providing clear images for best results."
+                : confidenceData[confidenceData.length - 1].confidence >= 60
+                  ? "Diagnosis confidence is moderate. Try to provide well-lit, clear images for more accurate results."
+                  : "Recent diagnoses show lower confidence. Please ensure good lighting and clear focus when taking photos."}
             </p>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
-            <h4 className="font-medium text-sky-600 dark:text-sky-400">Treatment Effectiveness</h4>
+            <h4 className="font-medium text-sky-600 dark:text-sky-400">Distribution Pattern</h4>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              {progressData[progressData.length - 1].progress - progressData[0].progress > 20
-                ? "Your treatment plan is showing significant effectiveness. Continue with the current regimen."
-                : progressData[progressData.length - 1].progress - progressData[0].progress > 0
-                  ? "Your treatment plan is showing some effectiveness. Consider discussing with your doctor about potential optimizations."
-                  : "Your treatment plan may need adjustment. Schedule a consultation with your doctor to explore alternative options."}
+              {`Most commonly affected area is "${bodyPartDistribution[0]?.name}". 
+              Consider discussing specific treatment options for this area with your healthcare provider.`}
             </p>
           </div>
         </div>
@@ -298,4 +280,3 @@ export default function DiagnosisTrends({ diagnoses }: DiagnosisTrendsProps) {
     </div>
   )
 }
-
