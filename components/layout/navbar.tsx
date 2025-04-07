@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
 
 export default function Navbar({
   onMenuClick,
@@ -20,6 +21,7 @@ export default function Navbar({
 }) {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const { user } = useAuth()
+  const router = useRouter()
 
   const toggleDarkMode = () => {
     if (isDarkMode) {
@@ -73,6 +75,7 @@ export default function Navbar({
           <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
             <MessageSquare className="h-5 w-5" />
             <span className="sr-only">Messages</span>
+
           </button>
 
           <DropdownMenu>
@@ -88,12 +91,38 @@ export default function Navbar({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg cursor-pointer">Profile</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg cursor-pointer">Settings</DropdownMenuItem>
-              <DropdownMenuItem className="rounded-lg cursor-pointer">Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="rounded-lg cursor-pointer">Log out</DropdownMenuItem>
+              <DropdownMenuItem
+                className="rounded-lg cursor-pointer"
+                onClick={() => router.push("/profile")}
+              >
+                Profile
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="rounded-lg cursor-pointer"
+                onClick={() => router.push("/settings")}
+              >
+                Settings
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="rounded-lg cursor-pointer"
+                onClick={() => router.push("/support")}
+              >
+                Support
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="rounded-lg cursor-pointer"
+                onClick={() => {
+                  // Optionally clear auth or call logout logic
+                  localStorage.removeItem("token")
+                  router.push("/login")
+                }}
+              >
+                Log out
+              </DropdownMenuItem>
+
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
