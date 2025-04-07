@@ -1,12 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   LineChart,
   Line,
-  BarChart as RechartsBarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -16,84 +14,61 @@ import {
   PieChart,
   Pie,
   Cell,
-} from "recharts"
-import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis"
+} from "recharts";
+import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis";
 
 export default function DiagnosisTrends() {
-  const [activeChart, setActiveChart] = useState<"severity" | "symptoms" | "progress">("severity")
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [activeChart, setActiveChart] = useState<"severity" | "confidence" | "distribution">("severity");
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      setError('Please log in to view trends');
+      setLoading(false);
+      return;
+    }
     const fetchDiagnoses = async () => {
       try {
-        const response = await diagnosisApi.getAllDiagnoses()
-        setDiagnoses(response.data as Diagnosis[])
+        const response = await diagnosisApi.getAllDiagnoses();
+        setDiagnoses(response.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch diagnoses')
+        setError(err instanceof Error ? err.message : 'Failed to fetch diagnoses');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
+    fetchDiagnoses();
+  }, []);
 
-    fetchDiagnoses()
-  }, [])
+  if (loading) return <div className="flex items-center justify-center h-64">Loading...</div>;
+  if (error || !diagnoses.length) return (
+    <div className="flex items-center justify-center h-64 text-red-500">
+      {error || 'No diagnoses found'}
+    </div>
+  );
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>
-  }
+  const sortedDiagnoses = [...diagnoses].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-  if (error || !diagnoses.length) {
-    return (
-      <div className="flex items-center justify-center h-64 text-red-500">
-        {error || 'No diagnoses found'}
-      </div>
-    )
-  }
-
-  // Sort diagnoses by date (oldest first for charts)
-  const sortedDiagnoses = [...diagnoses].sort((a, b) => {
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  })
-
-  // Prepare data for severity chart
   const severityData = sortedDiagnoses.map((d) => ({
     date: new Date(d.createdAt).toLocaleDateString(),
     severity: d.severity === "Mild" ? 1 : d.severity === "Moderate" ? 2 : 3,
     severityLabel: d.severity,
-  }))
+  }));
 
-  // Prepare data for confidence chart
   const confidenceData = sortedDiagnoses.map((d) => ({
     date: new Date(d.createdAt).toLocaleDateString(),
     confidence: d.confidenceScore * 100,
-  }))
+  }));
 
-  // Prepare data for body part distribution pie chart
-  const bodyPartCounts: Record<string, number> = {}
+  const bodyPartCounts: Record<string, number> = {};
   diagnoses.forEach((d) => {
-    bodyPartCounts[d.bodyPart] = (bodyPartCounts[d.bodyPart] || 0) + 1
-  })
-  const bodyPartDistribution = Object.entries(bodyPartCounts).map(([name, value]) => ({
-    name,
-    value,
-  }))
+    bodyPartCounts[d.bodyPart] = (bodyPartCounts[d.bodyPart] || 0) + 1;
+  });
+  const bodyPartDistribution = Object.entries(bodyPartCounts).map(([name, value]) => ({ name, value }));
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82ca9d"]
-
-  const getSeverityColor = (severity: number) => {
-    switch (severity) {
-      case 1:
-        return "#10b981" // emerald-500
-      case 2:
-        return "#f59e0b" // amber-500
-      case 3:
-        return "#ef4444" // red-500
-      default:
-        return "#10b981"
-    }
-  }
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82ca9d"];
 
   return (
     <div className="space-y-6">
@@ -103,29 +78,26 @@ export default function DiagnosisTrends() {
           <button
             onClick={() => setActiveChart("severity")}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              activeChart === "severity"
-                ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              activeChart === "severity" ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" :
+              "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             }`}
           >
             Severity
           </button>
           <button
-            onClick={() => setActiveChart("symptoms")}
+            onClick={() => setActiveChart("confidence")}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              activeChart === "symptoms"
-                ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              activeChart === "confidence" ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" :
+              "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             }`}
           >
             Confidence
           </button>
           <button
-            onClick={() => setActiveChart("progress")}
+            onClick={() => setActiveChart("distribution")}
             className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              activeChart === "progress"
-                ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              activeChart === "distribution" ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" :
+              "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
             }`}
           >
             Distribution
@@ -148,16 +120,12 @@ export default function DiagnosisTrends() {
                 <LineChart data={severityData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                   <XAxis dataKey="date" />
-                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} tickFormatter={(value) => {
-                    return value === 1 ? 'Mild' : value === 2 ? 'Moderate' : 'Severe'
-                  }} />
+                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} tickFormatter={(value) => 
+                    value === 1 ? 'Mild' : value === 2 ? 'Moderate' : 'Severe'
+                  } />
                   <Tooltip
                     formatter={(value) => [value === 1 ? 'Mild' : value === 2 ? 'Moderate' : 'Severe', "Severity"]}
-                    contentStyle={{
-                      backgroundColor: "white",
-                      borderColor: "#e2e8f0",
-                      borderRadius: "0.5rem",
-                    }}
+                    contentStyle={{ backgroundColor: "white", borderColor: "#e2e8f0", borderRadius: "0.5rem" }}
                   />
                   <Legend />
                   <Line
@@ -173,7 +141,7 @@ export default function DiagnosisTrends() {
             </motion.div>
           )}
 
-          {activeChart === "symptoms" && (
+          {activeChart === "confidence" && (
             <motion.div
               key="confidence"
               initial={{ opacity: 0 }}
@@ -189,11 +157,7 @@ export default function DiagnosisTrends() {
                   <YAxis domain={[0, 100]} />
                   <Tooltip
                     formatter={(value) => [`${value}%`, "Confidence"]}
-                    contentStyle={{
-                      backgroundColor: "white",
-                      borderColor: "#e2e8f0",
-                      borderRadius: "0.5rem",
-                    }}
+                    contentStyle={{ backgroundColor: "white", borderColor: "#e2e8f0", borderRadius: "0.5rem" }}
                   />
                   <Legend />
                   <Line
@@ -209,7 +173,7 @@ export default function DiagnosisTrends() {
             </motion.div>
           )}
 
-          {activeChart === "progress" && (
+          {activeChart === "distribution" && (
             <motion.div
               key="distribution"
               initial={{ opacity: 0 }}
@@ -252,7 +216,7 @@ export default function DiagnosisTrends() {
               {severityData[severityData.length - 1].severity < severityData[0].severity
                 ? "Your eczema severity has improved over time. Continue with your current treatment plan."
                 : severityData[severityData.length - 1].severity > severityData[0].severity
-                  ? "Your eczema severity has worsened over time. Consider consulting with your doctor about adjusting your treatment plan."
+                  ? "Your eczema severity has worsened over time. Consider consulting with your doctor."
                   : "Your eczema severity has remained stable. Continue monitoring and following your treatment plan."}
             </p>
           </div>
@@ -261,22 +225,21 @@ export default function DiagnosisTrends() {
             <h4 className="font-medium text-sky-600 dark:text-sky-400">Confidence Analysis</h4>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {confidenceData[confidenceData.length - 1].confidence >= 80
-                ? "Recent diagnoses show high confidence in the analysis. Continue providing clear images for best results."
+                ? "Recent diagnoses show high confidence in the analysis. Continue providing clear images."
                 : confidenceData[confidenceData.length - 1].confidence >= 60
-                  ? "Diagnosis confidence is moderate. Try to provide well-lit, clear images for more accurate results."
-                  : "Recent diagnoses show lower confidence. Please ensure good lighting and clear focus when taking photos."}
+                  ? "Diagnosis confidence is moderate. Try to provide well-lit, clear images."
+                  : "Recent diagnoses show lower confidence. Ensure good lighting and clear focus."}
             </p>
           </div>
 
           <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm">
             <h4 className="font-medium text-sky-600 dark:text-sky-400">Distribution Pattern</h4>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              {`Most commonly affected area is "${bodyPartDistribution[0]?.name}". 
-              Consider discussing specific treatment options for this area with your healthcare provider.`}
+              {`Most commonly affected area is "${bodyPartDistribution[0]?.name}". Consider discussing specific treatment options for this area.`}
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,6 +1,12 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
+
+// Create axios instance with defaults
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true, // For cookies if used
+});
 
 export interface Diagnosis {
   _id: string;
@@ -8,7 +14,7 @@ export interface Diagnosis {
   imageUrl: string;
   severity: 'Mild' | 'Moderate' | 'Severe';
   confidenceScore: number;
-  bodyPart: string; 
+  bodyPart: string;
   isEczema: boolean;
   recommendations: string[];
   needsDoctorReview: boolean;
@@ -40,11 +46,13 @@ interface ApiResponse<T> {
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('No authentication token found. Please log in.');
+  }
   return {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
+      Authorization: `Bearer ${token}`,
+    },
   };
 };
 
@@ -63,56 +71,87 @@ export const diagnosisApi = {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const response = await axios.post<ApiResponse<{
-      diagnosisId: string;
-      isEczema: boolean;
-      severity: 'Mild' | 'Moderate' | 'Severe';
-      confidence: number;
-      bodyPart: string;
-      recommendations: string[];
-      needsDoctorReview: boolean;
-      imageUrl: string;
-    }>>(`${API_BASE_URL}/eczema/diagnose`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      withCredentials: true,
-    });
-    return response.data;
+    try {
+      const response = await apiClient.post('/eczema/diagnose', formData, {
+        ...getAuthHeaders(),
+        headers: {
+          ...getAuthHeaders().headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to upload image');
+      }
+      throw error;
+    }
   },
 
   // Get all diagnoses
   getAllDiagnoses: async (): Promise<ApiResponse<Diagnosis[]>> => {
-    const response = await axios.get<ApiResponse<Diagnosis[]>>(`${API_BASE_URL}/eczema/diagnoses`, {
-      ...getAuthHeaders(),
-      withCredentials: true,
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get('/eczema/diagnoses', getAuthHeaders());
+      return {
+        ...response.data,
+        data: response.data.data.map((d: any) => ({
+          ...d,
+          _id: d.diagnosisId,
+          confidenceScore: d.confidence,
+        })),
+      };
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to fetch diagnoses');
+      }
+      throw error;
+    }
   },
 
   // Get specific diagnosis
   getDiagnosis: async (diagnosisId: string): Promise<ApiResponse<Diagnosis>> => {
-    const response = await axios.get<ApiResponse<Diagnosis>>(`${API_BASE_URL}/eczema/diagnoses/${diagnosisId}`, {
-      ...getAuthHeaders(),
-      withCredentials: true,
-    });
-    return response.data;
+    try {
+      const response = await apiClient.get(`/eczema/diagnoses/${diagnosisId}`, getAuthHeaders());
+      return {
+        ...response.data,
+        data: {
+          ...response.data.data,
+          _id: response.data.data.diagnosisId,
+          confidenceScore: response.data.data.confidence,
+        },
+      };
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to fetch diagnosis');
+      }
+      throw error;
+    }
   },
 
   // Add doctor's review
-  addDoctorReview: async (diagnosisId: string, reviewData: {
-    review: string;
-    updatedSeverity?: 'Mild' | 'Moderate' | 'Severe';
-    treatmentPlan: string;
-  }): Promise<ApiResponse<Diagnosis>> => {
-    const response = await axios.post<ApiResponse<Diagnosis>>(
-      `${API_BASE_URL}/eczema/diagnoses/${diagnosisId}/review`,
-      reviewData,
-      {
-        ...getAuthHeaders(),
-        withCredentials: true,
+  addDoctorReview: async (
+    diagnosisId: string,
+    reviewData: {
+      review: string;
+      updatedSeverity?: 'Mild' | 'Moderate' | 'Severe';
+      treatmentPlan: string;
+    }
+  ): Promise<ApiResponse<Diagnosis>> => {
+    try {
+      const response = await apiClient.post(`/eczema/diagnoses/${diagnosisId}/review`, reviewData, getAuthHeaders());
+      return {
+        ...response.data,
+        data: {
+          ...response.data.data,
+          _id: response.data.data.diagnosisId,
+          confidenceScore: response.data.data.confidence,
+        },
+      };
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to add doctor review');
       }
-    );
-    return response.data;
-  }
+      throw error;
+    }
+  },
 };

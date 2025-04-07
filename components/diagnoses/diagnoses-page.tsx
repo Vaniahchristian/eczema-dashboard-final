@@ -1,42 +1,47 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import DiagnosisHeader from "@/components/diagnoses/diagnosis-header"
-import DiagnosisTimeline from "@/components/diagnoses/diagnosis-timeline"
-import DiagnosisDetail from "@/components/diagnoses/diagnosis-detail"
-import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import DiagnosisHeader from "@/components/diagnoses/diagnosis-header";
+import DiagnosisTimeline from "@/components/diagnoses/diagnosis-timeline";
+import DiagnosisDetail from "@/components/diagnoses/diagnosis-detail";
+import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis";
 
 export default function DiagnosesPage() {
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
-  const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
+  const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDiagnoses = async () => {
     try {
-      const response = await diagnosisApi.getAllDiagnoses()
-      const diagnosesData = response.data as Diagnosis[]
-      setDiagnoses(diagnosesData)
-      if (!selectedDiagnosisId && diagnosesData.length > 0) {
-        setSelectedDiagnosisId(diagnosesData[0]._id)
+      const response = await diagnosisApi.getAllDiagnoses();
+      const diagnosesData = response.data;
+      setDiagnoses(diagnosesData);
+      if (selectedDiagnosisId === undefined && diagnosesData.length > 0) {
+        setSelectedDiagnosisId(diagnosesData[0]._id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch diagnoses')
+      setError(err instanceof Error ? err.message : 'Failed to fetch diagnoses');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchDiagnoses()
-  }, [])
+    if (!localStorage.getItem('token')) {
+      setError('Please log in to view diagnoses');
+      setLoading(false);
+      return;
+    }
+    fetchDiagnoses();
+  }, []);
 
   const handleNewDiagnosis = (diagnosisId: string) => {
-    setSelectedDiagnosisId(diagnosisId)
-    fetchDiagnoses() // Refresh the list
-  }
+    setSelectedDiagnosisId(diagnosisId);
+    fetchDiagnoses();
+  };
 
   return (
     <DashboardLayout>
@@ -81,7 +86,7 @@ export default function DiagnosesPage() {
               >
                 <DiagnosisTimeline
                   diagnoses={diagnoses}
-                  selectedDiagnosisId={selectedDiagnosisId || undefined}
+                  selectedDiagnosisId={selectedDiagnosisId}
                   onSelectDiagnosis={setSelectedDiagnosisId}
                 />
               </motion.div>
@@ -96,14 +101,11 @@ export default function DiagnosesPage() {
                   <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30">
                     <div className="border-b border-slate-200 dark:border-slate-700">
                       <div className="flex space-x-1 p-4">
-                        <button
-                          className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        >
+                        <button className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400">
                           Diagnosis Details
                         </button>
                       </div>
                     </div>
-
                     <div className="p-6">
                       <DiagnosisDetail diagnosisId={selectedDiagnosisId} />
                     </div>
@@ -115,5 +117,5 @@ export default function DiagnosesPage() {
         </motion.div>
       </div>
     </DashboardLayout>
-  )
+  );
 }
