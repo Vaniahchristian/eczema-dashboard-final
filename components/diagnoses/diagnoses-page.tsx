@@ -6,8 +6,6 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import DiagnosesHeader from "@/components/diagnoses/diagnoses-header"
 import DiagnosesTimeline from "@/components/diagnoses/diagnoses-timeline"
 import DiagnosisDetail from "@/components/diagnoses/diagnosis-detail"
-import DiagnosesComparison from "@/components/diagnoses/diagnoses-comparison"
-import DiagnosisTrends from "@/components/diagnoses/diagnosis-trends"
 
 export type Diagnosis = {
   id: string
@@ -26,9 +24,7 @@ export type Diagnosis = {
 
 export default function DiagnosesPage() {
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"detail" | "comparison" | "trends">("detail")
 
-  // Sample diagnoses data
   const diagnoses: Diagnosis[] = [
     {
       id: "diag-001",
@@ -78,7 +74,6 @@ export default function DiagnosesPage() {
     },
   ]
 
-  // Find the selected diagnosis
   const currentDiagnosis = diagnoses.find((d) => d.id === selectedDiagnosis) || diagnoses[0]
 
   return (
@@ -116,42 +111,15 @@ export default function DiagnosesPage() {
                 <div className="border-b border-slate-200 dark:border-slate-700">
                   <div className="flex space-x-1 p-4">
                     <button
-                      onClick={() => setActiveTab("detail")}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        activeTab === "detail"
-                          ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
+                      className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
                     >
                       Diagnosis Details
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("comparison")}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        activeTab === "comparison"
-                          ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      Compare Diagnoses
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("trends")}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        activeTab === "trends"
-                          ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      }`}
-                    >
-                      Trends & Analytics
                     </button>
                   </div>
                 </div>
 
                 <div className="p-6">
-                  {activeTab === "detail" && <DiagnosisDetail diagnosis={currentDiagnosis} />}
-                  {activeTab === "comparison" && <DiagnosesComparison diagnoses={diagnoses} />}
-                  {activeTab === "trends" && <DiagnosisTrends diagnoses={diagnoses} />}
+                  <DiagnosisDetail diagnosis={currentDiagnosis} />
                 </div>
               </div>
             </motion.div>
@@ -161,4 +129,3 @@ export default function DiagnosesPage() {
     </DashboardLayout>
   )
 }
-
