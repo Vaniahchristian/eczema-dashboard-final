@@ -1,6 +1,7 @@
 "use client"
-
-import { Bell, Menu, MessageSquare, Search, Sun, Moon } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Bell, Menu, MessageSquare, Sun, Moon } from "lucide-react"
 import { motion } from "framer-motion"
 import { useState } from "react"
 import {
@@ -18,6 +19,7 @@ export default function Navbar({
   onMenuClick: () => void
 }) {
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const { user } = useAuth()
 
   const toggleDarkMode = () => {
     if (isDarkMode) {
@@ -51,12 +53,7 @@ export default function Navbar({
         </div>
         <div className="flex items-center space-x-4 ml-auto">
           <div className="hidden md:flex relative">
-            {/* <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
-            <input
-              type="search"
-              placeholder="Search..."
-              className="w-[200px] lg:w-[300px] pl-10 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            /> */}
+            
           </div>
 
           <button
@@ -81,7 +78,10 @@ export default function Navbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-sky-200 dark:border-sky-900 hover:border-sky-300 dark:hover:border-sky-700 transition-colors">
-                <img src="/placeholder.svg?height=40&width=40" alt="Avatar" className="rounded-full object-cover" />
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={user?.profileImage || "/placeholder.svg?height=40&width=40"} />
+                  {/* <AvatarFallback>{user?.firstName?.[0] + user?.lastName?.[0]}</AvatarFallback> */}
+                </Avatar>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
