@@ -31,9 +31,9 @@ export default function SupportPage() {
             </div>
 
             <div className="space-y-8">
-              <KnowledgeBase />
-              <CommunitySupport />
-              <SupportStatus />
+              {/* <KnowledgeBase /> */}
+              {/* <CommunitySupport /> */}
+              {/* <SupportStatus /> */}
             </div>
           </div>
         </motion.div>
