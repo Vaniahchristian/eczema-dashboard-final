@@ -13,7 +13,7 @@ import FeedbackSection from "@/components/support/feedback-section"
 export default function SupportPage() {
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-8 mx-auto max-w-screen-2xl w-full">
+      <div className="p-6 md:p-8 mx-auto max-w-screen-2xl w-full">  
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
