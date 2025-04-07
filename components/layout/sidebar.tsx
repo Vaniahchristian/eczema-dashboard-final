@@ -125,10 +125,12 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Contact our support team for assistance with your eczema management.
               </p>
+              <Link href="/support">
               <button className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-center">
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Contact Support
               </button>
+              </Link>
             </div>
           </div>
         </div>

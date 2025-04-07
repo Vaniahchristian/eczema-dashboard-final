@@ -18,7 +18,7 @@ export default function SupportPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-screen-2xl mx-auto"
+          className="w-full mx-auto"
         >
           <SupportHeader />
 
