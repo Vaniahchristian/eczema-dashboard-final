@@ -9,9 +9,7 @@ type SettingsTab =
   | "notifications"
   | "accessibility"
   | "data"
-  | "appearance"
-  | "integrations"
-  | "advanced"
+  | "appearance";
 
 interface SettingsSidebarProps {
   activeTab: SettingsTab
@@ -49,16 +47,7 @@ const settingsTabs = [
     label: "Appearance",
     icon: <Brush className="h-5 w-5" />,
   },
-  {
-    id: "integrations",
-    label: "Integrations",
-    icon: <Globe className="h-5 w-5" />,
-  },
-  {
-    id: "advanced",
-    label: "Advanced",
-    icon: <Settings className="h-5 w-5" />,
-  },
+
 ]
 
 export default function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProps) {
