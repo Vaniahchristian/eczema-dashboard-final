@@ -79,7 +79,9 @@ export default function Navbar({
             <DropdownMenuTrigger asChild>
               <button className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-sky-200 dark:border-sky-900 hover:border-sky-300 dark:hover:border-sky-700 transition-colors">
                 <Avatar className="h-full w-full">
-                  <AvatarImage src={user?.profileImage || "/placeholder.svg?height=40&width=40"} />
+                  <AvatarImage src={user?.profileImage ||
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
+                   />
                   {/* <AvatarFallback>{user?.firstName?.[0] + user?.lastName?.[0]}</AvatarFallback> */}
                 </Avatar>
               </button>
