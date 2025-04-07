@@ -4,10 +4,8 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import AppointmentsHeader from "@/components/appointments/appointments-header"
-import AppointmentsCalendar from "@/components/appointments/appointments-calendar"
 import AppointmentsList from "@/components/appointments/appointments-list"
 import ScheduleAppointment from "@/components/appointments/schedule-appointment"
-import DoctorProfiles from "@/components/appointments/doctor-profiles"
 import { patientAppointmentService, type PatientAppointment, type Doctor } from "@/services/patientAppointmentService"
 import { toast } from "@/components/ui/use-toast"
 
@@ -120,28 +118,15 @@ export default function AppointmentsPage() {
     <DashboardLayout>
       <div className="container mx-auto py-6 space-y-8">
         <AppointmentsHeader
-          activeView={activeView}
-          onViewChange={setActiveView}
           onScheduleClick={() => setShowScheduleModal(true)}
         />
 
-        {activeView === "calendar" ? (
-          <AppointmentsCalendar
-            appointments={appointments}
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            onCancel={handleCancelAppointment}
-            onReschedule={handleRescheduleAppointment}
-            loading={loading}
-          />
-        ) : (
-          <AppointmentsList
-            appointments={appointments}
-            onCancel={handleCancelAppointment}
-            onReschedule={handleRescheduleAppointment}
-            loading={loading}
-          />
-        )}
+        <AppointmentsList
+          appointments={appointments}
+          onCancel={handleCancelAppointment}
+          onReschedule={handleRescheduleAppointment}
+          loading={loading}
+        />
 
         {showScheduleModal && (
           <ScheduleAppointment

@@ -1,15 +1,13 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Calendar, List, Plus, Filter } from "lucide-react"
+import { Plus, Filter } from "lucide-react"
 
 interface AppointmentsHeaderProps {
-  activeView: "calendar" | "list"
-  onViewChange: (view: "calendar" | "list") => void
   onScheduleClick: () => void
 }
 
-export default function AppointmentsHeader({ activeView, onViewChange, onScheduleClick }: AppointmentsHeaderProps) {
+export default function AppointmentsHeader({ onScheduleClick }: AppointmentsHeaderProps) {
   return (
     <div className="space-y-6">
       <motion.div
@@ -25,30 +23,6 @@ export default function AppointmentsHeader({ activeView, onViewChange, onSchedul
           <p className="text-slate-500 dark:text-slate-400 mt-2">Schedule and manage your doctor appointments</p>
         </div>
         <div className="flex space-x-3 mt-4 md:mt-0">
-          <div className="flex bg-white dark:bg-slate-800 rounded-xl shadow-sm p-1 border border-slate-200 dark:border-slate-700">
-            <button
-              onClick={() => onViewChange("calendar")}
-              className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                activeView === "calendar"
-                  ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-              }`}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>Calendar</span>
-            </button>
-            <button
-              onClick={() => onViewChange("list")}
-              className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                activeView === "list"
-                  ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-              }`}
-            >
-              <List className="h-4 w-4 mr-2" />
-              <span>List</span>
-            </button>
-          </div>
           <button className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700">
             <Filter className="h-4 w-4 mr-2" />
             <span>Filter</span>
