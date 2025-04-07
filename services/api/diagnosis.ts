@@ -32,9 +32,9 @@ export interface Diagnosis {
   };
 }
 
-export interface DiagnosisResponse {
+interface ApiResponse<T> {
   success: boolean;
-  data: Diagnosis | Diagnosis[];
+  data: T;
   message?: string;
 }
 
@@ -50,28 +50,51 @@ const getAuthHeaders = () => {
 
 export const diagnosisApi = {
   // Upload image and get diagnosis
-  uploadImage: async (imageFile: File): Promise<DiagnosisResponse> => {
+  uploadImage: async (imageFile: File): Promise<ApiResponse<{
+    diagnosisId: string;
+    isEczema: boolean;
+    severity: 'Mild' | 'Moderate' | 'Severe';
+    confidence: number;
+    bodyPart: string;
+    recommendations: string[];
+    needsDoctorReview: boolean;
+    imageUrl: string;
+  }>> => {
     const formData = new FormData();
     formData.append('image', imageFile);
 
-    const response = await axios.post<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnose`, formData, {
-      ...getAuthHeaders()
+    const response = await axios.post<ApiResponse<{
+      diagnosisId: string;
+      isEczema: boolean;
+      severity: 'Mild' | 'Moderate' | 'Severe';
+      confidence: number;
+      bodyPart: string;
+      recommendations: string[];
+      needsDoctorReview: boolean;
+      imageUrl: string;
+    }>>(`${API_BASE_URL}/eczema/diagnose`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      withCredentials: true,
     });
     return response.data;
   },
 
   // Get all diagnoses
-  getAllDiagnoses: async (): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnoses`, {
-      ...getAuthHeaders()
+  getAllDiagnoses: async (): Promise<ApiResponse<Diagnosis[]>> => {
+    const response = await axios.get<ApiResponse<Diagnosis[]>>(`${API_BASE_URL}/eczema/diagnoses`, {
+      ...getAuthHeaders(),
+      withCredentials: true,
     });
     return response.data;
   },
 
   // Get specific diagnosis
-  getDiagnosis: async (diagnosisId: string): Promise<DiagnosisResponse> => {
-    const response = await axios.get<DiagnosisResponse>(`${API_BASE_URL}/eczema/diagnoses/${diagnosisId}`, {
-      ...getAuthHeaders()
+  getDiagnosis: async (diagnosisId: string): Promise<ApiResponse<Diagnosis>> => {
+    const response = await axios.get<ApiResponse<Diagnosis>>(`${API_BASE_URL}/eczema/diagnoses/${diagnosisId}`, {
+      ...getAuthHeaders(),
+      withCredentials: true,
     });
     return response.data;
   },
@@ -81,12 +104,13 @@ export const diagnosisApi = {
     review: string;
     updatedSeverity?: 'Mild' | 'Moderate' | 'Severe';
     treatmentPlan: string;
-  }): Promise<DiagnosisResponse> => {
-    const response = await axios.post<DiagnosisResponse>(
+  }): Promise<ApiResponse<Diagnosis>> => {
+    const response = await axios.post<ApiResponse<Diagnosis>>(
       `${API_BASE_URL}/eczema/diagnoses/${diagnosisId}/review`,
       reviewData,
       {
-        ...getAuthHeaders()
+        ...getAuthHeaders(),
+        withCredentials: true,
       }
     );
     return response.data;

@@ -32,8 +32,12 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
       }
 
       const response = await diagnosisApi.uploadImage(file)
-      const diagnosis = response.data as { _id: string }
-      onNewDiagnosis?.(diagnosis._id)
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to process image')
+      }
+      
+      onNewDiagnosis?.(response.data.diagnosisId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload image')
     } finally {
