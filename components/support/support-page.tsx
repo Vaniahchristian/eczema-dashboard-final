@@ -22,14 +22,12 @@ export default function SupportPage() {
         >
           <SupportHeader />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8 justify-center">
             <div className="lg:col-span-2 space-y-8">
               <div className="mx-auto w-full max-w-2xl"><SupportAssistant /></div>
               <div className="mx-auto w-full max-w-2xl"><SupportTicket /></div>
               <div className="mx-auto w-full max-w-2xl"><FeedbackSection /></div>
             </div>
-
-            
           </div>
         </motion.div>
       </div>
