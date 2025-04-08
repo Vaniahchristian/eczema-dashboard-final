@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
+import DashboardLayout from "../layout/dashboard-layout"
 
 export default function MessagesPage() {
   const { user } = useAuth()
@@ -234,6 +235,7 @@ export default function MessagesPage() {
   })
 
   return (
+    <DashboardLayout>
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Conversations List */}
       <div className="w-1/3 border-r">
@@ -430,5 +432,6 @@ export default function MessagesPage() {
         )}
       </div>
     </div>
+    </DashboardLayout>
   )
 }

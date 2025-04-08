@@ -3,6 +3,7 @@
 import { useState } from "react"
 import ProfileHeader from "@/components/profile/profile-header"
 import PersonalizationPanel from "@/components/profile/personalization-panel"
+import DashboardLayout from "../layout/dashboard-layout"
 
 export default function ProfilePage() {
   const [theme, setTheme] = useState<"default" | "nature" | "ocean" | "sunset">("default")
@@ -22,6 +23,7 @@ export default function ProfilePage() {
   }
 
   return (
+    <DashboardLayout>
     <div className={`min-h-screen ${getThemeClass()} transition-colors duration-300`}>
       <div className="container mx-auto px-4 py-8 pt-20 md:pt-24">
         <ProfileHeader />
@@ -34,6 +36,7 @@ export default function ProfilePage() {
         />
       </div>
     </div>
+    </DashboardLayout>
   )
 }
 
