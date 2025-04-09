@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - aheebwomugish-UI  # Runs the pipeline only on your branch
+  pull_request:
+    branches:
+      - main  # Runs tests when merging to main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # GitHub Actions uses Ubuntu for builds
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint TypeScript code
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build project
+        run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/aheebwomugish-UI'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Server (Replace with your actual deployment steps)
+        run: |
+          echo "Deploying the application..."
+          # Add actual deployment commands here
