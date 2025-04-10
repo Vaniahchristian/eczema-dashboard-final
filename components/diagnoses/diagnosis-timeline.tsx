@@ -83,20 +83,24 @@ export default function DiagnosisTimeline({
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${diagnosis.severity === "Mild" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" :
+                {/* <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${diagnosis.severity === "Mild" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" :
                     diagnosis.severity === "Moderate" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" :
                       "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                   }`}>
                   {diagnosis.severity}
-                </span>
-                <div className="flex items-center gap-1">
+                </span> */}
+                {/* <div className="flex items-center gap-1">
                   <span className="text-sm text-slate-700 dark:text-slate-300">{diagnosis.bodyPart}</span>
                   {diagnosis.bodyPartConfidence && (
                     <span className="text-xs text-slate-500">
                       ({Math.round(diagnosis.bodyPartConfidence * 100)}%)
                     </span>
                   )}
-                </div>
+                </div> */}
+
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium }`}>
+                  {diagnosis.isEczema}
+                </span>
                 {diagnosis.confidence && (
                   <span className="text-xs bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 px-2 py-1 rounded-full">
                     Confidence: {Math.round(diagnosis.confidence * 100)}%
