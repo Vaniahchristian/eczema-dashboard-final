@@ -2,6 +2,16 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
 
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  return {
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+    }
+  };
+};
+
 export interface AgeDistribution {
   ageRange: string;
   count: number;
@@ -32,22 +42,22 @@ export interface DiagnosisHistory {
 
 class AnalyticsService {
   async getAgeDistribution(): Promise<AgeDistribution[]> {
-    const response = await axios.get(`${API_BASE_URL}/analytics/age-distribution`);
+    const response = await axios.get(`${API_BASE_URL}/analytics/age-distribution`, getAuthHeaders());
     return response.data.data.ageGroups;
   }
 
   async getGeographicalDistribution(): Promise<GeographicalDistribution[]> {
-    const response = await axios.get(`${API_BASE_URL}/analytics/geographical-distribution`);
+    const response = await axios.get(`${API_BASE_URL}/analytics/geographical-distribution`, getAuthHeaders());
     return response.data.data.regions;
   }
 
   async getTreatmentEffectiveness(): Promise<TreatmentEffectiveness[]> {
-    const response = await axios.get(`${API_BASE_URL}/analytics/treatment-effectiveness`);
+    const response = await axios.get(`${API_BASE_URL}/analytics/treatment-effectiveness`, getAuthHeaders());
     return response.data.data.treatments;
   }
 
   async getModelConfidence(): Promise<ModelConfidence[]> {
-    const response = await axios.get(`${API_BASE_URL}/analytics/model-confidence`);
+    const response = await axios.get(`${API_BASE_URL}/analytics/model-confidence`, getAuthHeaders());
     return response.data.data.confidenceLevels;
   }
 
@@ -56,7 +66,10 @@ class AnalyticsService {
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     
-    const response = await axios.get(`${API_BASE_URL}/analytics/diagnosis-history?${params.toString()}`);
+    const response = await axios.get(
+      `${API_BASE_URL}/analytics/diagnosis-history?${params.toString()}`,
+      getAuthHeaders()
+    );
     return response.data.data.history;
   }
 }
