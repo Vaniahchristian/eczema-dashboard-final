@@ -54,7 +54,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            {diagnosis.isEczema ? 'Eczema Diagnosis' : 'Skin Condition Analysis'}
+            {diagnosis.isEczema }
           </h2>
           <div className="flex items-center mt-2">
             <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />

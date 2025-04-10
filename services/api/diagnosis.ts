@@ -15,7 +15,7 @@ export interface Diagnosis {
   severity: 'Mild' | 'Moderate' | 'Severe';
   confidenceScore: number;
   bodyPart: string;
-  isEczema: boolean;
+  isEczema: string;
   recommendations: string[];
   needsDoctorReview: boolean;
   status: 'pending_review' | 'completed' | 'reviewed';
@@ -34,7 +34,7 @@ export interface Diagnosis {
   metadata?: {
     imageQuality: number;
     mlAnalysis: {
-      isEczema: boolean;
+      isEczema: string;
       confidence: number;
       bodyPart: string;
       bodyPartConfidence: number;
@@ -64,7 +64,7 @@ export const diagnosisApi = {
   // Upload image and get diagnosis
   uploadImage: async (imageFile: File): Promise<ApiResponse<{
     diagnosisId: string;
-    isEczema: boolean;
+    isEczema: string;
     severity: 'Mild' | 'Moderate' | 'Severe';
     confidence: number;
     bodyPart: string;

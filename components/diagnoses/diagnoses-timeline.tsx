@@ -74,7 +74,7 @@ export default function DiagnosesTimeline({ diagnoses, selectedId, onSelect }: D
                     <div className="flex items-center">
                       {getSeverityIcon(diagnosis.severity)}
                       <span className="ml-2 font-medium">
-                        {diagnosis.isEczema ? "Eczema" : "Non-Eczema Condition"}
+                        {diagnosis.isEczema }
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 dark:text-slate-400">
