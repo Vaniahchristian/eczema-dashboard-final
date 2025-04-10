@@ -9,17 +9,10 @@ interface DiagnosisHeaderProps {
   onNewDiagnosis?: (diagnosisId: string) => void;
 }
 
-interface Stats {
-  total: number;
-  lastDate: string;
-  progress: number;
-  eczemaCount: number;
-}
-
 export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ total: 0, lastDate: '', progress: 0, eczemaCount: 0 });
+  const [stats, setStats] = useState({ total: 0, lastDate: '', progress: 0 });
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -28,12 +21,10 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
     }
     diagnosisApi.getAllDiagnoses().then((response) => {
       const diagnoses = response.data;
-      const eczemaCount = diagnoses.filter(d => d.isEczema === 'Eczema').length;
       setStats({
         total: diagnoses.length,
         lastDate: diagnoses[0]?.createdAt ? new Date(diagnoses[0].createdAt).toLocaleDateString() : '',
         progress: diagnoses.length ? Math.round(diagnoses.reduce((sum, d) => sum + (d.confidenceScore * 100), 0) / diagnoses.length) : 0,
-        eczemaCount
       });
     }).catch((err) => setError(err.message));
   }, []);
@@ -80,7 +71,7 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
         <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0">
           <label
             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${uploading ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed" :
-                "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-900/40 cursor-pointer"
+              "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-900/40 cursor-pointer"
               }`}
           >
             {uploading ? <><Clock className="h-4 w-4 animate-spin" />Processing...</> :
@@ -96,7 +87,7 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
           </label>
           <label
             className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${uploading ? "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed" :
-                "bg-white text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer"
+              "bg-white text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 cursor-pointer"
               }`}
           >
             {uploading ? <><Clock className="h-4 w-4 animate-spin" />Processing...</> :
@@ -135,8 +126,8 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
             <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.total}</div>
           </div>
           <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Eczema Cases</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.eczemaCount}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">Last Diagnosis</div>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.lastDate || 'N/A'}</div>
           </div>
           <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
             <div className="text-sm text-slate-500 dark:text-slate-400">Avg. Confidence</div>
