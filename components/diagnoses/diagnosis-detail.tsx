@@ -33,10 +33,11 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
   }, [diagnosisId]);
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "Mild": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
-      case "Moderate": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
-      case "Severe": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+    const normalizedSeverity = severity.toLowerCase();
+    switch (normalizedSeverity) {
+      case "mild": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+      case "moderate": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+      case "severe": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       default: return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
     }
   };
@@ -70,7 +71,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
         </div>
         <div className="mt-4 md:mt-0">
           <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getSeverityColor(diagnosis.severity)}`}>
-            {diagnosis.severity}
+            {diagnosis.severity.charAt(0).toUpperCase() + diagnosis.severity.slice(1)}
           </span>
         </div>
       </div>
@@ -82,7 +83,32 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <MapPin className="h-4 w-4 text-sky-500 mr-2" />
               <h3 className="font-medium">Affected Area</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300">{diagnosis.bodyPart}</p>
+            <p className="text-slate-700 dark:text-slate-300">
+              {diagnosis.bodyPart}
+              {diagnosis.bodyPartConfidence && (
+                <span className="text-sm text-slate-500 ml-2">
+                  (Confidence: {Math.round(diagnosis.bodyPartConfidence * 100)}%)
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center mb-2">
+              <AlertTriangle className="h-4 w-4 text-sky-500 mr-2" />
+              <h3 className="font-medium">Diagnosis Confidence</h3>
+            </div>
+            <div className="flex items-center">
+              <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="h-full bg-sky-500" 
+                  style={{ width: `${Math.round(diagnosis.confidence * 100)}%` }}
+                />
+              </div>
+              <span className="ml-3 text-sm text-slate-700 dark:text-slate-300">
+                {Math.round(diagnosis.confidence * 100)}%
+              </span>
+            </div>
           </div>
 
           {diagnosis.doctorReview && (
@@ -100,7 +126,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <Clock className="h-4 w-4 text-sky-500 mr-2" />
               <h3 className="font-medium">Status</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 capitalize">{diagnosis?.status?.replace('_', ' ') || 'Pending'}</p>
+            <p className="text-slate-700 dark:text-slate-300 capitalize">{diagnosis.status.replace('_', ' ')}</p>
           </div>
         </div>
 
@@ -113,7 +139,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
             <div className="mt-2">
               <div className="relative rounded-lg overflow-hidden aspect-video">
                 <img
-                  src={diagnosis.imageUrl ? `${process.env.NEXT_PUBLIC_API_URL}${diagnosis.imageUrl}` : '/placeholder.png'}
+                  src={diagnosis.imageUrl}
                   alt="Skin condition"
                   className="object-cover w-full h-full"
                 />
@@ -127,8 +153,10 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <h3 className="font-medium">Recommendations</h3>
             </div>
             <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 text-sm space-y-2">
-              {Array.isArray(diagnosis?.recommendations) 
-                ? diagnosis.recommendations.map((rec, index) => <li key={index}>{rec}</li>)
+              {Array.isArray(diagnosis.recommendations) && diagnosis.recommendations.length > 0
+                ? diagnosis.recommendations.map((rec, index) => (
+                    <li key={index} className="leading-relaxed">{rec}</li>
+                  ))
                 : <li>No recommendations available</li>
               }
             </ul>

@@ -19,6 +19,9 @@ export interface Diagnosis {
   recommendations: string[];
   needsDoctorReview: boolean;
   status: 'pending_review' | 'completed' | 'reviewed';
+  confidence:number;
+  bodyPartConfidence:number;
+
   createdAt: string;
   doctorReview?: {
     doctorId: string;
@@ -26,6 +29,7 @@ export interface Diagnosis {
     reviewedAt: string;
     updatedSeverity: 'Mild' | 'Moderate' | 'Severe';
     treatmentPlan: string;
+    
   };
   metadata?: {
     imageQuality: number;
