@@ -54,7 +54,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            {diagnosis.isEczema }
+            Diagnosis Result: {diagnosis.isEczema === 'Eczema' ? 'Eczema' : 'Not Eczema'}
           </h2>
           <div className="flex items-center mt-2">
             <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-1" />
@@ -101,7 +101,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
             <div className="flex items-center">
               <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                 <div 
-                  className="h-full bg-sky-500" 
+                  className={`h-full ${diagnosis.isEczema === 'Eczema' ? 'bg-sky-500' : 'bg-gray-500'}`}
                   style={{ width: `${Math.round(diagnosis.confidence * 100)}%` }}
                 />
               </div>

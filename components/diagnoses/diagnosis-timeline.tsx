@@ -98,11 +98,19 @@ export default function DiagnosisTimeline({
                   )}
                 </div> */}
 
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium }`}>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  diagnosis.isEczema === 'Eczema' 
+                    ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400"
+                    : "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400"
+                }`}>
                   {diagnosis.isEczema}
                 </span>
                 {diagnosis.confidence && (
-                  <span className="text-xs bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 px-2 py-1 rounded-full">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    diagnosis.isEczema === 'Eczema'
+                      ? "bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
+                      : "bg-slate-50 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400"
+                  }`}>
                     Confidence: {Math.round(diagnosis.confidence * 100)}%
                   </span>
                 )}
