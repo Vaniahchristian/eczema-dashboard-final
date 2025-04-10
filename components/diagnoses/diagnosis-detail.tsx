@@ -100,7 +100,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <Clock className="h-4 w-4 text-sky-500 mr-2" />
               <h3 className="font-medium">Status</h3>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 capitalize">{diagnosis.status.replace('_', ' ')}</p>
+            <p className="text-slate-700 dark:text-slate-300 capitalize">{diagnosis?.status?.replace('_', ' ') || 'Pending'}</p>
           </div>
         </div>
 
@@ -127,7 +127,10 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <h3 className="font-medium">Recommendations</h3>
             </div>
             <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 text-sm space-y-2">
-              {diagnosis.recommendations.map((rec, index) => <li key={index}>{rec}</li>)}
+              {Array.isArray(diagnosis?.recommendations) 
+                ? diagnosis.recommendations.map((rec, index) => <li key={index}>{rec}</li>)
+                : <li>No recommendations available</li>
+              }
             </ul>
           </div>
 

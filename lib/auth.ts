@@ -96,13 +96,17 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const userData = data.data.user
       const token = data.data.token
 
-      // Store token in localStorage and cookie
-      localStorage.setItem("token", token)
+      // First set cookies to ensure they're available for middleware
       setCookie("token", token)
       setCookie("userRole", userData.role)
       
-      // Set user data
+      // Then set localStorage
+      localStorage.setItem("token", token)
+      localStorage.setItem("user", JSON.stringify(userData))
+      
+      // Finally update state
       setUser(userData)
+      
       return userData
     } catch (error) {
       setError(error instanceof Error ? error.message : "Login failed")

@@ -24,12 +24,11 @@ export default function LoginForm() {
 
     try {
       const userData = await login(email, password)
-      console.log("Login successful, userData:", userData)
       
       // Wait a moment for cookies to be set
       await new Promise(resolve => setTimeout(resolve, 100))
       
-      // Navigate based on role
+      // Use Next.js router for navigation
       const redirectPath = userData.role === "patient" 
         ? "/dashboard"
         : userData.role === "doctor"
@@ -37,7 +36,7 @@ export default function LoginForm() {
         : "/admin"
 
       console.log("Redirecting to:", redirectPath)
-      window.location.href = redirectPath
+      router.push(redirectPath)
       
       toast.success("Login successful!")
     } catch (err) {
