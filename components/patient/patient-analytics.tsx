@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Calendar, TrendingUp, Clock, CheckCircle, Download } from "lucide-react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
@@ -26,8 +26,17 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { analyticsService } from "@/services/analyticsService"
+import type { 
+  AgeDistribution, 
+  GeographicalDistribution, 
+  TreatmentEffectiveness,
+  ModelConfidence,
+  DiagnosisHistory 
+} from "@/services/analyticsService"
 
-// Mock data for patient analytics
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
+
 const healthMetricsData = [
   { date: "Jan", severity: 7.2, itching: 6.8, redness: 7.5, dryness: 6.5 },
   { date: "Feb", severity: 6.8, itching: 6.5, redness: 7.0, dryness: 6.2 },
@@ -119,155 +128,295 @@ const triggerData = [
   { name: "Other", value: 5 },
 ]
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
-
 export default function PatientAnalytics() {
   const [timeRange, setTimeRange] = useState("6m")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleTimeRangeChange = (value: string) => {
-    setIsLoading(true)
+  // Analytics states
+  const [ageDistribution, setAgeDistribution] = useState<AgeDistribution[]>([])
+  const [geoDistribution, setGeoDistribution] = useState<GeographicalDistribution[]>([])
+  const [treatmentEffectiveness, setTreatmentEffectiveness] = useState<TreatmentEffectiveness[]>([])
+  const [modelConfidence, setModelConfidence] = useState<ModelConfidence[]>([])
+  const [diagnosisHistory, setDiagnosisHistory] = useState<DiagnosisHistory[]>([])
+
+  const handleTimeRangeChange = async (value: string) => {
     setTimeRange(value)
-
-    // Simulate data loading
-    setTimeout(() => {
+    setIsLoading(true)
+    
+    try {
+      const endDate = new Date().toISOString().split('T')[0]
+      const startDate = new Date(new Date().setMonth(new Date().getMonth() - parseInt(value))).toISOString().split('T')[0]
+      
+      const history = await analyticsService.getDiagnosisHistory(startDate, endDate)
+      setDiagnosisHistory(history)
+    } catch (err) {
+      setError('Failed to fetch updated diagnosis history')
+      console.error(err)
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
+  }
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      setIsLoading(true)
+      setError(null)
+      
+      try {
+        const [age, geo, treatment, confidence, history] = await Promise.all([
+          analyticsService.getAgeDistribution(),
+          analyticsService.getGeographicalDistribution(),
+          analyticsService.getTreatmentEffectiveness(),
+          analyticsService.getModelConfidence(),
+          analyticsService.getDiagnosisHistory()
+        ])
+
+        setAgeDistribution(age)
+        setGeoDistribution(geo)
+        setTreatmentEffectiveness(treatment)
+        setModelConfidence(confidence)
+        setDiagnosisHistory(history)
+      } catch (err) {
+        setError('Failed to fetch analytics data')
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAnalytics()
+  }, [])
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center text-red-500">
+                <p>{error}</p>
+                <Button onClick={() => window.location.reload()} className="mt-4">
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-8 space-y-8">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+          <div className="flex items-center space-x-2">
+            <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Last Month</SelectItem>
+                <SelectItem value="3">Last 3 Months</SelectItem>
+                <SelectItem value="6">Last 6 Months</SelectItem>
+                <SelectItem value="12">Last Year</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+          </div>
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-screen-2xl mx-auto"
+          transition={{ duration: 0.4 }}
         >
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
-                Personal Health Analytics
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
-                Track your eczema journey and treatment progress
-              </p>
-            </div>
-            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-              <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1m">Last Month</SelectItem>
-                  <SelectItem value="3m">Last 3 Months</SelectItem>
-                  <SelectItem value="6m">Last 6 Months</SelectItem>
-                  <SelectItem value="1y">Last Year</SelectItem>
-                  <SelectItem value="all">All Time</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-            </div>
-          </div>
-
-          {/* Health Metrics Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-100 dark:border-blue-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium text-blue-700 dark:text-blue-400 flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-blue-500" />
-                  Symptom Severity
-                </CardTitle>
-                <CardDescription>Current severity score</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-700 dark:text-blue-400">3.5/10</div>
-                <div className="text-sm text-blue-600 dark:text-blue-500 flex items-center mt-1">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  52% improvement since first visit
-                </div>
-                <Progress
-                  value={35}
-                  className="h-2 mt-4 bg-blue-100 dark:bg-blue-900"
-                  indicatorClassName="bg-blue-500"
-                />
-                <div className="flex justify-between text-xs text-blue-600 dark:text-blue-500 mt-1">
-                  <span>Mild</span>
-                  <span>Moderate</span>
-                  <span>Severe</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/40 border-green-100 dark:border-green-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium text-green-700 dark:text-green-400 flex items-center">
-                  <CheckCircle className="h-5 w-5 mr-2 text-green-500" />
-                  Treatment Adherence
-                </CardTitle>
-                <CardDescription>Medication and care routine</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-700 dark:text-green-400">98%</div>
-                <div className="text-sm text-green-600 dark:text-green-500 flex items-center mt-1">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  15% improvement in last 3 months
-                </div>
-                <Progress
-                  value={98}
-                  className="h-2 mt-4 bg-green-100 dark:bg-green-900"
-                  indicatorClassName="bg-green-500"
-                />
-                <div className="flex justify-between text-xs text-green-600 dark:text-green-500 mt-1">
-                  <span>Poor</span>
-                  <span>Good</span>
-                  <span>Excellent</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/40 dark:to-violet-950/40 border-purple-100 dark:border-purple-900">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium text-purple-700 dark:text-purple-400 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-purple-500" />
-                  Next Appointment
-                </CardTitle>
-                <CardDescription>Upcoming doctor visit</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold text-purple-700 dark:text-purple-400">March 15, 2024</div>
-                <div className="text-sm text-purple-600 dark:text-purple-500 mt-1">
-                  Dr. James Wilson - Dermatology Consultation
-                </div>
-                <div className="flex items-center justify-between mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-purple-600 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-900/50"
-                  >
-                    View Details
-                  </Button>
-                  <div className="text-sm font-medium text-purple-600 dark:text-purple-500 flex items-center">
-                    <Clock className="h-4 w-4 mr-1" />
-                    In 5 days
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content Tabs */}
-          <Tabs defaultValue="health-metrics" className="space-y-6">
-            <TabsList className="grid grid-cols-4 md:w-[600px]">
-              <TabsTrigger value="health-metrics">Health Metrics</TabsTrigger>
-              <TabsTrigger value="appointments">Appointments</TabsTrigger>
-              <TabsTrigger value="treatment">Treatment Plan</TabsTrigger>
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="demographics">Demographics</TabsTrigger>
+              <TabsTrigger value="treatments">Treatments</TabsTrigger>
               <TabsTrigger value="triggers">Triggers</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Diagnoses</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoading ? "..." : diagnosisHistory.reduce((sum, item) => sum + item.totalCases, 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Severity</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoading ? "..." : (
+                        diagnosisHistory.reduce((sum, item) => 
+                          sum + (item.severeCases / item.totalCases), 0) / diagnosisHistory.length
+                      ).toFixed(1)}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Treatment Success Rate</CardTitle>
+                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoading ? "..." : 
+                        `${(treatmentEffectiveness.reduce((sum, item) => 
+                          sum + item.effectiveness, 0) / treatmentEffectiveness.length).toFixed(1)}%`
+                      }
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">ML Confidence</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {isLoading ? "..." : 
+                        `${(modelConfidence.reduce((sum, item) => 
+                          sum + item.averageConfidence, 0) / modelConfidence.length * 100).toFixed(1)}%`
+                      }
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4">
+                  <CardHeader>
+                    <CardTitle>Diagnosis History</CardTitle>
+                    <CardDescription>Number of cases over time</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={diagnosisHistory}>
+                          <defs>
+                            <linearGradient id="total" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.1} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip />
+                          <Area
+                            type="monotone"
+                            dataKey="totalCases"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            fill="url(#total)"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="severeCases"
+                            stroke="#ef4444"
+                            strokeWidth={2}
+                            fill="url(#severe)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="col-span-3">
+                  <CardHeader>
+                    <CardTitle>Age Distribution</CardTitle>
+                    <CardDescription>Cases by age group</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={ageDistribution}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis dataKey="ageRange" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="count" fill="#8b5cf6" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Treatment Effectiveness</CardTitle>
+                    <CardDescription>Success rate by treatment type</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={treatmentEffectiveness} layout="vertical">
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                          <XAxis type="number" domain={[0, 100]} />
+                          <YAxis dataKey="type" type="category" />
+                          <Tooltip />
+                          <Bar dataKey="effectiveness" fill="#8b5cf6" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Geographical Distribution</CardTitle>
+                    <CardDescription>Cases by region</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={geoDistribution}
+                            dataKey="count"
+                            nameKey="location"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label
+                          >
+                            {geoDistribution.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
 
             {/* Health Metrics Tab */}
             <TabsContent value="health-metrics" className="space-y-6">
@@ -556,8 +705,7 @@ export default function PatientAnalytics() {
                         </div>
                         <Progress
                           value={treatment.progress}
-                          className="h-2"
-                          indicatorClassName={treatment.status === "Completed" ? "bg-green-500" : "bg-blue-500"}
+                          className={`h-2 ${treatment.status === "Completed" ? "[&>div]:bg-green-500" : "[&>div]:bg-blue-500"}`}
                         />
                       </div>
                     ))}
@@ -791,4 +939,3 @@ export default function PatientAnalytics() {
     </DashboardLayout>
   )
 }
-
