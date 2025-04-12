@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'https://eczema-backend.onrender.com/api';
+import { API_URL } from '../lib/config';
 
 export interface AgeDistribution {
   ageRange: string;
@@ -30,12 +29,20 @@ export interface DiagnosisHistory {
   severeCases: number;
 }
 
+export type ExportType = 'patients' | 'diagnoses' | 'analytics';
+
 class AnalyticsService {
+  private axiosInstance = axios.create({
+    baseURL: `${API_URL}/analytics`,
+    withCredentials: true, // Always send cookies
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
   async getAgeDistribution(): Promise<AgeDistribution[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/analytics/age-distribution`, {
-        withCredentials: true, // Send cookies with the request
-      });
+      const response = await this.axiosInstance.get('/age-distribution');
       return response.data.data.ageGroups;
     } catch (error: any) {
       console.error('Age Distribution Error:', error?.response?.data || error?.message);
@@ -45,9 +52,7 @@ class AnalyticsService {
 
   async getGeographicalDistribution(): Promise<GeographicalDistribution[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/analytics/geographical-distribution`, {
-        withCredentials: true, // Send cookies with the request
-      });
+      const response = await this.axiosInstance.get('/geographical-distribution');
       return response.data.data.regions;
     } catch (error: any) {
       console.error('Geographical Distribution Error:', error?.response?.data || error?.message);
@@ -57,9 +62,7 @@ class AnalyticsService {
 
   async getTreatmentEffectiveness(): Promise<TreatmentEffectiveness[]> {
     try { 
-      const response = await axios.get(`${API_BASE_URL}/analytics/treatment-effectiveness`, {
-        withCredentials: true, // Send cookies with the request
-      });
+      const response = await this.axiosInstance.get('/treatment-effectiveness');
       return response.data.data.treatments;
     } catch (error: any) {
       console.error('Treatment Effectiveness Error:', error?.response?.data || error?.message);
@@ -69,9 +72,7 @@ class AnalyticsService {
 
   async getModelConfidence(): Promise<ModelConfidence[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/analytics/model-confidence`, {
-        withCredentials: true, // Send cookies with the request
-      });
+      const response = await this.axiosInstance.get('/model-confidence');
       return response.data.data.confidenceLevels;
     } catch (error: any) {
       console.error('Model Confidence Error:', error?.response?.data || error?.message);
@@ -85,15 +86,44 @@ class AnalyticsService {
       if (startDate) params.append('startDate', startDate);
       if (endDate) params.append('endDate', endDate);
     
-      const response = await axios.get(
-        `${API_BASE_URL}/analytics/diagnosis-history?${params.toString()}`,
-        {
-          withCredentials: true, // Send cookies with the request
-        }
+      const response = await this.axiosInstance.get(
+        `/diagnosis-history?${params.toString()}`
       );
       return response.data.data.history;
     } catch (error: any) {
       console.error('Diagnosis History Error:', error?.response?.data || error?.message);
+      throw error;
+    }
+  }
+
+  async exportData(type: ExportType, dateRange?: [Date, Date]): Promise<void> {
+    try {
+      const params = new URLSearchParams();
+      if (dateRange) {
+        params.append('startDate', dateRange[0].toISOString());
+        params.append('endDate', dateRange[1].toISOString());
+      }
+
+      const response = await this.axiosInstance.get(`/export/${type}?${params.toString()}`, {
+        responseType: 'blob'
+      });
+
+      // Create a blob from the response data
+      const blob = new Blob([response.data], { 
+        type: type === 'analytics' ? 'application/pdf' : 'text/csv' 
+      });
+
+      // Create a link and trigger the download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${type}-export-${new Date().toISOString().split('T')[0]}.${type === 'analytics' ? 'pdf' : 'csv'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Export Error:', error?.response?.data || error?.message);
       throw error;
     }
   }

@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Calendar, ChevronDown, BarChart2, Activity, Cpu, Users, Zap, Filter, RefreshCw } from "lucide-react"
+import { Calendar, ChevronDown, BarChart2, Activity, Cpu, Users, Zap, Filter, RefreshCw, Download } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import type { TimeRange, MetricType } from "./analytics-page"
+import { analyticsService, type ExportType } from "@/services/analyticsService"
+import { toast } from "sonner"
 
 interface AnalyticsHeaderProps {
   timeRange: TimeRange
@@ -31,6 +33,7 @@ export default function AnalyticsHeader({
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isSelectingStartDate, setIsSelectingStartDate] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return
@@ -104,6 +107,19 @@ export default function AnalyticsHeader({
         return "Demographics"
       case "realtime":
         return "Real-time Activity"
+    }
+  }
+
+  const handleExport = async (type: ExportType) => {
+    try {
+      setIsExporting(true)
+      await analyticsService.exportData(type, dateRange)
+      toast.success(`Successfully exported ${type} data`)
+    } catch (error) {
+      toast.error(`Failed to export ${type} data`)
+      console.error('Export error:', error)
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -230,6 +246,47 @@ export default function AnalyticsHeader({
             </PopoverContent>
           </Popover>
 
+          <Popover>
+            <PopoverTrigger asChild>
+              <button 
+                className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700"
+                disabled={isExporting}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                <span>Export</span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56" align="end">
+              <div className="space-y-2">
+                <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">
+                  Export Data
+                </div>
+                <button
+                  onClick={() => handleExport('patients')}
+                  disabled={isExporting}
+                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  Patient Records (CSV)
+                </button>
+                <button
+                  onClick={() => handleExport('diagnoses')}
+                  disabled={isExporting}
+                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  Diagnosis Data (CSV)
+                </button>
+                <button
+                  onClick={() => handleExport('analytics')}
+                  disabled={isExporting}
+                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                >
+                  Analytics Report (PDF)
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <button
             onClick={onToggleComparisonMode}
             className={`flex items-center px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-shadow border ${
@@ -265,4 +322,3 @@ export default function AnalyticsHeader({
     </div>
   )
 }
-

@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Calendar, TrendingUp, Clock, CheckCircle, Download } from "lucide-react"
+import { Calendar, TrendingUp, Clock, CheckCircle, Download, ChevronDown } from "lucide-react"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { toast } from "sonner"
 import {
   AreaChart,
   Area,
@@ -32,7 +34,8 @@ import type {
   GeographicalDistribution, 
   TreatmentEffectiveness,
   ModelConfidence,
-  DiagnosisHistory 
+  DiagnosisHistory,
+  ExportType
 } from "@/services/analyticsService"
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
@@ -130,7 +133,13 @@ const triggerData = [
 
 export default function PatientAnalytics() {
   const [timeRange, setTimeRange] = useState("6m")
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const [dateRange, setDateRange] = useState<[Date, Date]>([
+    new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), // 6 months ago
+    new Date()
+  ])
+
   const [error, setError] = useState<string | null>(null)
 
   // Analytics states
@@ -140,21 +149,47 @@ export default function PatientAnalytics() {
   const [modelConfidence, setModelConfidence] = useState<ModelConfidence[]>([])
   const [diagnosisHistory, setDiagnosisHistory] = useState<DiagnosisHistory[]>([])
 
-  const handleTimeRangeChange = async (value: string) => {
+  const handleTimeRangeChange = (value: string) => {
     setTimeRange(value)
     setIsLoading(true)
-    
-    try {
-      const endDate = new Date().toISOString().split('T')[0]
-      const startDate = new Date(new Date().setMonth(new Date().getMonth() - parseInt(value))).toISOString().split('T')[0]
-      
-      const history = await analyticsService.getDiagnosisHistory(startDate, endDate)
-      setDiagnosisHistory(history)
-    } catch (err) {
-      setError('Failed to fetch updated diagnosis history')
-      console.error(err)
-    } finally {
+
+    // Calculate new date range based on selected time range
+    const endDate = new Date()
+    let startDate = new Date()
+
+    switch (value) {
+      case "1m":
+        startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case "3m":
+        startDate = new Date(endDate.getTime() - 90 * 24 * 60 * 60 * 1000)
+        break
+      case "6m":
+        startDate = new Date(endDate.getTime() - 180 * 24 * 60 * 60 * 1000)
+        break
+      case "1y":
+        startDate = new Date(endDate.getTime() - 365 * 24 * 60 * 60 * 1000)
+        break
+    }
+
+    setDateRange([startDate, endDate])
+
+    // Simulate loading
+    setTimeout(() => {
       setIsLoading(false)
+    }, 500)
+  }
+
+  const handleExport = async (type: ExportType) => {
+    try {
+      setIsExporting(true)
+      await analyticsService.exportData(type, dateRange)
+      toast.success(`Successfully exported ${type} data`)
+    } catch (error) {
+      toast.error(`Failed to export ${type} data`)
+      console.error('Export error:', error)
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -209,33 +244,71 @@ export default function PatientAnalytics() {
 
   return (
     <DashboardLayout>
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
-          <div className="flex items-center space-x-2">
-            <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select time range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Last Month</SelectItem>
-                <SelectItem value="3">Last 3 Months</SelectItem>
-                <SelectItem value="6">Last 6 Months</SelectItem>
-                <SelectItem value="12">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-          </div>
-        </div>
-
+      <div className="p-6 md:p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.5 }}
         >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
+                My Analytics
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">
+                Track your eczema management progress and insights
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+              <Select value={timeRange} onValueChange={handleTimeRangeChange}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Select time range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1m">Last Month</SelectItem>
+                  <SelectItem value="3m">Last 3 Months</SelectItem>
+                  <SelectItem value="6m">Last 6 Months</SelectItem>
+                  <SelectItem value="1y">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    disabled={isExporting}
+                  >
+                    <Download className="h-4 w-4" />
+                    Export
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56" align="end">
+                  <div className="space-y-2">
+                    <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">
+                      Export Data
+                    </div>
+                    <button
+                      onClick={() => handleExport('diagnoses')}
+                      disabled={isExporting}
+                      className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                    >
+                      My Diagnosis History (CSV)
+                    </button>
+                    <button
+                      onClick={() => handleExport('analytics')}
+                      disabled={isExporting}
+                      className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                    >
+                      Analytics Report (PDF)
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
