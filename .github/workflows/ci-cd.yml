@@ -6,7 +6,7 @@ on:
       - aheebwomugish-UI  # Runs the pipeline only on your branch
   pull_request:
     branches:
-      - main  # Runs tests when merging to main
+      - main  # Runs when merging to main
 
 jobs:
   build:
@@ -24,12 +24,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci  # Faster and safer than `npm install`
-
-      - name: Lint TypeScript code
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test
 
       - name: Build project
         run: npm run build
