@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
+const API_BASE_URL = 'https://eczema-backend.onrender.com/api';
 
 export interface AgeDistribution {
   ageRange: string;
