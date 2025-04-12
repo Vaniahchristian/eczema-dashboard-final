@@ -37,11 +37,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 const setCookie = (name: string, value: string) => {
-  document.cookie = `${name}=${value}; path=/; max-age=604800; SameSite=Lax`
+  // Set SameSite=None and Secure for cross-domain cookies
+  document.cookie = `${name}=${value}; path=/; max-age=604800; SameSite=None; Secure`
 }
 
 const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`
+  // Set SameSite=None and Secure when deleting cross-domain cookies
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure`
 }
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
@@ -80,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
-        credentials: "include",
+        credentials: "include", // Important for cookie-based auth
       })
 
       const data = await response.json()
@@ -96,15 +98,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const userData = data.data.user
       const token = data.data.token
 
-      // First set cookies to ensure they're available for middleware
+      // Store in both cookies and localStorage for maximum compatibility
       setCookie("token", token)
       setCookie("userRole", userData.role)
       
-      // Then set localStorage
       localStorage.setItem("token", token)
       localStorage.setItem("user", JSON.stringify(userData))
       
-      // Finally update state
       setUser(userData)
       
       return userData
@@ -143,10 +143,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       const userData = responseData.data.user
       const token = responseData.data.token
 
-      // Store token in localStorage and cookie
-      localStorage.setItem("token", token)
+      // Store token in cookies and user data in localStorage
       setCookie("token", token)
       setCookie("userRole", userData.role)
+      localStorage.setItem("user", JSON.stringify(userData))
 
       setUser(userData)
     } catch (err) {
@@ -169,7 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       // Clear all auth data
       setUser(null)
       localStorage.removeItem("user")
-      localStorage.removeItem("token")
       deleteCookie("token")
       deleteCookie("userRole")
     }
