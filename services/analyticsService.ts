@@ -34,18 +34,62 @@ export type ExportType = 'patients' | 'diagnoses' | 'analytics';
 class AnalyticsService {
   private axiosInstance = axios.create({
     baseURL: `${API_URL}/analytics`,
-    withCredentials: true, // Always send cookies
+    withCredentials: true,
     headers: {
       'Content-Type': 'application/json'
     }
   });
+
+  constructor() {
+    this.axiosInstance.interceptors.request.use(
+      (config) => {
+        console.log('🚀 Making request:', {
+          url: config.url,
+          method: config.method,
+          withCredentials: config.withCredentials,
+          headers: config.headers,
+        });
+        return config;
+      },
+      (error) => {
+        console.error('❌ Request error:', error);
+        return Promise.reject(error);
+      }
+    );
+
+    this.axiosInstance.interceptors.response.use(
+      (response) => {
+        console.log('✅ Response received:', {
+          url: response.config.url,
+          status: response.status,
+          statusText: response.statusText,
+        });
+        return response;
+      },
+      (error) => {
+        console.error('❌ Response error:', {
+          url: error.config?.url,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        });
+        return Promise.reject(error);
+      }
+    );
+  }
 
   async getAgeDistribution(): Promise<AgeDistribution[]> {
     try {
       const response = await this.axiosInstance.get('/age-distribution');
       return response.data.data.ageGroups;
     } catch (error: any) {
-      console.error('Age Distribution Error:', error?.response?.data || error?.message);
+      console.error('Age Distribution Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie
+      });
       throw error;
     }
   }
@@ -55,7 +99,12 @@ class AnalyticsService {
       const response = await this.axiosInstance.get('/geographical-distribution');
       return response.data.data.regions;
     } catch (error: any) {
-      console.error('Geographical Distribution Error:', error?.response?.data || error?.message);
+      console.error('Geographical Distribution Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie
+      });
       throw error;
     }
   }
@@ -65,7 +114,12 @@ class AnalyticsService {
       const response = await this.axiosInstance.get('/treatment-effectiveness');
       return response.data.data.treatments;
     } catch (error: any) {
-      console.error('Treatment Effectiveness Error:', error?.response?.data || error?.message);
+      console.error('Treatment Effectiveness Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie
+      });
       throw error;
     }
   }
@@ -75,7 +129,12 @@ class AnalyticsService {
       const response = await this.axiosInstance.get('/model-confidence');
       return response.data.data.confidenceLevels;
     } catch (error: any) {
-      console.error('Model Confidence Error:', error?.response?.data || error?.message);
+      console.error('Model Confidence Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie
+      });
       throw error;
     }
   }
@@ -91,7 +150,13 @@ class AnalyticsService {
       );
       return response.data.data.history;
     } catch (error: any) {
-      console.error('Diagnosis History Error:', error?.response?.data || error?.message);
+      console.error('Diagnosis History Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie,
+        params: { startDate, endDate }
+      });
       throw error;
     }
   }
@@ -123,7 +188,14 @@ class AnalyticsService {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error('Export Error:', error?.response?.data || error?.message);
+      console.error('Export Error:', {
+        type,
+        dateRange,
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        cookies: document.cookie
+      });
       throw error;
     }
   }
