@@ -1,5 +1,5 @@
-import ProfilePage from "@/components/profile/profile-page"
+import DoctorProfile from "@/components/profile/doctor-profile"
 
-export default function DoctorProfile() {
-  return <ProfilePage />
+export default function DoctorProfilePage() {
+  return <DoctorProfile />
 }
