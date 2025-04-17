@@ -4,12 +4,15 @@ import type React from "react"
 
 import { useState } from "react"
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react"
+import { diagnosisApi } from "@/services/api/diagnosis"
+import { useRouter } from "next/navigation"
 
 interface UploadSectionProps {
   setIsLoading: (loading: boolean) => void
 }
 
 export default function UploadSection({ setIsLoading }: UploadSectionProps) {
+  const router = useRouter()
   const [dragActive, setDragActive] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -55,18 +58,25 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
     setPreview(null)
   }
 
-  const analyzeImage = () => {
+  const analyzeImage = async () => {
     if (!file) return
 
     setAnalyzing(true)
     setIsLoading(true)
-    // Simulate API call
-    setTimeout(() => {
+    
+    try {
+      const response = await diagnosisApi.uploadImage(file)
+      if (response.success) {
+        router.push(`/diagnoses/${response.data.diagnosisId}`)
+      } else {
+        throw new Error(response.message || 'Failed to analyze image')
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to analyze image')
+    } finally {
       setAnalyzing(false)
       setIsLoading(false)
-      // Here you would handle the response from your ML model
-      alert("Analysis complete! Your image has been processed.")
-    }, 2000)
+    }
   }
 
   return (
@@ -137,4 +147,3 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
     </div>
   )
 }
-
