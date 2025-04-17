@@ -5,13 +5,13 @@ import { useAuth } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Share2, Edit, Camera, Palette, Stethoscope, Clock, MapPin } from "lucide-react"
+import { Share2, Edit, Camera, Palette, Activity, AlertCircle } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import { API_URL } from "@/lib/config"
 
-interface DoctorProfileData {
+interface PatientProfileData {
   id: string
   email: string
   first_name: string
@@ -19,24 +19,21 @@ interface DoctorProfileData {
   date_of_birth: string
   gender: string
   image_url: string | null
-  role: 'doctor'
-  doctor_profile: {
+  role: 'patient'
+  patient: {
     id: string
     user_id: string
-    specialty: string
-    bio: string
-    rating: number
-    experience_years: number
-    clinic_name: string
-    clinic_address: string
-    consultation_fee: number
-    available_hours: string
+    date_of_birth: string
+    gender: string
+    medical_history: string | null
+    allergies: string | null
+    region: string | null
   } | null
 }
 
-export default function DoctorProfile() {
+export default function PatientProfile() {
   const [isEditing, setIsEditing] = useState(false)
-  const [profileData, setProfileData] = useState<DoctorProfileData | null>(null)
+  const [profileData, setProfileData] = useState<PatientProfileData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { user } = useAuth()
 
@@ -106,7 +103,7 @@ export default function DoctorProfile() {
       className="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden"
     >
       {/* Cover Photo */}
-      <div className="h-48 bg-gradient-to-r from-blue-500 to-teal-500 relative">
+      <div className="h-48 bg-gradient-to-r from-purple-500 to-pink-500 relative">
         <Button size="sm" variant="secondary" className="absolute top-4 right-4 rounded-full" onClick={() => console.log("Customize")}>
           <Palette className="h-4 w-4 mr-2" />
           Customize
@@ -141,65 +138,57 @@ export default function DoctorProfile() {
           </Button>
         </div>
 
-        {/* Doctor Info */}
+        {/* Patient Info */}
         <div className="mt-12 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              Dr. {profileData.first_name} {profileData.last_name}
-              {profileData.doctor_profile?.specialty && (
-                <Badge variant="secondary" className="ml-2">
-                  <Stethoscope className="h-3 w-3 mr-1" />
-                  {profileData.doctor_profile.specialty}
-                </Badge>
-              )}
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {profileData.first_name} {profileData.last_name}
             </h1>
             <p className="text-slate-500 dark:text-slate-400">
               {profileData.email}
             </p>
           </div>
 
-          {profileData.doctor_profile && (
+          {profileData.patient && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {profileData.doctor_profile.clinic_address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-5 w-5 text-slate-500" />
-                    <div>
-                      <h3 className="font-medium text-slate-900 dark:text-white">Clinic Address</h3>
-                      <p className="text-slate-500 dark:text-slate-400">{profileData.doctor_profile.clinic_address}</p>
-                    </div>
+                <div className="flex items-start gap-2">
+                  <Activity className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <h3 className="font-medium text-slate-900 dark:text-white">Medical History</h3>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      {profileData.patient.medical_history || "No medical history recorded"}
+                    </p>
                   </div>
-                )}
-                {profileData.doctor_profile.available_hours && (
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-5 w-5 text-slate-500" />
-                    <div>
-                      <h3 className="font-medium text-slate-900 dark:text-white">Consultation Hours</h3>
-                      <p className="text-slate-500 dark:text-slate-400">{profileData.doctor_profile.available_hours}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {profileData.doctor_profile.bio && (
-                <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white mb-2">About</h3>
-                  <p className="text-slate-500 dark:text-slate-400">{profileData.doctor_profile.bio}</p>
                 </div>
-              )}
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-slate-500" />
+                  <div>
+                    <h3 className="font-medium text-slate-900 dark:text-white">Allergies</h3>
+                    <p className="text-slate-500 dark:text-slate-400">
+                      {profileData.patient.allergies || "No allergies recorded"}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white mb-2">Experience</h3>
-                  <Badge variant="secondary">{profileData.doctor_profile.experience_years} years</Badge>
-                </div>
-
-                {profileData.doctor_profile.consultation_fee && (
-                  <div>
-                    <h3 className="font-medium text-slate-900 dark:text-white mb-2">Consultation Fee</h3>
-                    <Badge variant="secondary">${profileData.doctor_profile.consultation_fee}</Badge>
+                  <h3 className="font-medium text-slate-900 dark:text-white mb-2">Personal Information</h3>
+                  <div className="space-x-2">
+                    <Badge variant="secondary">
+                      Gender: {profileData.patient.gender || "Not specified"}
+                    </Badge>
+                    <Badge variant="secondary">
+                      Date of Birth: {new Date(profileData.patient.date_of_birth).toLocaleDateString()}
+                    </Badge>
+                    {profileData.patient.region && (
+                      <Badge variant="secondary">
+                        Region: {profileData.patient.region}
+                      </Badge>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </>
           )}
@@ -210,11 +199,11 @@ export default function DoctorProfile() {
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
-            <DialogTitle>Edit Doctor Profile</DialogTitle>
-            <DialogDescription>Update your professional information and credentials</DialogDescription>
+            <DialogTitle>Edit Patient Profile</DialogTitle>
+            <DialogDescription>Update your personal information and medical history</DialogDescription>
           </DialogHeader>
 
-          {/* TODO: Add DoctorEditProfileDialog component */}
+          {/* TODO: Add PatientEditProfileDialog component */}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsEditing(false)}>
               Cancel

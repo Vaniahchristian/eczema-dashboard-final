@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import ProfileHeader from "@/components/profile/profile-header"
-import PersonalizationPanel from "@/components/profile/personalization-panel"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/lib/auth"
+import DoctorProfile from "./doctor-profile"
+import PatientProfile from "./patient-profile"
 import DashboardLayout from "../layout/dashboard-layout"
 
 export default function ProfilePage() {
   const [theme, setTheme] = useState<"default" | "nature" | "ocean" | "sunset">("default")
-  const [isPersonalizationOpen, setIsPersonalizationOpen] = useState(false)
+  const { user } = useAuth()
 
   const getThemeClass = () => {
     switch (theme) {
@@ -24,19 +25,19 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-    <div className={`min-h-screen ${getThemeClass()} transition-colors duration-300`}>
-      <div className="container mx-auto px-4 py-8 pt-20 md:pt-24">
-        <ProfileHeader />
-
-        <PersonalizationPanel
-          isOpen={isPersonalizationOpen}
-          onClose={() => setIsPersonalizationOpen(false)}
-          currentTheme={theme}
-          onThemeChange={setTheme}
-        />
+      <div className={`min-h-screen ${getThemeClass()} transition-colors duration-300`}>
+        <div className="container mx-auto px-4 py-8 pt-20 md:pt-24">
+          {user?.role === 'doctor' ? (
+            <DoctorProfile />
+          ) : user?.role === 'patient' ? (
+            <PatientProfile />
+          ) : (
+            <div className="text-center text-red-500">
+              Invalid user role. Please log in again.
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </DashboardLayout>
   )
 }
-
