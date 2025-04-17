@@ -61,7 +61,7 @@ export const appointmentService = {
       if (filters?.status) params.append('status', filters.status);
 
       const response = await axios.get(`${API_URL}/appointments?${params.toString()}`, getAuthHeaders());
-      return response.data;
+      return Array.isArray(response.data) ? response.data : response.data.data || [];
     } catch (error) {
       console.error('Error getting appointments:', error);
       throw error;

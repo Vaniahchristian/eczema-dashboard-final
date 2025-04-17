@@ -29,13 +29,15 @@ export default function DoctorDashboard() {
     const fetchTodayAppointments = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const appointments = await appointmentService.getAppointments({
+        const response = await appointmentService.getAppointments({
           startDate: today,
           endDate: today
         });
-        setTodayAppointments(appointments);
+        // Ensure we're setting an array of appointments
+        setTodayAppointments(Array.isArray(response) ? response : response.data || []);
       } catch (error) {
         console.error('Error fetching today\'s appointments:', error);
+        setTodayAppointments([]); // Set empty array on error
       } finally {
         setIsLoading(false);
       }
