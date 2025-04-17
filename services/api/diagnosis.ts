@@ -9,6 +9,7 @@ const apiClient = axios.create({
 });
 
 export interface Diagnosis {
+  id: string;
   _id: string;
   patientId: string;
   imageUrl: string;
