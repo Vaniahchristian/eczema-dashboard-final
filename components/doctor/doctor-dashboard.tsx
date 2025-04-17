@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -18,9 +18,31 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { appointmentService, Appointment } from '@/services/appointmentService';
 
 export default function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTodayAppointments = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const appointments = await appointmentService.getAppointments({
+          startDate: today,
+          endDate: today
+        });
+        setTodayAppointments(appointments);
+      } catch (error) {
+        console.error('Error fetching today\'s appointments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTodayAppointments();
+  }, []);
 
   return (
     <div className="container px-4 py-6 md:px-6 max-w-7xl mx-auto">
@@ -114,7 +136,7 @@ export default function DoctorDashboard() {
                   <div key={i} className="flex items-center justify-between py-4 border-b last:border-0">
                     <div className="flex items-center space-x-4">
                       <div className="bg-indigo-100 dark:bg-indigo-900 w-10 h-10 rounded-full flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-300" />
+                        <Clock className="h-5 w-5 text-indigo-600" />
                       </div>
                       <div>
                         <p className="font-medium">{appointment.patient}</p>
@@ -311,22 +333,41 @@ export default function DoctorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Today's Appointments</CardTitle>
-              <CardDescription>Manage your schedule for June 12, 2023</CardDescription>
+              <CardDescription>Manage your schedule for {new Date().toLocaleDateString()}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Appointment content will go here</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="patients" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Patient Directory</CardTitle>
-              <CardDescription>View and manage your patients</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>Patient directory content will go here</p>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : todayAppointments.length === 0 ? (
+                <p className="text-muted-foreground text-center">No appointments scheduled for today</p>
+              ) : (
+                <div className="space-y-4">
+                  {todayAppointments.map((appointment) => (
+                    <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{appointment.patient.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(appointment.appointmentDate).toLocaleTimeString()} - {appointment.appointmentType}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Mode: {appointment.mode}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                          appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                          appointment.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {appointment.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -346,4 +387,3 @@ export default function DoctorDashboard() {
     </div>
   )
 }
-
