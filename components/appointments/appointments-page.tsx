@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast"
 import AppointmentsList from "@/components/appointments/appointments-list"
 import ScheduleAppointment from "@/components/appointments/schedule-appointment"
 import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
+import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function AppointmentsPage() {
   const [activeView, setActiveView] = useState<"calendar" | "list">("calendar")
@@ -86,12 +87,13 @@ export default function AppointmentsPage() {
       })
     }
   }
-
+  
   if (loading) {
     return <div>Loading...</div>
   }
-
+ 
   return (
+    <DashboardLayout>
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Appointments</h1>
@@ -127,5 +129,6 @@ export default function AppointmentsPage() {
         onSubmit={handleScheduleAppointment}
       />
     </div>
+    </DashboardLayout>
   )
 }
