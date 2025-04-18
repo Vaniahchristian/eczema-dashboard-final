@@ -113,7 +113,7 @@ export const patientAppointmentService = {
   getDoctors: async () => {
     try {
       const response = await axios.get(`${API_URL}/doctors`, getAuthHeaders())
-      return response.data
+      return response.data.data // Note: backend returns { success: true, data: [...] }
     } catch (error) {
       console.error('Error getting doctors:', error)
       throw error
@@ -124,10 +124,10 @@ export const patientAppointmentService = {
   getDoctorAvailability: async (doctorId: string, date: string) => {
     try {
       const response = await axios.get(
-        `${API_URL}/appointments/availability?doctorId=${doctorId}&date=${date}`,
+        `${API_URL}/doctors/${doctorId}/available-slots?date=${date}`,
         getAuthHeaders()
       )
-      return response.data
+      return response.data.data.availableSlots // Note: backend returns { success: true, data: { date, availableSlots: [...] } }
     } catch (error) {
       console.error('Error getting doctor availability:', error)
       throw error

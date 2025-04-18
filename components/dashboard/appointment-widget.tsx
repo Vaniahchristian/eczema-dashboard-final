@@ -41,8 +41,8 @@ export default function AppointmentWidget() {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const { data } = await patientAppointmentService.getDoctors()
-        setDoctors(data)
+        const response = await patientAppointmentService.getDoctors()
+        setDoctors(response)
       } catch (err) {
         toast({
           title: "Error",
