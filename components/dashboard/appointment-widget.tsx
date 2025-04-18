@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePick
 import { toast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
 import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
+import { useAuth } from "@/lib/auth"
 
 interface TimeSlot {
   time: string
@@ -21,6 +22,7 @@ interface AppointmentForm {
 }
 
 export default function AppointmentWidget() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("appointment")
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
@@ -130,24 +132,19 @@ export default function AppointmentWidget() {
       return
     }
 
+    if (!user) {
+      console.error('No authenticated user found');
+      toast({
+        title: "Authentication Error",
+        description: "Please log in to schedule an appointment",
+        variant: "destructive",
+      })
+      return;
+    }
+
     setLoading(true)
     try {
-      const patientId = localStorage.getItem("patientId")
-      const token = localStorage.getItem("token")
-      
-      console.log('Current auth state:', { 
-        patientId: patientId ? 'present' : 'missing',
-        token: token ? 'present' : 'missing'
-      });
-
-      if (!patientId) {
-        throw new Error("Patient ID not found")
-      }
-
-      if (!token) {
-        throw new Error("Authentication token not found")
-      }
-
+      console.log('Current user:', user);
       console.log('Creating appointment with form data:', {
         ...formData,
         date: formData.date ? format(formData.date, "yyyy-MM-dd") : null
@@ -158,11 +155,11 @@ export default function AppointmentWidget() {
       
       const appointmentData = {
         doctor_id: formData.doctorId,
-        patient_id: patientId,
+        patient_id: user.id,
         appointment_date: appointmentDate,
         reason: formData.reason,
         mode: formData.mode,
-        duration: 30, // Default duration in minutes
+        duration: 30,
         appointment_type: "consultation",
       }
 
@@ -184,15 +181,13 @@ export default function AppointmentWidget() {
         reason: "",
         mode: "video"
       })
-
-      // Refresh appointments list if we have that functionality
-      // fetchAppointments?.();
     } catch (err) {
       console.error('Error in handleSubmit:', err);
       const errorMessage = err instanceof Error ? err.message : "Failed to schedule appointment";
       console.error('Error details:', {
         message: errorMessage,
-        error: err
+        error: err,
+        user: user
       });
       toast({
         title: "Error",
