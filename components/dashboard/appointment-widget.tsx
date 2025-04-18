@@ -157,10 +157,10 @@ export default function AppointmentWidget() {
         doctor_id: formData.doctorId,
         patient_id: user.id,
         appointment_date: appointmentDate,
-        reason: formData.reason,
+        reason: formData.reason.trim(),
         mode: formData.mode,
         duration: 30,
-        appointment_type: "consultation",
+        appointment_type: 'general', // Use the valid appointment type
       }
 
       console.log('Submitting appointment data:', appointmentData);
