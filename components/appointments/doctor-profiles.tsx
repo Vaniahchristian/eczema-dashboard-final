@@ -6,8 +6,6 @@ import { Star, Loader2, MapPin, Video, Phone, Calendar } from "lucide-react"
 import type { Doctor } from "@/services/patientAppointmentService"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
-import { patientAppointmentService } from "@/services/patientAppointmentService"
 
 interface DoctorProfilesProps {
   doctors: Doctor[]
@@ -70,24 +68,18 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
                   <div className="p-4">
                     <div className="flex items-center">
                       <div className="flex text-amber-400">
-                        {[...Array(5)].map((_, i) => {
-                          const experienceYears = doctor.doctor_profile?.experience_years || 0;
-                          return (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < Math.floor(experienceYears / 5) ? "fill-current" : "fill-none"
-                              }`}
-                            />
-                          );
-                        })}
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < Math.floor(doctor.doctor_profile?.experience_years || 0) ? "fill-current" : "fill-none"
+                            }`}
+                          />
+                        ))}
                       </div>
                       <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                        {Math.min(5, Math.floor((doctor.doctor_profile?.experience_years || 0) / 5))} stars
+                        {doctor.doctor_profile?.experience_years || "N/A"}
                       </span>
-                    </div>
-                    <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                      {doctor.doctor_profile?.experience_years || 0} years of experience
                     </div>
 
                     {!expandedDoctor || expandedDoctor !== doctor.id ? (
@@ -171,7 +163,7 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
 
                       {doctor.doctor_profile?.consultation_fee && (
                         <Badge variant="outline" className="mt-2">
-                          Consultation Fee: ${doctor.doctor_profile?.consultation_fee}
+                          Consultation Fee: ${doctor.doctor_profile.consultation_fee}
                         </Badge>
                       )}
                     </div>
