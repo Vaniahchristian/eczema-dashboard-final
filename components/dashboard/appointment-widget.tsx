@@ -113,28 +113,63 @@ export default function AppointmentWidget() {
   }, [formData.doctorId, formData.date])
 
   const handleSubmit = async () => {
-    if (!formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason) {
+    // Validate required fields
+    const missingFields = [];
+    if (!formData.doctorId) missingFields.push('doctor');
+    if (!formData.date) missingFields.push('date');
+    if (!formData.timeSlot) missingFields.push('time slot');
+    if (!formData.reason) missingFields.push('reason');
+
+    if (missingFields.length > 0) {
+      console.warn('Missing required fields:', missingFields);
+      toast({
+        title: "Missing Information",
+        description: `Please fill in the following: ${missingFields.join(', ')}`,
+        variant: "destructive",
+      })
       return
     }
 
     setLoading(true)
     try {
       const patientId = localStorage.getItem("patientId")
+      const token = localStorage.getItem("token")
+      
+      console.log('Current auth state:', { 
+        patientId: patientId ? 'present' : 'missing',
+        token: token ? 'present' : 'missing'
+      });
+
       if (!patientId) {
         throw new Error("Patient ID not found")
       }
 
+      if (!token) {
+        throw new Error("Authentication token not found")
+      }
+
+      console.log('Creating appointment with form data:', {
+        ...formData,
+        date: formData.date ? format(formData.date, "yyyy-MM-dd") : null
+      });
+      
+      const appointmentDate = `${format(formData.date!, "yyyy-MM-dd")}T${formData.timeSlot}:00`;
+      console.log('Formatted appointment date:', appointmentDate);
+      
       const appointmentData = {
         doctor_id: formData.doctorId,
         patient_id: patientId,
-        appointment_date: `${format(formData.date, "yyyy-MM-dd")}T${formData.timeSlot}`,
+        appointment_date: appointmentDate,
         reason: formData.reason,
         mode: formData.mode,
         duration: 30, // Default duration in minutes
         appointment_type: "consultation",
       }
 
-      await patientAppointmentService.scheduleAppointment(appointmentData)
+      console.log('Submitting appointment data:', appointmentData);
+      
+      const response = await patientAppointmentService.scheduleAppointment(appointmentData)
+      console.log('Appointment created successfully:', response);
 
       toast({
         title: "Success",
@@ -149,10 +184,19 @@ export default function AppointmentWidget() {
         reason: "",
         mode: "video"
       })
+
+      // Refresh appointments list if we have that functionality
+      // fetchAppointments?.();
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to schedule appointment";
+      console.error('Error details:', {
+        message: errorMessage,
+        error: err
+      });
       toast({
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to schedule appointment",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

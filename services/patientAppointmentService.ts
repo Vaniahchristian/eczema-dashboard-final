@@ -112,15 +112,16 @@ export const patientAppointmentService = {
   // Schedule new appointment
   scheduleAppointment: async (data: CreateAppointmentData) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        throw new Error('No auth token found')
-      }
-
+      console.log('Scheduling appointment with data:', data);
       const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders())
-      return response.data
+      console.log('Appointment scheduling response:', response.data);
+      return response.data.data
     } catch (error) {
       console.error('Error scheduling appointment:', error)
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Server error response:', error.response.data);
+        throw new Error(error.response.data.message || 'Failed to schedule appointment')
+      }
       throw error
     }
   },
