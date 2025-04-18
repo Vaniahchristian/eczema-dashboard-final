@@ -2,7 +2,10 @@ name: Deploy to Vercel
 on:
   push:
     branches:
-      - main
+      - main 
+      - diagnosis_integration
+
+
 
 jobs:
   deploy:
