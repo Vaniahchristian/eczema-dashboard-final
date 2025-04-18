@@ -294,7 +294,8 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                       className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white"
                     >
                       <option value="first_visit">First Visit</option>
-                      <option value="follow-up">Follow-up</option>
+                      <option value="follow_up">Follow-up</option>
+                      <option value="emergency">Emergency</option>
                     </select>
                   </div>
                 </div>
