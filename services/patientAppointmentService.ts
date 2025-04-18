@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { getAuthHeaders } from '@/lib/auth'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+import { API_URL } from '@/lib/config'
 
 export interface DoctorProfile {
   id: string
@@ -22,14 +21,16 @@ export interface DoctorProfile {
 
 export interface Doctor {
   id: string
-  first_name: string
-  last_name: string
+  name: string
   email: string
-  role: 'doctor'
-  doctor_profile?: DoctorProfile
-  image_url?: string
-  created_at: string
-  updated_at: string
+  imageUrl: string
+  specialty: string
+  bio: string
+  rating: number
+  experienceYears: number
+  clinicName: string
+  clinicAddress: string
+  consultationFee: number
 }
 
 export interface Patient {
@@ -73,6 +74,11 @@ export const patientAppointmentService = {
       if (params?.startDate) queryParams.append('startDate', params.startDate)
       if (params?.endDate) queryParams.append('endDate', params.endDate)
 
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.get(
         `${API_URL}/appointments/patient/${patientId}?${queryParams.toString()}`,
         getAuthHeaders()
@@ -87,6 +93,11 @@ export const patientAppointmentService = {
   // Get upcoming appointments
   getUpcomingAppointments: async (patientId: string) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.get(
         `${API_URL}/appointments/patient/${patientId}/upcoming`,
         getAuthHeaders()
@@ -101,6 +112,11 @@ export const patientAppointmentService = {
   // Schedule new appointment
   scheduleAppointment: async (data: CreateAppointmentData) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders())
       return response.data
     } catch (error) {
@@ -112,8 +128,13 @@ export const patientAppointmentService = {
   // Get available doctors
   getDoctors: async () => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.get(`${API_URL}/doctors`, getAuthHeaders())
-      return response.data.data // Note: backend returns { success: true, data: [...] }
+      return response.data.data // Returns array of Doctor objects
     } catch (error) {
       console.error('Error getting doctors:', error)
       throw error
@@ -123,6 +144,11 @@ export const patientAppointmentService = {
   // Get doctor availability
   getDoctorAvailability: async (doctorId: string, date: string) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.get(
         `${API_URL}/doctors/${doctorId}/available-slots?date=${date}`,
         getAuthHeaders()
@@ -137,6 +163,11 @@ export const patientAppointmentService = {
   // Reschedule appointment
   rescheduleAppointment: async (id: string, data: Partial<CreateAppointmentData>) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.put(
         `${API_URL}/appointments/${id}`,
         data,
@@ -152,6 +183,11 @@ export const patientAppointmentService = {
   // Cancel appointment
   cancelAppointment: async (id: string) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+
       const response = await axios.patch(
         `${API_URL}/appointments/${id}/status`,
         { status: 'cancelled' },

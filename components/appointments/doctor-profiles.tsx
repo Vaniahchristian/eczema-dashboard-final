@@ -6,6 +6,7 @@ import { Star, Loader2, MapPin, Video, Phone, Calendar } from "lucide-react"
 import type { Doctor } from "@/services/patientAppointmentService"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import Image from 'next/image'
 
 interface DoctorProfilesProps {
   doctors: Doctor[]
@@ -55,31 +56,33 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
               <div className={`flex flex-col ${expandedDoctor === doctor.id ? "md:flex-row" : ""}`}>
                 <div className={`${expandedDoctor === doctor.id ? "md:w-1/3" : ""}`}>
                   <div className="relative">
-                    <img
-                      src={doctor.image_url || "/placeholder-doctor.png"}
-                      alt={`${doctor.first_name} ${doctor.last_name}`}
+                    <Image
+                      alt={`${doctor.name}'s profile`}
                       className="w-full h-48 object-cover"
+                      fill
+                      src={doctor.imageUrl}
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                      <h3 className="text-white font-medium">{`Dr. ${doctor.first_name} ${doctor.last_name}`}</h3>
-                      <p className="text-white/80 text-sm">{doctor.doctor_profile?.specialty}</p>
+                      <h3 className="text-white font-medium">{doctor.name}</h3>
+                      <p className="text-white/80 text-sm">{doctor.specialty}</p>
                     </div>
                   </div>
                   <div className="p-4">
-                    <div className="flex items-center">
-                      <div className="flex text-amber-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < Math.floor(doctor.doctor_profile?.experience_years || 0) ? "fill-current" : "fill-none"
-                            }`}
-                          />
-                        ))}
+                    <div className="flex items-center gap-4">
+                      <div className="relative h-10 w-10">
+                        <Image
+                          alt={`${doctor.name}'s profile`}
+                          className="rounded-full"
+                          fill
+                          src={doctor.imageUrl}
+                        />
                       </div>
-                      <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                        {doctor.doctor_profile?.experience_years || "N/A"}
-                      </span>
+                      <div>
+                        <h3 className="text-lg font-semibold">{doctor.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          {doctor.specialty} • {doctor.experienceYears} years experience
+                        </p>
+                      </div>
                     </div>
 
                     {!expandedDoctor || expandedDoctor !== doctor.id ? (
@@ -109,7 +112,7 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
                   <div className="p-4 md:flex-1">
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-slate-900 dark:text-white">
-                        About Dr. {doctor.last_name}
+                        About {doctor.name}
                       </h3>
                       <Button
                         variant="ghost"
@@ -119,53 +122,26 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
                         Close
                       </Button>
                     </div>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{doctor.doctor_profile?.bio}</p>
+                    <div className="mt-4">
+                      <h4 className="font-medium">About</h4>
+                      <p className="mt-2 text-sm text-gray-500">{doctor.bio || 'No bio available'}</p>
+                    </div>
 
-                    <div className="mt-4 space-y-4">
-                      {doctor.doctor_profile?.clinic_address && (
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-5 w-5 text-slate-400 mt-0.5" />
-                          <div>
-                            <h4 className="text-sm font-medium text-slate-900 dark:text-white">Clinic Location</h4>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                              {doctor.doctor_profile?.clinic_address}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-start gap-2">
-                        <Calendar className="h-5 w-5 text-slate-400 mt-0.5" />
-                        <div>
-                          <h4 className="text-sm font-medium text-slate-900 dark:text-white">Available Hours</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            {doctor.doctor_profile?.available_hours || "Contact clinic for availability"}
-                          </p>
-                        </div>
+                    <div className="mt-4">
+                      <h4 className="font-medium">Clinic Information</h4>
+                      <div className="mt-2 space-y-2 text-sm text-gray-500">
+                        <p>Clinic: {doctor.clinicName || 'Not specified'}</p>
+                        <p>Address: {doctor.clinicAddress || 'Not specified'}</p>
+                        <p>Consultation Fee: ${doctor.consultationFee || 0}</p>
                       </div>
+                    </div>
 
-                      <div className="flex items-start gap-2">
-                        <div className="flex gap-2">
-                          <Badge variant="secondary">
-                            <Video className="h-4 w-4 mr-1" />
-                            Video Consult
-                          </Badge>
-                          <Badge variant="secondary">
-                            <Phone className="h-4 w-4 mr-1" />
-                            Phone Consult
-                          </Badge>
-                          <Badge variant="secondary">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            In-Person
-                          </Badge>
-                        </div>
+                    <div className="mt-4">
+                      <h4 className="font-medium">Rating</h4>
+                      <div className="mt-2 flex items-center">
+                        <Star className="h-5 w-5 text-yellow-400" />
+                        <span className="ml-1 text-sm text-gray-500">{doctor.rating.toFixed(1)}</span>
                       </div>
-
-                      {doctor.doctor_profile?.consultation_fee && (
-                        <Badge variant="outline" className="mt-2">
-                          Consultation Fee: ${doctor.doctor_profile.consultation_fee}
-                        </Badge>
-                      )}
                     </div>
 
                     <div className="mt-6 flex justify-end">

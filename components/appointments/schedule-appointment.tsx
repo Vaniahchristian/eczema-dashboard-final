@@ -217,12 +217,12 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                     <div className="flex items-center">
                       <img
                         src={"/placeholder.svg"}
-                        alt={`${doctor.first_name} ${doctor.last_name}`}
+                        alt={`${doctor.name}`}
                         className="h-12 w-12 rounded-full object-cover mr-4"
                       />
                       <div className="flex-1">
-                        <h3 className="font-medium text-slate-900 dark:text-white">{doctor.first_name} {doctor.last_name}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{doctor.doctor_profile?.specialty}</p>
+                        <h3 className="font-medium text-slate-900 dark:text-white">{doctor.name}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{doctor.specialty}</p>
                       </div>
                       <div
                         className={`h-5 w-5 rounded-full border-2 ${
@@ -242,7 +242,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
             {step === "date" && (
               <div>
                 <p className="text-slate-500 dark:text-slate-400 mb-4">
-                  Select a date for your appointment with {selectedDoctor?.first_name} {selectedDoctor?.last_name}:
+                  Select a date for your appointment with {selectedDoctor?.name} 
                 </p>
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="mb-4">
