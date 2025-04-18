@@ -187,6 +187,16 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   return React.createElement(AuthContext.Provider, { value: contextValue }, children)
 }
 
+export function getAuthHeaders() {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+  return {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
+}
+
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (!context) {

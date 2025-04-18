@@ -1,158 +1,127 @@
-import axios from 'axios';
+import axios from 'axios'
+import { getAuthHeaders } from '@/lib/auth'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  };
-};
-
-interface Patient {
-  id: string;
-  first_name: string;
-  last_name: string;
-  image_url: string;
+export interface DoctorProfile {
+  id: string
+  specialty: string
+  qualifications: string
+  experience_years: number
+  created_at: string
+  updated_at: string
 }
 
-interface Doctor {
-  id: string;
-  first_name: string;
-  last_name: string;
-  image_url: string;
-  doctor_profile: {
-    specialty: string;
-    rating: number;
-  };
+export interface Doctor {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: 'doctor'
+  image?: string
+  doctor_profile?: DoctorProfile
+  created_at: string
+  updated_at: string
+}
+
+export interface Patient {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: 'patient'
+  created_at: string
+  updated_at: string
 }
 
 export interface Appointment {
-  id: string;
-  doctor_id: string;
-  patient_id: string;
-  appointment_date: string;
-  reason: string;
-  appointment_type: 'regular' | 'follow_up' | 'emergency';
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  mode: 'in_person' | 'video' | 'phone';
-  duration: number;
-  patient?: Patient;
-  doctor?: Doctor;
-  created_at: string;
-  updated_at: string;
+  id: string
+  doctor_id: string
+  patient_id: string
+  appointment_date: string
+  reason: string
+  appointment_type: string
+  mode: 'video' | 'phone' | 'in_person'
+  duration: number
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  doctor?: Doctor
+  patient?: Patient
+  created_at: string
+  updated_at: string
 }
 
-export const appointmentService = {
-  // Create new appointment
-  createAppointment: async (data: Omit<Appointment, 'id' | 'status' | 'patient' | 'doctor' | 'created_at' | 'updated_at'>) => {
-    try {
-      const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders());
-      return response.data.data;
-    } catch (error) {
-      console.error('Error creating appointment:', error);
-      throw error;
-    }
-  },
+export type CreateAppointmentData = Omit<Appointment, 'id' | 'status' | 'doctor' | 'patient' | 'created_at' | 'updated_at'>
 
-  // Get appointment by ID
-  getAppointmentById: async (id: string) => {
-    try {
-      const response = await axios.get(`${API_URL}/appointments/${id}`, getAuthHeaders());
-      return response.data.data;
-    } catch (error) {
-      console.error('Error getting appointment:', error);
-      throw error;
-    }
-  },
-
-  // Get doctor's appointments
-  getDoctorAppointments: async (doctorId: string, filters?: {
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.startDate) params.append('startDate', filters.startDate);
-      if (filters?.endDate) params.append('endDate', filters.endDate);
-
-      const response = await axios.get(
-        `${API_URL}/appointments/doctor/${doctorId}?${params.toString()}`,
-        getAuthHeaders()
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error getting doctor appointments:', error);
-      throw error;
-    }
-  },
-
-  // Get patient's appointments
-  getPatientAppointments: async (patientId: string, filters?: {
-    status?: string;
-  }) => {
-    try {
-      const params = new URLSearchParams();
-      if (filters?.status) params.append('status', filters.status);
-
-      const response = await axios.get(
-        `${API_URL}/appointments/patient/${patientId}?${params.toString()}`,
-        getAuthHeaders()
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error getting patient appointments:', error);
-      throw error;
-    }
-  },
-
-  // Update appointment status
-  updateAppointmentStatus: async (appointmentId: string, status: Appointment['status']) => {
-    try {
-      const response = await axios.patch(
-        `${API_URL}/appointments/${appointmentId}/status`,
-        { status },
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error updating appointment status:', error);
-      throw error;
-    }
-  },
-
-  // Update appointment details
-  updateAppointment: async (appointmentId: string, data: Partial<Omit<Appointment, 'id' | 'patient' | 'doctor' | 'created_at' | 'updated_at'>>) => {
-    try {
-      const response = await axios.put(
-        `${API_URL}/appointments/${appointmentId}`,
-        data,
-        getAuthHeaders()
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error updating appointment:', error);
-      throw error;
-    }
-  },
-
-  // Check doctor's availability
-  checkAvailability: async (doctorId: string, appointmentDate: string) => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/appointments/availability?doctorId=${doctorId}&appointmentDate=${appointmentDate}`,
-        getAuthHeaders()
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error checking availability:', error);
-      throw error;
-    }
+class AppointmentService {
+  async createAppointment(data: CreateAppointmentData) {
+    const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders())
+    return response.data
   }
-};
+
+  async getAppointmentById(id: string) {
+    const response = await axios.get(`${API_URL}/appointments/${id}`, getAuthHeaders())
+    return response.data
+  }
+
+  async getDoctorAppointments(doctorId: string, params?: {
+    status?: Appointment['status']
+    startDate?: string
+    endDate?: string
+  }) {
+    const queryParams = new URLSearchParams()
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.startDate) queryParams.append('startDate', params.startDate)
+    if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+    const response = await axios.get(
+      `${API_URL}/appointments/doctor/${doctorId}?${queryParams.toString()}`,
+      getAuthHeaders()
+    )
+    return response.data
+  }
+
+  async getPatientAppointments(patientId: string, params?: {
+    status?: Appointment['status']
+    startDate?: string
+    endDate?: string
+  }) {
+    const queryParams = new URLSearchParams()
+    if (params?.status) queryParams.append('status', params.status)
+    if (params?.startDate) queryParams.append('startDate', params.startDate)
+    if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+    const response = await axios.get(
+      `${API_URL}/appointments/patient/${patientId}?${queryParams.toString()}`,
+      getAuthHeaders()
+    )
+    return response.data
+  }
+
+  async updateAppointmentStatus(id: string, status: Appointment['status']) {
+    const response = await axios.patch(
+      `${API_URL}/appointments/${id}/status`,
+      { status },
+      getAuthHeaders()
+    )
+    return response.data
+  }
+
+  async updateAppointment(id: string, data: Partial<CreateAppointmentData>) {
+    const response = await axios.put(
+      `${API_URL}/appointments/${id}`,
+      data,
+      getAuthHeaders()
+    )
+    return response.data
+  }
+
+  async checkAvailability(doctorId: string, date: string) {
+    const response = await axios.get(
+      `${API_URL}/appointments/availability?doctorId=${doctorId}&date=${date}`,
+      getAuthHeaders()
+    )
+    return response.data
+  }
+}
+
+export const appointmentService = new AppointmentService()

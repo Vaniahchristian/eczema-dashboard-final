@@ -1,31 +1,24 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import AppointmentsHeader from "@/components/appointments/appointments-header"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { Calendar, List } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 import AppointmentsList from "@/components/appointments/appointments-list"
 import ScheduleAppointment from "@/components/appointments/schedule-appointment"
-import { patientAppointmentService, type PatientAppointment, type Doctor } from "@/services/patientAppointmentService"
-import { toast } from "@/components/ui/use-toast"
+import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
 
 export default function AppointmentsPage() {
   const [activeView, setActiveView] = useState<"calendar" | "list">("calendar")
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [showScheduleModal, setShowScheduleModal] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [appointments, setAppointments] = useState<PatientAppointment[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
-
-  useEffect(() => {
-    loadAppointments()
-    loadDoctors()
-  }, [])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
   const loadAppointments = async () => {
     try {
-      setLoading(true)
-      const response = await patientAppointmentService.getAppointments()
+      if (!user) return
+      const response = await patientAppointmentService.getAppointments(user.id)
       setAppointments(response.data)
     } catch (error) {
       console.error("Error loading appointments:", error)
@@ -34,8 +27,6 @@ export default function AppointmentsPage() {
         description: "Failed to load appointments. Please try again.",
         variant: "destructive"
       })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -53,15 +44,31 @@ export default function AppointmentsPage() {
     }
   }
 
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true)
+      await Promise.all([loadAppointments(), loadDoctors()])
+      setLoading(false)
+    }
+    init()
+  }, [user])
+
   const handleScheduleAppointment = async (data: {
-    doctorId: string
-    appointmentDate: string
+    doctor_id: string
+    patient_id: string
+    appointment_date: string
     reason: string
-    mode: 'In-person' | 'Video' | 'Phone'
-    appointmentType: string
+    mode: 'video' | 'phone' | 'in_person'
+    appointment_type: string
+    duration: number
   }) => {
     try {
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
       await patientAppointmentService.scheduleAppointment(data)
+
       toast({
         title: "Success",
         description: "Appointment scheduled successfully."
@@ -78,64 +85,45 @@ export default function AppointmentsPage() {
     }
   }
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    try {
-      await patientAppointmentService.cancelAppointment(appointmentId)
-      toast({
-        title: "Success",
-        description: "Appointment cancelled successfully."
-      })
-      loadAppointments() // Refresh appointments list
-    } catch (error) {
-      console.error("Error cancelling appointment:", error)
-      toast({
-        title: "Error",
-        description: "Failed to cancel appointment. Please try again.",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const handleRescheduleAppointment = async (appointmentId: string, newDate: string) => {
-    try {
-      await patientAppointmentService.rescheduleAppointment(appointmentId, newDate)
-      toast({
-        title: "Success",
-        description: "Appointment rescheduled successfully."
-      })
-      loadAppointments() // Refresh appointments list
-    } catch (error) {
-      console.error("Error rescheduling appointment:", error)
-      toast({
-        title: "Error",
-        description: "Failed to reschedule appointment. Please try again.",
-        variant: "destructive"
-      })
-    }
+  if (loading) {
+    return <div>Loading...</div>
   }
 
   return (
-    <DashboardLayout>
-      <div className="container mx-auto py-6 space-y-8">
-        <AppointmentsHeader
-          onScheduleClick={() => setShowScheduleModal(true)}
-        />
-
-        <AppointmentsList
-          appointments={appointments}
-          onCancel={handleCancelAppointment}
-          onReschedule={handleRescheduleAppointment}
-          loading={loading}
-        />
-
-        {showScheduleModal && (
-          <ScheduleAppointment
-            doctors={doctors}
-            onSchedule={handleScheduleAppointment}
-            onClose={() => setShowScheduleModal(false)}
-          />
-        )}
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Appointments</h1>
+        <div className="flex items-center gap-4">
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            <Button
+              variant={activeView === "calendar" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setActiveView("calendar")}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Calendar
+            </Button>
+            <Button
+              variant={activeView === "list" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setActiveView("list")}
+            >
+              <List className="h-4 w-4 mr-2" />
+              List
+            </Button>
+          </div>
+          <Button onClick={() => setShowScheduleModal(true)}>Schedule Appointment</Button>
+        </div>
       </div>
-    </DashboardLayout>
+
+      <AppointmentsList appointments={appointments} onRefresh={loadAppointments} />
+
+      <ScheduleAppointment
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        doctors={doctors}
+        onSubmit={handleScheduleAppointment}
+      />
+    </div>
   )
 }

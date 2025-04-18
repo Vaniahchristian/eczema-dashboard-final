@@ -1,20 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
 import { Calendar, Clock, MessageSquare, User, Video } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePicker } from "@/components/ui"
-import { API_URL } from "@/lib/config"
-import { toast } from "sonner"
+import { toast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
-
-interface Doctor {
-  id: string
-  // firstName: string
-  // lastName: string
-  name:string
-  specialty: string
-}
+import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
 
 interface TimeSlot {
   time: string
@@ -26,29 +17,7 @@ interface AppointmentForm {
   date: Date | null
   timeSlot: string
   reason: string
-  appointmentType: "in-person" | "virtual"
-}
-
-interface Message {
-  id: string
-  conversationId: string
-  senderId: string
-  content: string
-  type: 'text' | 'image' | 'file'
-  status: 'sent' | 'delivered' | 'read'
-  createdAt: string
-  attachments?: string[]
-}
-
-interface Conversation {
-  id: string
-  participants: {
-    userId: string
-    role: string
-    name: string
-  }[]
-  lastMessage?: Message
-  updatedAt: string
+  mode: PatientAppointment['mode']
 }
 
 export default function AppointmentWidget() {
@@ -65,34 +34,21 @@ export default function AppointmentWidget() {
     date: null,
     timeSlot: "",
     reason: "",
-    appointmentType: "virtual"
+    mode: "video"
   })
 
   // Fetch doctors on component mount
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No authentication token found")
-
-        const response = await fetch(`${API_URL}/doctors`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        })
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch doctors")
-        }
-
-        const data = await response.json()
-        if (!data.success) {
-          throw new Error(data.message || "Failed to fetch doctors")
-        }
-
-        setDoctors(data.data)
+        const { data } = await patientAppointmentService.getDoctors()
+        setDoctors(data)
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to fetch doctors")
+        toast({
+          title: "Error",
+          description: err instanceof Error ? err.message : "Failed to fetch doctors",
+          variant: "destructive",
+        })
       }
     }
 
@@ -114,238 +70,135 @@ export default function AppointmentWidget() {
 
       setLoadingSlots(true)
       try {
-        const token = localStorage.getItem("token")
-        if (!token) throw new Error("No authentication token found")
-
-        const response = await fetch(
-          `${API_URL}/doctors/${formData.doctorId}/available-slots?date=${format(formData.date, "yyyy-MM-dd")}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          }
+        const { data } = await patientAppointmentService.getDoctorAvailability(
+          formData.doctorId,
+          format(formData.date, "yyyy-MM-dd")
         )
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch time slots")
-        }
-
-        const data = await response.json()
-        if (!data.success) {
-          throw new Error(data.message || "Failed to fetch time slots")
-        }
-
         // Map the available slots to our format
-        const availableSlots = data.data.availableSlots.map((time: string) => ({
+        const availableSlots = data.availableSlots.map((time: string) => ({
           time,
           available: true
-        }));
+        }))
 
         setTimeSlots(availableSlots)
         if (availableSlots.length === 0) {
-          toast.info("No available time slots for the selected date")
+          toast({
+            title: "No Slots Available",
+            description: "No available time slots for the selected date",
+          })
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to fetch time slots")
-        setTimeSlots([])
+        toast({
+          title: "Error",
+          description: err instanceof Error ? err.message : "Failed to fetch time slots",
+          variant: "destructive",
+        })
       } finally {
         setLoadingSlots(false)
       }
     }
 
-    fetchTimeSlots()
+    if (formData.doctorId && formData.date) {
+      fetchTimeSlots()
+    }
   }, [formData.doctorId, formData.date])
 
   const handleSubmit = async () => {
     if (!formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason) {
-      toast.error("Please fill in all required fields")
       return
     }
 
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) throw new Error("No authentication token found")
+      const patientId = localStorage.getItem("patientId")
+      if (!patientId) {
+        throw new Error("Patient ID not found")
+      }
 
-      const response = await fetch(`${API_URL}/appointments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          doctorId: formData.doctorId,
-          appointmentDate: format(
-            new Date(`${format(formData.date!, "yyyy-MM-dd")}T${formData.timeSlot}`),
-            "yyyy-MM-dd'T'HH:mm:ss"
-          ),
-          reason: formData.reason,
-          appointmentType: formData.appointmentType
-        })
+      const appointmentData = {
+        doctor_id: formData.doctorId,
+        patient_id: patientId,
+        appointment_date: `${format(formData.date, "yyyy-MM-dd")}T${formData.timeSlot}`,
+        reason: formData.reason,
+        mode: formData.mode,
+        duration: 30, // Default duration in minutes
+        appointment_type: "consultation",
+      }
+
+      await patientAppointmentService.scheduleAppointment(appointmentData)
+
+      toast({
+        title: "Success",
+        description: "Appointment scheduled successfully",
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to create appointment")
-      }
-
-      const data = await response.json()
-      if (!data.success) {
-        throw new Error(data.message || "Failed to create appointment")
-      }
-
-      toast.success("Appointment scheduled successfully")
+      // Reset form
       setFormData({
         doctorId: "",
         date: null,
         timeSlot: "",
         reason: "",
-        appointmentType: "virtual"
+        mode: "video"
       })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to schedule appointment")
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to schedule appointment",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSendMessage = async () => {
-    if (!selectedDoctor || !messageContent.trim()) {
-      toast.error("Please select a doctor and enter a message")
-      return
-    }
-
-    setSendingMessage(true)
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) throw new Error("No authentication token found")
-
-      // First create or get existing conversation
-      const conversationResponse = await fetch(`${API_URL}/messages/conversations`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          participantId: selectedDoctor
-        })
-      })
-
-      if (!conversationResponse.ok) {
-        throw new Error("Failed to create conversation")
-      }
-
-      const conversationData = await conversationResponse.json()
-      if (!conversationData.success) {
-        throw new Error(conversationData.message || "Failed to create conversation")
-      }
-
-      // Then send the message in that conversation
-      const messageResponse = await fetch(`${API_URL}/messages/conversations/${conversationData.data.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          content: messageContent,
-          type: 'text'
-        })
-      })
-
-      if (!messageResponse.ok) {
-        throw new Error("Failed to send message")
-      }
-
-      const messageData = await messageResponse.json()
-      if (!messageData.success) {
-        throw new Error(messageData.message || "Failed to send message")
-      }
-
-      toast.success("Message sent successfully")
-      setMessageContent("")
-      setSelectedDoctor("")
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send message")
-    } finally {
-      setSendingMessage(false)
-    }
-  }
-
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border-none shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30">
-      <div className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white p-6">
-        <h2 className="text-xl font-semibold flex items-center">
-          <Video className="mr-2 h-5 w-5" />
-          Doctor Consultation
-        </h2>
-        <div className="flex space-x-2 mt-3">
-          <button
-            className={`px-4 py-2 text-sm rounded-xl transition-all ${
-              activeTab === "appointment" ? "bg-white text-indigo-600 shadow-md" : "text-white/80 hover:bg-white/20"
-            }`}
-            onClick={() => setActiveTab("appointment")}
-          >
-            <Calendar className="h-4 w-4 inline-block mr-2" />
-            Book Appointment
-          </button>
-          <button
-            className={`px-4 py-2 text-sm rounded-xl transition-all ${
-              activeTab === "message" ? "bg-white text-indigo-600 shadow-md" : "text-white/80 hover:bg-white/20"
-            }`}
-            onClick={() => setActiveTab("message")}
-          >
-            <MessageSquare className="h-4 w-4 inline-block mr-2" />
-            Send Message
-          </button>
-        </div>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-6">
+        <h2 className="text-xl font-semibold">Schedule Appointment</h2>
+        <p className="text-sm text-white/80 mt-1">Book a consultation with our specialists</p>
       </div>
+
       <div className="p-6">
-        {activeTab === "appointment" ? (
-          <motion.div
-            key="appointment"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-5"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <User className="mr-2 h-4 w-4 text-indigo-500" />
-                Select Doctor
-              </label>
-              <Select
-                value={formData.doctorId}
-                onValueChange={(value) => setFormData({ ...formData, doctorId: value })}
-              >
-                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
-                  <SelectValue placeholder="Choose a doctor" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {doctors.map((doctor) => (
-                    <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.name} - {doctor.specialty}
-                       {/* {doctor.lastName}  */}
-                      {/* - {doctor.specialty} */}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <User className="mr-2 h-4 w-4 text-indigo-500" />
+              Select Doctor
+            </label>
+            <Select
+              value={formData.doctorId}
+              onValueChange={(value) => setFormData({ ...formData, doctorId: value })}
+            >
+              <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
+                <SelectValue placeholder="Choose a doctor" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {doctors.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    Dr. {doctor.first_name} {doctor.last_name} - {doctor.doctor_profile?.specialty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Calendar className="mr-2 h-4 w-4 text-indigo-500" />
-                Select Date
-              </label>
-              <DatePicker
-                date={formData.date}
-                onSelect={(date) => setFormData({ ...formData, date: date || null })}
-                className="w-full"
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Calendar className="mr-2 h-4 w-4 text-indigo-500" />
+              Select Date
+            </label>
+            <DatePicker
+              date={formData.date}
+              onSelect={(date) => {
+                if (date) {
+                  setFormData({ ...formData, date })
+                }
+              }}
+            />
+          </div>
 
+          {formData.doctorId && formData.date && (
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center">
                 <Clock className="mr-2 h-4 w-4 text-indigo-500" />
@@ -354,120 +207,63 @@ export default function AppointmentWidget() {
               <Select
                 value={formData.timeSlot}
                 onValueChange={(value) => setFormData({ ...formData, timeSlot: value })}
-                disabled={!formData.doctorId || !formData.date || loadingSlots}
+                disabled={loadingSlots}
               >
                 <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
-                  <SelectValue placeholder={loadingSlots ? "Loading time slots..." : "Choose a time"} />
+                  <SelectValue placeholder={loadingSlots ? "Loading slots..." : "Choose a time"} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {timeSlots.length === 0 ? (
-                    <SelectItem value="no-slots" disabled>
-                      {loadingSlots ? "Loading..." : "No available time slots"}
-                    </SelectItem>
-                  ) : (
-                    timeSlots.map((slot) => (
-                      <SelectItem key={slot.time} value={slot.time} disabled={!slot.available}>
-                        {slot.time}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <MessageSquare className="mr-2 h-4 w-4 text-indigo-500" />
-                Reason for Visit (Required)
-              </label>
-              <textarea
-                className="w-full min-h-[120px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Please describe your symptoms or reason for the appointment..."
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Video className="mr-2 h-4 w-4 text-indigo-500" />
-                Appointment Type
-              </label>
-              <Select
-                value={formData.appointmentType}
-                onValueChange={(value: "in-person" | "virtual") => setFormData({ ...formData, appointmentType: value })}
-              >
-                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
-                  <SelectValue placeholder="Choose appointment type" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="virtual">Virtual Consultation</SelectItem>
-                  <SelectItem value="in-person">In-Person Visit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <button
-              className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSubmit}
-              disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason}
-            >
-              {loading ? "Scheduling..." : "Schedule Appointment"}
-            </button>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="message"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="space-y-5"
-          >
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <User className="mr-2 h-4 w-4 text-indigo-500" />
-                Select Recipient
-              </label>
-              <Select
-                value={selectedDoctor}
-                onValueChange={setSelectedDoctor}
-              >
-                <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
-                  <SelectValue placeholder="Choose a doctor" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {doctors.map((doctor) => (
-                    <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.name} - {doctor.specialty}
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot.time} value={slot.time}>
+                      {format(new Date(`2000-01-01T${slot.time}`), "h:mm a")}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <MessageSquare className="mr-2 h-4 w-4 text-indigo-500" />
-                Message
-              </label>
-              <textarea
-                className="w-full min-h-[120px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Type your message here..."
-                value={messageContent}
-                onChange={(e) => setMessageContent(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <MessageSquare className="mr-2 h-4 w-4 text-indigo-500" />
+              Reason for Visit
+            </label>
+            <textarea
+              className="w-full min-h-[80px] rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Briefly describe your symptoms or reason for visit..."
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+            />
+          </div>
 
-            <button 
-              className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSendMessage}
-              disabled={sendingMessage || !selectedDoctor || !messageContent.trim()}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center">
+              <Video className="mr-2 h-4 w-4 text-indigo-500" />
+              Consultation Mode
+            </label>
+            <Select
+              value={formData.mode}
+              onValueChange={(value: PatientAppointment['mode']) => setFormData({ ...formData, mode: value })}
             >
-              {sendingMessage ? "Sending..." : "Send Message"}
-            </button>
-          </motion.div>
-        )}
+              <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
+                <SelectValue placeholder="Choose consultation mode" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="video">Video Consultation</SelectItem>
+                <SelectItem value="phone">Phone Consultation</SelectItem>
+                <SelectItem value="in_person">In-Person Visit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <button
+            className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleSubmit}
+            disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason}
+          >
+            {loading ? "Scheduling..." : "Schedule Appointment"}
+          </button>
+        </div>
       </div>
     </div>
   )

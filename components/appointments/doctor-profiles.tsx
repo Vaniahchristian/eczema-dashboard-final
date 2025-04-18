@@ -2,8 +2,12 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Star, Loader2 } from "lucide-react"
+import { Star, Loader2, MapPin, Video, Phone, Calendar } from "lucide-react"
 import type { Doctor } from "@/services/patientAppointmentService"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/use-toast"
+import { patientAppointmentService } from "@/services/patientAppointmentService"
 
 interface DoctorProfilesProps {
   doctors: Doctor[]
@@ -54,48 +58,55 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
                 <div className={`${expandedDoctor === doctor.id ? "md:w-1/3" : ""}`}>
                   <div className="relative">
                     <img
-                      src={doctor.image || "/placeholder.svg"}
-                      alt={doctor.name}
+                      src={doctor.image_url || "/placeholder-doctor.png"}
+                      alt={`${doctor.first_name} ${doctor.last_name}`}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                      <h3 className="text-white font-medium">{doctor.name}</h3>
-                      <p className="text-white/80 text-sm">{doctor.specialty}</p>
+                      <h3 className="text-white font-medium">{`Dr. ${doctor.first_name} ${doctor.last_name}`}</h3>
+                      <p className="text-white/80 text-sm">{doctor.doctor_profile?.specialty}</p>
                     </div>
                   </div>
                   <div className="p-4">
                     <div className="flex items-center">
                       <div className="flex text-amber-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${i < Math.floor(doctor.rating) ? "fill-current" : "fill-none"}`}
-                          />
-                        ))}
+                        {[...Array(5)].map((_, i) => {
+                          const experienceYears = doctor.doctor_profile?.experience_years || 0;
+                          return (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < Math.floor(experienceYears / 5) ? "fill-current" : "fill-none"
+                              }`}
+                            />
+                          );
+                        })}
                       </div>
                       <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                        {doctor.rating.toFixed(1)}
+                        {Math.min(5, Math.floor((doctor.doctor_profile?.experience_years || 0) / 5))} stars
                       </span>
                     </div>
                     <div className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                      {doctor.experience} years of experience
+                      {doctor.doctor_profile?.experience_years || 0} years of experience
                     </div>
 
                     {!expandedDoctor || expandedDoctor !== doctor.id ? (
                       <>
                         <div className="mt-4 flex justify-between">
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => toggleExpand(doctor.id)}
-                            className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
                           >
                             View Profile
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => onSchedule(doctor.id)}
-                            className="px-3 py-1 text-sm rounded-lg bg-gradient-to-r from-sky-500 to-teal-500 text-white"
+                            size="sm"
+                            className="bg-gradient-to-r from-sky-500 to-teal-500 text-white"
                           >
                             Book
-                          </button>
+                          </Button>
                         </div>
                       </>
                     ) : null}
@@ -106,46 +117,72 @@ export default function DoctorProfiles({ doctors, onSchedule, loading = false }:
                   <div className="p-4 md:flex-1">
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-medium text-slate-900 dark:text-white">
-                        About Dr. {doctor.name.split(" ")[1]}
+                        About Dr. {doctor.last_name}
                       </h3>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => toggleExpand(doctor.id)}
-                        className="text-sm text-slate-500 dark:text-slate-400 hover:underline"
                       >
                         Close
-                      </button>
+                      </Button>
                     </div>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{doctor.bio}</p>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{doctor.doctor_profile?.bio}</p>
 
-                    <h4 className="mt-4 font-medium text-slate-900 dark:text-white">Availability</h4>
-                    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {doctor.availability.map((avail, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700"
-                        >
-                          <div className="font-medium text-sm capitalize">{avail.day}</div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {avail.slots.map((slot, slotIdx) => (
-                              <span
-                                key={slotIdx}
-                                className="inline-block px-2 py-1 text-xs rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                              >
-                                {slot}
-                              </span>
-                            ))}
+                    <div className="mt-4 space-y-4">
+                      {doctor.doctor_profile?.clinic_address && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-5 w-5 text-slate-400 mt-0.5" />
+                          <div>
+                            <h4 className="text-sm font-medium text-slate-900 dark:text-white">Clinic Location</h4>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              {doctor.doctor_profile?.clinic_address}
+                            </p>
                           </div>
                         </div>
-                      ))}
+                      )}
+
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-5 w-5 text-slate-400 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-medium text-slate-900 dark:text-white">Available Hours</h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {doctor.doctor_profile?.available_hours || "Contact clinic for availability"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">
+                            <Video className="h-4 w-4 mr-1" />
+                            Video Consult
+                          </Badge>
+                          <Badge variant="secondary">
+                            <Phone className="h-4 w-4 mr-1" />
+                            Phone Consult
+                          </Badge>
+                          <Badge variant="secondary">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            In-Person
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {doctor.doctor_profile?.consultation_fee && (
+                        <Badge variant="outline" className="mt-2">
+                          Consultation Fee: ${doctor.doctor_profile?.consultation_fee}
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="mt-6 flex justify-end">
-                      <button
+                      <Button
                         onClick={() => onSchedule(doctor.id)}
-                        className="px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                        className="bg-gradient-to-r from-sky-500 to-teal-500 text-white"
                       >
                         Schedule Appointment
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
