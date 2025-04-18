@@ -7,7 +7,7 @@ import { Calendar, List } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import AppointmentsList from "@/components/appointments/appointments-list"
 import ScheduleAppointment from "@/components/appointments/schedule-appointment"
-import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
+import { patientAppointmentService, type Doctor, type PatientAppointment, type CreateAppointmentData, type AppointmentType } from "@/services/patientAppointmentService"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 
 export default function AppointmentsPage() {
@@ -56,15 +56,7 @@ export default function AppointmentsPage() {
     init()
   }, [user])
 
-  const handleScheduleAppointment = async (data: {
-    doctor_id: string
-    patient_id: string
-    appointment_date: string
-    reason: string
-    mode: 'video' | 'phone' | 'in_person'
-    appointment_type: string
-    duration: number
-  }) => {
+  const handleScheduleAppointment = async (data: CreateAppointmentData) => {
     try {
       if (!user) {
         throw new Error('User not authenticated')
@@ -82,7 +74,7 @@ export default function AppointmentsPage() {
       console.error("Error scheduling appointment:", error)
       toast({
         title: "Error",
-        description: "Failed to schedule appointment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to schedule appointment",
         variant: "destructive"
       })
     }

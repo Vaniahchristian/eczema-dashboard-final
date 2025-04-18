@@ -5,7 +5,7 @@ import { Calendar, Clock, MessageSquare, User, Video } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePicker } from "@/components/ui"
 import { toast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
-import { patientAppointmentService, type Doctor, type PatientAppointment } from "@/services/patientAppointmentService"
+import { patientAppointmentService, type Doctor, type PatientAppointment, type AppointmentType, type AppointmentStatus } from "@/services/patientAppointmentService"
 import { useAuth } from "@/lib/auth"
 
 interface TimeSlot {
@@ -13,12 +13,12 @@ interface TimeSlot {
   available: boolean
 }
 
-interface AppointmentForm {
+interface FormData {
   doctorId: string
   date: Date | null
   timeSlot: string
   reason: string
-  mode: PatientAppointment['mode']
+  mode: string
 }
 
 export default function AppointmentWidget() {
@@ -31,7 +31,7 @@ export default function AppointmentWidget() {
   const [selectedDoctor, setSelectedDoctor] = useState("")
   const [messageContent, setMessageContent] = useState("")
   const [sendingMessage, setSendingMessage] = useState(false)
-  const [formData, setFormData] = useState<AppointmentForm>({
+  const [formData, setFormData] = useState<FormData>({
     doctorId: "",
     date: null,
     timeSlot: "",
@@ -157,10 +157,9 @@ export default function AppointmentWidget() {
         doctor_id: formData.doctorId,
         patient_id: user.id,
         appointment_date: appointmentDate,
-        reason: formData.reason.trim(),
-        mode: formData.mode,
-        duration: 30,
-        appointment_type: 'first_visit', // Use the valid ENUM value
+        reason_for_visit: formData.reason.trim(),
+        appointment_type: 'first_visit' as AppointmentType,
+        status: 'pending' as AppointmentStatus
       }
 
       console.log('Submitting appointment data:', appointmentData);
@@ -290,7 +289,7 @@ export default function AppointmentWidget() {
             </label>
             <Select
               value={formData.mode}
-              onValueChange={(value: PatientAppointment['mode']) => setFormData({ ...formData, mode: value })}
+              onValueChange={(value) => setFormData({ ...formData, mode: value })}
             >
               <SelectTrigger className="rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-indigo-500">
                 <SelectValue placeholder="Choose consultation mode" />

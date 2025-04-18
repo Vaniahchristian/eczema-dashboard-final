@@ -59,7 +59,17 @@ export interface PatientAppointment {
   updated_at: string
 }
 
-export type CreateAppointmentData = Omit<PatientAppointment, 'id' | 'status' | 'doctor' | 'patient' | 'created_at' | 'updated_at'>
+export type AppointmentType = 'first_visit' | 'follow_up' | 'emergency';
+export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+
+export interface CreateAppointmentData {
+  doctor_id: string;
+  patient_id: string;
+  appointment_date: string;
+  reason_for_visit: string;
+  appointment_type: AppointmentType;
+  status: AppointmentStatus;
+}
 
 export const patientAppointmentService = {
   // Get all appointments for the patient
@@ -111,18 +121,14 @@ export const patientAppointmentService = {
 
   // Schedule new appointment
   scheduleAppointment: async (data: CreateAppointmentData) => {
+    console.log('Scheduling appointment with data:', data);
     try {
-      console.log('Scheduling appointment with data:', data);
-      const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders())
-      console.log('Appointment scheduling response:', response.data);
-      return response.data.data
+      const response = await axios.post(`${API_URL}/appointments`, data, getAuthHeaders());
+      console.log('Appointment scheduled successfully:', response.data);
+      return response.data;
     } catch (error) {
-      console.error('Error scheduling appointment:', error)
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Server error response:', error.response.data);
-        throw new Error(error.response.data.message || 'Failed to schedule appointment')
-      }
-      throw error
+      console.error('Error scheduling appointment:', error);
+      throw error;
     }
   },
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Calendar, User, Video, Phone, MapPin, ChevronRight, Check } from "lucide-react"
-import { Doctor, patientAppointmentService } from "@/services/patientAppointmentService"
+import { Doctor, patientAppointmentService, type CreateAppointmentData, type AppointmentType, type AppointmentStatus } from "@/services/patientAppointmentService"
 import { useAuth } from "@/lib/auth"
 import { toast } from "@/components/ui/use-toast"
 
@@ -12,27 +12,19 @@ interface ScheduleAppointmentProps {
   onClose: () => void
   doctors: Doctor[]
   selectedDate?: Date
-  onSubmit: (data: {
-    doctor_id: string
-    patient_id: string
-    appointment_date: string
-    reason: string
-    mode: "video" | "phone" | "in_person"
-    appointment_type: string
-    duration: number
-  }) => Promise<void>
+  onSubmit: (data: CreateAppointmentData) => Promise<void>
 }
 
 type AppointmentStep = "doctor" | "date" | "details"
 
 export default function ScheduleAppointment({ isOpen, onClose, doctors, selectedDate, onSubmit }: ScheduleAppointmentProps) {
+  const { user } = useAuth()
   const [step, setStep] = useState<AppointmentStep>("doctor")
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
   const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate || new Date())
   const [appointmentTime, setAppointmentTime] = useState<string>("")
-  const [appointmentMode, setAppointmentMode] = useState<'video' | 'phone' | 'in_person'>('video')
   const [appointmentReason, setAppointmentReason] = useState("")
-  const [appointmentType, setAppointmentType] = useState("")
+  const [appointmentType, setAppointmentType] = useState<AppointmentType>('first_visit')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -55,9 +47,8 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
     setSelectedDoctor(null)
     setAppointmentDate(selectedDate || new Date())
     setAppointmentTime("")
-    setAppointmentMode("video")
     setAppointmentReason("")
-    setAppointmentType("")
+    setAppointmentType('first_visit')
     setIsSubmitting(false)
   }
 
@@ -69,7 +60,6 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
   const handleSubmit = () => {
     if (!selectedDoctor || !appointmentDate || !appointmentTime) return
 
-    const { user } = useAuth()
     if (!user) {
       toast({
         title: "Error",
@@ -79,14 +69,13 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
       return
     }
 
-    const appointmentData = {
+    const appointmentData: CreateAppointmentData = {
       doctor_id: selectedDoctor.id,
       patient_id: user.id,
       appointment_date: `${appointmentDate.toISOString().split('T')[0]}T${appointmentTime}:00`,
-      reason: appointmentReason,
-      mode: appointmentMode,
+      reason_for_visit: appointmentReason.trim(),
       appointment_type: appointmentType,
-      duration: 30 // Default duration in minutes
+      status: 'pending'
     }
 
     setIsSubmitting(true)
@@ -104,7 +93,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
         console.error(error)
         toast({
           title: "Error",
-          description: "Failed to schedule appointment. Please try again.",
+          description: error instanceof Error ? error.message : "Failed to schedule appointment",
           variant: "destructive"
         })
       })
@@ -301,88 +290,12 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                     </label>
                     <select
                       value={appointmentType}
-                      onChange={(e) => setAppointmentType(e.target.value)}
+                      onChange={(e) => setAppointmentType(e.target.value as AppointmentType)}
                       className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white"
                     >
-                      <option value="">Select appointment type</option>
-                      <option value="consultation">Consultation</option>
+                      <option value="first_visit">First Visit</option>
                       <option value="follow-up">Follow-up</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Appointment Mode
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <button
-                        onClick={() => setAppointmentMode("video")}
-                        className={`p-4 rounded-xl border flex flex-col items-center transition-all ${
-                          appointmentMode === "video"
-                            ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20"
-                            : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
-                        }`}
-                      >
-                        <div
-                          className={`p-3 rounded-full ${
-                            appointmentMode === "video"
-                              ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                          }`}
-                        >
-                          <Video className="h-6 w-6" />
-                        </div>
-                        <h3 className="mt-3 font-medium">Video Call</h3>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 text-center">
-                          Connect via secure video call
-                        </p>
-                      </button>
-
-                      <button
-                        onClick={() => setAppointmentMode("phone")}
-                        className={`p-4 rounded-xl border flex flex-col items-center transition-all ${
-                          appointmentMode === "phone"
-                            ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20"
-                            : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
-                        }`}
-                      >
-                        <div
-                          className={`p-3 rounded-full ${
-                            appointmentMode === "phone"
-                              ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                          }`}
-                        >
-                          <Phone className="h-6 w-6" />
-                        </div>
-                        <h3 className="mt-3 font-medium">Phone Call</h3>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 text-center">
-                          Speak with your doctor by phone
-                        </p>
-                      </button>
-
-                      <button
-                        onClick={() => setAppointmentMode("in_person")}
-                        className={`p-4 rounded-xl border flex flex-col items-center transition-all ${
-                          appointmentMode === "in_person"
-                            ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20"
-                            : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
-                        }`}
-                      >
-                        <div
-                          className={`p-3 rounded-full ${
-                            appointmentMode === "in_person"
-                              ? "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                          }`}
-                        >
-                          <MapPin className="h-6 w-6" />
-                        </div>
-                        <h3 className="mt-3 font-medium">In-person</h3>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 text-center">
-                          Visit the clinic for your appointment
-                        </p>
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
