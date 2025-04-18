@@ -68,24 +68,35 @@ export default function AppointmentWidget() {
 
     setLoadingSlots(true)
     try {
+      console.log('Fetching time slots for:', {
+        doctorId: formData.doctorId,
+        date: format(formData.date, "yyyy-MM-dd")
+      });
+
       const response = await patientAppointmentService.getDoctorAvailability(
         formData.doctorId,
         format(formData.date, "yyyy-MM-dd")
       )
+
+      console.log('Response from service:', response);
 
       const availableSlots = response.availableSlots.map((time: string) => ({
         time,
         available: true
       }))
 
+      console.log('Processed time slots:', availableSlots);
       setTimeSlots(availableSlots)
+
       if (availableSlots.length === 0) {
+        console.log('No time slots available');
         toast({
           title: "No Slots Available",
           description: "No available time slots for the selected date",
         })
       }
     } catch (err) {
+      console.error('Error in fetchTimeSlots:', err);
       toast({
         title: "Error",
         description: err instanceof Error ? err.message : "Failed to fetch time slots",

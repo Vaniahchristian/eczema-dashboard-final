@@ -144,16 +144,14 @@ export const patientAppointmentService = {
   // Get doctor availability
   getDoctorAvailability: async (doctorId: string, date: string) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        throw new Error('No auth token found')
-      }
-
+      console.log('Fetching availability for doctor:', doctorId, 'date:', date);
       const response = await axios.get(
         `${API_URL}/doctors/${doctorId}/available-slots?date=${date}`,
         getAuthHeaders()
       )
-      return response.data.data.availableSlots // Note: backend returns { success: true, data: { date, availableSlots: [...] } }
+      console.log('Raw API response:', response.data);
+      console.log('Available slots:', response.data.data.availableSlots);
+      return response.data.data
     } catch (error) {
       console.error('Error getting doctor availability:', error)
       throw error
