@@ -160,7 +160,7 @@ export default function AppointmentWidget() {
         reason: formData.reason.trim(),
         mode: formData.mode,
         duration: 30,
-        appointment_type: 'general', // Use the valid appointment type
+        appointment_type: 'first_visit', // Use the valid ENUM value
       }
 
       console.log('Submitting appointment data:', appointmentData);
