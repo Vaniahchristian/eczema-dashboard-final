@@ -60,48 +60,45 @@ export default function AppointmentWidget() {
     setFormData(prev => ({ ...prev, timeSlot: "" }))
   }, [formData.doctorId, formData.date])
 
-  // Fetch available time slots when doctor and date are selected
-  useEffect(() => {
-    const fetchTimeSlots = async () => {
-      if (!formData.doctorId || !formData.date) {
-        setTimeSlots([])
-        return
-      }
+  const fetchTimeSlots = async () => {
+    if (!formData.doctorId || !formData.date) {
+      setTimeSlots([])
+      return
+    }
 
-      setLoadingSlots(true)
-      try {
-        const { data } = await patientAppointmentService.getDoctorAvailability(
-          formData.doctorId,
-          format(formData.date, "yyyy-MM-dd")
-        )
+    setLoadingSlots(true)
+    try {
+      const response = await patientAppointmentService.getDoctorAvailability(
+        formData.doctorId,
+        format(formData.date, "yyyy-MM-dd")
+      )
 
-        // Map the available slots to our format
-        const availableSlots = data.availableSlots.map((time: string) => ({
-          time,
-          available: true
-        }))
+      const availableSlots = response.availableSlots.map((time: string) => ({
+        time,
+        available: true
+      }))
 
-        setTimeSlots(availableSlots)
-        if (availableSlots.length === 0) {
-          toast({
-            title: "No Slots Available",
-            description: "No available time slots for the selected date",
-          })
-        }
-      } catch (err) {
+      setTimeSlots(availableSlots)
+      if (availableSlots.length === 0) {
         toast({
-          title: "Error",
-          description: err instanceof Error ? err.message : "Failed to fetch time slots",
-          variant: "destructive",
+          title: "No Slots Available",
+          description: "No available time slots for the selected date",
         })
-      } finally {
-        setLoadingSlots(false)
       }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to fetch time slots",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingSlots(false)
     }
+  }
 
-    if (formData.doctorId && formData.date) {
-      fetchTimeSlots()
-    }
+  // Fetch time slots when doctor or date changes
+  useEffect(() => {
+    fetchTimeSlots()
   }, [formData.doctorId, formData.date])
 
   const handleSubmit = async () => {
@@ -215,7 +212,7 @@ export default function AppointmentWidget() {
                 <SelectContent className="rounded-xl">
                   {timeSlots.map((slot) => (
                     <SelectItem key={slot.time} value={slot.time}>
-                      {format(new Date(`2000-01-01T${slot.time}`), "h:mm a")}
+                      {slot.time}
                     </SelectItem>
                   ))}
                 </SelectContent>
