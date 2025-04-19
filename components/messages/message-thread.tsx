@@ -31,6 +31,7 @@ interface MessageThreadProps {
     messages: Message[]
     onSendMessage: (content: string, type?: Message['type'], attachments?: Message['attachments']) => Promise<void>
     onReaction: (messageId: string, reaction: string) => Promise<void>
+    onTypingStatus?: (isTyping: boolean) => void
 }
 
 export function MessageThread({
@@ -38,11 +39,13 @@ export function MessageThread({
     messages,
     onSendMessage,
     onReaction,
+    onTypingStatus
 }: MessageThreadProps) {
     const { user } = useAuth()
     const [newMessage, setNewMessage] = useState("")
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const typingTimeoutRef = useRef<NodeJS.Timeout>()
     const { toast } = useToast()
 
     useEffect(() => {
@@ -120,6 +123,24 @@ export function MessageThread({
             })
         }
     }
+
+    // Handle typing status
+    useEffect(() => {
+        if (newMessage && onTypingStatus) {
+            onTypingStatus(true)
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current)
+            }
+            typingTimeoutRef.current = setTimeout(() => {
+                onTypingStatus(false)
+            }, 3000)
+        }
+        return () => {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current)
+            }
+        }
+    }, [newMessage, onTypingStatus])
 
     if (!user) return null
 

@@ -17,7 +17,8 @@ import {
   CheckCheck,
   Search,
   Plus,
-  MessageSquare
+  MessageSquare,
+  MoreVertical
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -38,9 +39,87 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
   const [searchQuery, setSearchQuery] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const typingTimeoutRef = useRef<NodeJS.Timeout>()
   const { toast } = useToast()
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const cleanup = messageService.onNewMessage((message) => {
+      if (message.conversationId === selectedConversation?.id) {
+        setMessages((prev) => [...prev, message])
+      }
+      // Update conversation list to show latest message
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === message.conversationId
+            ? {
+                ...conv,
+                lastMessage: {
+                  id: message.id,
+                  content: message.content,
+                  timestamp: message.timestamp,
+                  status: message.status,
+                },
+                unreadCount:
+                  message.fromDoctor !== (user?.role === 'doctor')
+                    ? (conv.unreadCount || 0) + 1
+                    : conv.unreadCount,
+              }
+            : conv
+        )
+      )
+    })
+
+    const typingCleanup = messageService.onTypingStatus(({ userId, isTyping }) => {
+      setTypingUsers((prev) => ({ ...prev, [userId]: isTyping }))
+    })
+
+    const statusCleanup = messageService.onMessageStatus(({ messageId, status }) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, status } : msg
+        )
+      )
+    })
+
+    return () => {
+      cleanup()
+      typingCleanup()
+      statusCleanup()
+    }
+  }, [selectedConversation?.id, user?.role])
+
+  // Join conversation room when selected
+  useEffect(() => {
+    if (selectedConversation) {
+      messageService.joinConversation(selectedConversation.id)
+      return () => {
+        messageService.leaveConversation(selectedConversation.id)
+      }
+    }
+  }, [selectedConversation])
+
+  // Handle typing status
+  useEffect(() => {
+    if (selectedConversation && newMessage) {
+      messageService.setTypingStatus(selectedConversation.id, true)
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        messageService.setTypingStatus(selectedConversation.id, false)
+      }, 3000)
+    }
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [selectedConversation, newMessage])
 
   // Fetch conversations periodically
   useEffect(() => {
@@ -135,18 +214,12 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedConversation || !newMessage.trim() || !user) return
+    if (!selectedConversation || !newMessage.trim()) return
 
     try {
       setLoading(true)
-      const message = await messageService.sendMessage(
-        selectedConversation.id,
-        newMessage,
-        'text'
-      )
-      setMessages((prev) => [...prev, message])
+      await messageService.sendMessage(selectedConversation.id, newMessage.trim())
       setNewMessage("")
-      await fetchConversations() // Update lastMessage and unreadCount
     } catch (error) {
       console.error("Error sending message:", error)
       toast({
@@ -310,22 +383,36 @@ export default function MessagesPage() {
       <div className="flex-1 flex flex-col">
         {selectedConversation ? (
           <>
-            <div className="p-4 border-b">
+            <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={selectedConversation.participantImage} />
                   <AvatarFallback>
-                    {selectedConversation.participantName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {selectedConversation.participantName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h2 className="font-semibold">{selectedConversation.participantName}</h2>
-                  <p className="text-sm text-gray-500">{selectedConversation.participantRole}</p>
+                  <h3 className="font-semibold">{selectedConversation.participantName}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedConversation.participantRole}
+                    {typingUsers[selectedConversation.participantId] && (
+                      <span className="ml-2 text-primary">typing...</span>
+                    )}
+                  </p>
                 </div>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleArchiveConversation(selectedConversation.id)}>
+                    Archive Conversation
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <ScrollArea className="flex-1 p-4">

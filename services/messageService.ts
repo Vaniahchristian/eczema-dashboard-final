@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { io, Socket } from 'socket.io-client';
 
 
 export interface Message {
@@ -38,6 +38,66 @@ export interface Conversation {
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
 
 class MessageService {
+    private socket: Socket | null = null;
+    private messageCallbacks: ((message: Message) => void)[] = [];
+    private typingCallbacks: ((data: { userId: string; isTyping: boolean }) => void)[] = [];
+    private statusCallbacks: ((data: { messageId: string; status: Message['status'] }) => void)[] = [];
+
+    constructor() {
+        this.initializeSocket();
+    }
+
+    private initializeSocket() {
+        this.socket = io(API_URL, {
+            auth: { token: localStorage.getItem('token') }
+        });
+
+        this.socket.on('message:new', (message: Message) => {
+            this.messageCallbacks.forEach(callback => callback(message));
+        });
+
+        this.socket.on('message:typing', (data: { userId: string; isTyping: boolean }) => {
+            this.typingCallbacks.forEach(callback => callback(data));
+        });
+
+        this.socket.on('message:status', (data: { messageId: string; status: Message['status'] }) => {
+            this.statusCallbacks.forEach(callback => callback(data));
+        });
+    }
+
+    onNewMessage(callback: (message: Message) => void) {
+        this.messageCallbacks.push(callback);
+        return () => {
+            this.messageCallbacks = this.messageCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    onTypingStatus(callback: (data: { userId: string; isTyping: boolean }) => void) {
+        this.typingCallbacks.push(callback);
+        return () => {
+            this.typingCallbacks = this.typingCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    onMessageStatus(callback: (data: { messageId: string; status: Message['status'] }) => void) {
+        this.statusCallbacks.push(callback);
+        return () => {
+            this.statusCallbacks = this.statusCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    joinConversation(conversationId: string) {
+        this.socket?.emit('join:conversation', conversationId);
+    }
+
+    leaveConversation(conversationId: string) {
+        this.socket?.emit('leave:conversation', conversationId);
+    }
+
+    setTypingStatus(conversationId: string, isTyping: boolean) {
+        this.socket?.emit('message:typing', { conversationId, isTyping });
+    }
+
     async getConversations(): Promise<Conversation[]> {
         const response = await fetch(`${API_URL}/messages/conversations`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -110,6 +170,48 @@ class MessageService {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ reaction })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+    }
+
+    async uploadFile(file: File): Promise<{ url: string; type: string; name: string; size: number }> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/messages/upload`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+        return data.data;
+    }
+
+    async deleteMessage(conversationId: string, messageId: string): Promise<void> {
+        const response = await fetch(
+            `${API_URL}/messages/conversations/${conversationId}/messages/${messageId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`
+                }
+            }
+        );
+        const data = await response.json();
+        if (!data.success) throw new Error(data.message);
+    }
+
+    async archiveConversation(conversationId: string): Promise<void> {
+        const response = await fetch(`${API_URL}/messages/conversations/${conversationId}`, {
+            method: 'DELETE',
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
         });
         const data = await response.json();
         if (!data.success) throw new Error(data.message);
