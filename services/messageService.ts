@@ -1,14 +1,13 @@
-import axios from 'axios';
-import { io, Socket } from 'socket.io-client';
-
+import { Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 
 export interface Message {
-    id: string
-    conversationId: string
-    patientId: string
-    doctorId: string
-    fromDoctor: boolean
-    content: string
+    id: string;
+    conversationId: string;
+    patientId: string;
+    doctorId: string;
+    fromDoctor: boolean;
+    content: string;
     type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion'
     status: 'sent' | 'delivered' | 'read'
     senderName: string
@@ -35,34 +34,38 @@ export interface Conversation {
     }
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
-
 class MessageService {
-    private socket: Socket | null = null;
+    private socket: typeof Socket | null = null;
     private messageCallbacks: ((message: Message) => void)[] = [];
     private typingCallbacks: ((data: { userId: string; isTyping: boolean }) => void)[] = [];
     private statusCallbacks: ((data: { messageId: string; status: Message['status'] }) => void)[] = [];
+    private apiUrl: string;
 
     constructor() {
+        this.apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
         this.initializeSocket();
     }
 
     private initializeSocket() {
-        this.socket = io(API_URL, {
+        if (typeof window === 'undefined') return;
+
+        this.socket = io(this.apiUrl, {
             auth: { token: localStorage.getItem('token') }
         });
 
-        this.socket.on('message:new', (message: Message) => {
-            this.messageCallbacks.forEach(callback => callback(message));
-        });
+        if (this.socket) {
+            this.socket.on('message:new', (message: Message) => {
+                this.messageCallbacks.forEach(callback => callback(message));
+            });
 
-        this.socket.on('message:typing', (data: { userId: string; isTyping: boolean }) => {
-            this.typingCallbacks.forEach(callback => callback(data));
-        });
+            this.socket.on('user:typing', (data: { userId: string; isTyping: boolean }) => {
+                this.typingCallbacks.forEach(callback => callback(data));
+            });
 
-        this.socket.on('message:status', (data: { messageId: string; status: Message['status'] }) => {
-            this.statusCallbacks.forEach(callback => callback(data));
-        });
+            this.socket.on('message:status', (data: { messageId: string; status: Message['status'] }) => {
+                this.statusCallbacks.forEach(callback => callback(data));
+            });
+        }
     }
 
     onNewMessage(callback: (message: Message) => void) {
@@ -87,19 +90,25 @@ class MessageService {
     }
 
     joinConversation(conversationId: string) {
-        this.socket?.emit('join:conversation', conversationId);
+        if (this.socket) {
+            this.socket.emit('join:conversation', conversationId);
+        }
     }
 
     leaveConversation(conversationId: string) {
-        this.socket?.emit('leave:conversation', conversationId);
+        if (this.socket) {
+            this.socket.emit('leave:conversation', conversationId);
+        }
     }
 
-    setTypingStatus(conversationId: string, isTyping: boolean) {
-        this.socket?.emit('message:typing', { conversationId, isTyping });
+    emitTyping(conversationId: string, isTyping: boolean) {
+        if (this.socket) {
+            this.socket.emit('user:typing', { conversationId, isTyping });
+        }
     }
 
     async getConversations(): Promise<Conversation[]> {
-        const response = await fetch(`${API_URL}/messages/conversations`, {
+        const response = await fetch(`${this.apiUrl}/messages/conversations`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await response.json();
@@ -108,7 +117,7 @@ class MessageService {
     }
 
     async getMessages(conversationId: string): Promise<Message[]> {
-        const response = await fetch(`${API_URL}/messages/conversations/${conversationId}/messages`, {
+        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}/messages`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
         const data = await response.json();
@@ -122,7 +131,7 @@ class MessageService {
         type: Message['type'] = 'text',
         attachments?: Message['attachments']
     ): Promise<Message> {
-        const response = await fetch(`${API_URL}/messages/conversations/${conversationId}/messages`, {
+        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}/messages`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -135,22 +144,23 @@ class MessageService {
         return data.data;
     }
 
-    async createConversation(participantId: string): Promise<{ id: string }> {
-        const response = await fetch(`${API_URL}/messages/conversations`, {
+    async createConversation(doctorId: string): Promise<Conversation> {
+        const response = await fetch(`${this.apiUrl}/messages/conversations`, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({ participantId })
+            body: JSON.stringify({ doctorId })
         });
+
         const data = await response.json();
         if (!data.success) throw new Error(data.message);
-        return data.data; // Returns { id: string }
+        return data.data;
     }
 
     async updateMessageStatus(messageId: string, status: Message['status']): Promise<void> {
-        const response = await fetch(`${API_URL}/messages/${messageId}/status`, {
+        const response = await fetch(`${this.apiUrl}/messages/${messageId}/status`, {
             method: 'PUT',
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -163,7 +173,7 @@ class MessageService {
     }
 
     async addReaction(messageId: string, reaction: string): Promise<void> {
-        const response = await fetch(`${API_URL}/messages/${messageId}/reaction`, {
+        const response = await fetch(`${this.apiUrl}/messages/${messageId}/reaction`, {
             method: 'PUT',
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -179,7 +189,7 @@ class MessageService {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_URL}/messages/upload`, {
+        const response = await fetch(`${this.apiUrl}/messages/upload`, {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -194,7 +204,7 @@ class MessageService {
 
     async deleteMessage(conversationId: string, messageId: string): Promise<void> {
         const response = await fetch(
-            `${API_URL}/messages/conversations/${conversationId}/messages/${messageId}`,
+            `${this.apiUrl}/messages/conversations/${conversationId}/messages/${messageId}`,
             {
                 method: 'DELETE',
                 headers: {
@@ -207,7 +217,7 @@ class MessageService {
     }
 
     async archiveConversation(conversationId: string): Promise<void> {
-        const response = await fetch(`${API_URL}/messages/conversations/${conversationId}`, {
+        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}`, {
             method: 'DELETE',
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`

@@ -29,6 +29,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/use-toast"
 import DashboardLayout from "../layout/dashboard-layout"
+import { DoctorList } from "./doctor-list"
+import { type Doctor } from "@/services/doctorService"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function MessagesPage() {
   const { user } = useAuth()
@@ -41,6 +51,7 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [typingUsers, setTypingUsers] = useState<{ [key: string]: boolean }>({})
+  const [showDoctorList, setShowDoctorList] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
@@ -294,6 +305,33 @@ export default function MessagesPage() {
     }
   }
 
+  const handleSelectDoctor = async (doctor: Doctor) => {
+    try {
+      // Check if conversation already exists
+      const existingConv = conversations.find(
+        conv => conv.participantId === doctor.id
+      )
+      
+      if (existingConv) {
+        setSelectedConversation(existingConv)
+        setShowDoctorList(false)
+        return
+      }
+
+      // Create new conversation
+      const newConversation = await messageService.createConversation(doctor.id)
+      setConversations(prev => [...prev, newConversation])
+      setSelectedConversation(newConversation)
+      setShowDoctorList(false)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to start conversation",
+        variant: "destructive"
+      })
+    }
+  }
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -315,9 +353,32 @@ export default function MessagesPage() {
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
             <CardTitle>Messages</CardTitle>
-            <Button variant="ghost" size="icon" className="text-slate-500" onClick={handleCreateConversation}>
-              <Plus className="h-4 w-4" />
-            </Button>
+            {user?.role === 'patient' && (
+              <Dialog open={showDoctorList} onOpenChange={setShowDoctorList}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-slate-500" onClick={() => setShowDoctorList(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Select a Doctor</DialogTitle>
+                    <DialogDescription>
+                      Choose a doctor to start a conversation with
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DoctorList 
+                    onSelectDoctor={handleSelectDoctor}
+                    className="h-full"
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+            {user?.role !== 'patient' && (
+              <Button variant="ghost" size="icon" className="text-slate-500" onClick={handleCreateConversation}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-500" />
