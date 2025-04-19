@@ -307,30 +307,39 @@ export default function MessagesPage() {
 
   const handleSelectDoctor = async (doctor: Doctor) => {
     try {
-      // Check if conversation already exists
-      const existingConv = conversations.find(
-        conv => conv.participantId === doctor.id
-      )
+      setLoading(true);
+      const conversation = await messageService.createConversation(doctor.id);
       
-      if (existingConv) {
-        setSelectedConversation(existingConv)
-        setShowDoctorList(false)
-        return
-      }
+      // Add the new conversation to the list
+      const newConversation: Conversation = {
+        id: conversation.id,
+        participantId: doctor.id,
+        participantName: doctor.name,
+        participantRole: 'doctor',
+        participantImage: doctor.profileImage,
+        unreadCount: 0,
+        status: 'active',
+        lastMessage: null
+      };
 
-      // Create new conversation
-      const newConversation = await messageService.createConversation(doctor.id)
-      setConversations(prev => [...prev, newConversation])
-      setSelectedConversation(newConversation)
-      setShowDoctorList(false)
+      setConversations(prev => [newConversation, ...prev]);
+      setSelectedConversation(newConversation);
+      setShowDoctorList(false); // Close the doctor selection dialog
+
+      toast({
+        title: "Success",
+        description: `Started a conversation with Dr. ${doctor.name}`,
+      });
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start conversation",
+        description: error instanceof Error ? error.message : "Failed to create conversation",
         variant: "destructive"
-      })
+      });
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })

@@ -49,11 +49,25 @@ class MessageService {
     private initializeSocket() {
         if (typeof window === 'undefined') return;
 
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
         this.socket = io(this.apiUrl, {
-            auth: { token: localStorage.getItem('token') }
+            auth: { token },
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
         });
 
         if (this.socket) {
+            this.socket.on('connect', () => {
+                console.log('Socket connected successfully');
+            });
+
+            this.socket.on('connect_error', (error: Error) => {
+                console.error('Socket connection error:', error);
+            });
+
             this.socket.on('message:new', (message: Message) => {
                 this.messageCallbacks.forEach(callback => callback(message));
             });
