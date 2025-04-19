@@ -174,69 +174,77 @@ export function MessageThread({
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
-                    {messages.map((message, index) => {
-                        const isUser = message.fromDoctor === (user.role === 'doctor')
-                        const showAvatar = index === 0 || messages[index - 1]?.fromDoctor !== message.fromDoctor
-
+                    {messages.map((message) => {
+                        const isUser = message.senderId === user?.id
+                        const showAvatar = !isUser || message.type === 'ai-suggestion'
+                        
                         return (
                             <motion.div
                                 key={message.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className={cn(
-                                    "flex items-start space-x-2",
-                                    isUser && "flex-row-reverse space-x-reverse"
+                                    "flex items-start space-x-2 mb-4",
+                                    isUser ? "flex-row-reverse space-x-reverse" : "flex-row"
                                 )}
                             >
-                                {showAvatar && !isUser && (
-                                    <Avatar className="mt-0.5">
+                                {showAvatar && (
+                                    <Avatar className="h-8 w-8">
                                         <AvatarImage src={message.senderImage} />
-                                        <AvatarFallback>{message.senderName?.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback>
+                                            {message.senderName?.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
                                     </Avatar>
                                 )}
-                                <div
-                                    className={cn(
-                                        "flex flex-col space-y-2 max-w-[70%]",
-                                        isUser && "items-end"
+                                <div className={cn(
+                                    "flex flex-col",
+                                    isUser ? "items-end" : "items-start"
+                                )}>
+                                    {showAvatar && (
+                                        <span className="text-sm font-medium mb-1">
+                                            {message.senderName}
+                                        </span>
                                     )}
-                                >
-                                    {showAvatar && !isUser && (
-                                        <span className="text-sm font-medium">{message.senderName}</span>
-                                    )}
-                                    <div
-                                        className={cn(
-                                            "rounded-lg p-3",
+                                    <div className="flex items-end gap-2">
+                                        <div className={cn(
+                                            "rounded-lg p-3 max-w-[70%]",
                                             isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-                                        )}
-                                    >
-                                        {message.type === 'text' && (
-                                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                        )}
-                                        {message.type === 'image' && message.attachments?.[0] && (
-                                            <img
-                                                src={message.attachments[0].url}
-                                                alt="Attachment"
-                                                className="max-w-sm rounded"
-                                            />
-                                        )}
-                                        {message.type === 'file' && message.attachments?.[0] && (
-                                            <div className="flex items-center space-x-2">
-                                                <File className="h-4 w-4" />
-                                                <a
-                                                    href={message.attachments[0].url}
-                                                    download={message.attachments[0].name}
-                                                    className="text-sm hover:underline"
-                                                >
-                                                    {message.attachments[0].name}
-                                                </a>
-                                                <Button variant="ghost" size="icon">
-                                                    <Download className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <div className="mt-1 flex items-center space-x-2">
+                                        )}>
+                                            {message.type === 'text' && (
+                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                            )}
+                                            {(message.type === 'image' || message.type === 'file') && message.attachments?.map((attachment, index) => (
+                                                <div key={index} className="flex flex-col gap-2">
+                                                    {attachment.type.startsWith('image/') ? (
+                                                        <img
+                                                            src={attachment.url}
+                                                            alt={attachment.name}
+                                                            className="max-w-xs rounded"
+                                                        />
+                                                    ) : (
+                                                        <a
+                                                            href={attachment.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 text-sm hover:underline"
+                                                        >
+                                                            <File className="h-4 w-4" />
+                                                            <span>{attachment.name}</span>
+                                                            <span className="text-xs opacity-70">
+                                                                ({Math.round(attachment.size / 1024)}KB)
+                                                            </span>
+                                                            <Download className="h-4 w-4" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                                             <span className="text-xs opacity-70">
-                                                {messageService.formatTimestamp(message.timestamp)}
+                                                {new Date(message.createdAt).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
                                             </span>
                                             {isUser && (
                                                 message.status === 'read' ? (
@@ -247,13 +255,17 @@ export function MessageThread({
                                             )}
                                         </div>
                                     </div>
-                                    {message.reaction && (
-                                        <span className="text-xl">
-                                            {message.reaction === 'thumbs_up' ? '👍' : '👎'}
-                                        </span>
+                                    {message.reactions?.length > 0 && (
+                                        <div className="flex gap-1 mt-1">
+                                            {message.reactions.map((reaction, index) => (
+                                                <span key={index} className="text-xl">
+                                                    {reaction.type === 'thumbs_up' ? '👍' : '👎'}
+                                                </span>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                                {!message.reaction && !isUser && (
+                                {!message.reactions?.some(r => r.userId === user?.id) && !isUser && (
                                     <div className="flex space-x-1">
                                         <Button
                                             variant="ghost"

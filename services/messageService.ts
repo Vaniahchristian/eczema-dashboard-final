@@ -1,37 +1,50 @@
-import { Socket } from 'socket.io-client';
+import { Socket, Manager } from 'socket.io-client';
 import io from 'socket.io-client';
 
 export interface Message {
     id: string;
     conversationId: string;
-    patientId: string;
-    doctorId: string;
-    fromDoctor: boolean;
+    senderId: string;  // MySQL user ID
+    senderRole: 'patient' | 'doctor';
+    senderName: string;
+    senderImage?: string;
     content: string;
-    type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion'
-    status: 'sent' | 'delivered' | 'read'
-    senderName: string
-    senderRole: string
-    senderImage?: string
-    timestamp: string
-    attachments?: { url: string; type: string; name: string; size: number }[]
-    reaction?: string
+    type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion';
+    status: 'sent' | 'delivered' | 'read';
+    attachments?: {
+        url: string;
+        name: string;
+        type: string;
+        size: number;
+    }[];
+    readBy: {
+        userId: string;
+        timestamp: string;
+    }[];
+    reactions?: {
+        userId: string;
+        type: string;
+        timestamp: string;
+    }[];
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Conversation {
-    id: string
-    participantId: string
-    participantName: string
-    participantRole: string
-    participantImage?: string
-    unreadCount: number
-    status: string
+    id: string;
+    participantId: string;  // The other participant's MySQL user ID
+    participantName: string;
+    participantRole: 'patient' | 'doctor';
+    participantImage?: string;
+    unreadCount: number;
+    status: 'active' | 'archived';
     lastMessage?: {
-        id: string
-        content: string
-        timestamp: string
-        status: string
-    }
+        id: string;
+        content: string;
+        type: Message['type'];
+        createdAt: string;
+    };
+    updatedAt: string;
 }
 
 class MessageService {
@@ -62,16 +75,21 @@ class MessageService {
 
         this.socket = io(this.apiUrl, {
             auth: { token },
+            path: '/socket.io',
             transports: ['websocket', 'polling'],
             reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            autoConnect: true,
+            forceNew: true
         });
 
         if (this.socket) {
             this.socket.on('connect', () => {
                 console.log('Socket connected successfully', {
                     id: this.socket?.id,
-                    transport: this.socket?.connected ? 'connected' : 'disconnected'
+                    transport: (this.socket as any)?.io?.engine?.transport?.name
                 });
             });
 
@@ -79,8 +97,14 @@ class MessageService {
                 console.error('Socket connection error:', {
                     message: error.message,
                     type: error.name,
-                    transport: this.socket?.connected ? 'connected' : 'disconnected'
+                    transport: (this.socket as any)?.io?.engine?.transport?.name
                 });
+                
+                // Try to reconnect with websocket transport only
+                if ((this.socket as any)?.io?.engine?.transport?.name === 'polling') {
+                    console.log('Retrying connection with WebSocket transport only');
+                    (this.socket as any).io.opts.transports = ['websocket'];
+                }
             });
 
             this.socket.on('disconnect', (reason: string) => {
