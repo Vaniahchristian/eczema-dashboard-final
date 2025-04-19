@@ -1,52 +1,87 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { motion } from "framer-motion"
-import {
-    Send,
-    Paperclip,
-    Image as ImageIcon,
-    File,
-    Smile,
-    MoreVertical,
-    Phone,
-    Video,
-    CheckCircle,
-    Clock,
-    Download,
-    ThumbsUp,
-    ThumbsDown,
-} from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Message, messageService } from "@/services/messageService"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useAuth } from "@/lib/auth"
-import { messageService, type Message, type Conversation } from "@/services/messageService"
-import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
+import { Paperclip, Send } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
 
 interface MessageThreadProps {
-    conversation: Conversation
+    conversation: {
+        id: string
+        participants: Array<{
+            userId: string
+            role: 'patient' | 'doctor'
+            name: string
+            imageUrl?: string
+        }>
+    }
     messages: Message[]
-    onSendMessage: (content: string, type?: Message['type'], attachments?: Message['attachments']) => Promise<void>
-    onReaction: (messageId: string, reaction: string) => Promise<void>
-    onTypingStatus?: (isTyping: boolean) => void
+    user: {
+        id: string
+        role: 'patient' | 'doctor'
+    }
 }
 
 export function MessageThread({
     conversation,
-    messages,
-    onSendMessage,
-    onReaction,
-    onTypingStatus
+    messages: initialMessages,
+    user
 }: MessageThreadProps) {
-    const { user } = useAuth()
+    const [messages, setMessages] = useState<Message[]>(initialMessages)
     const [newMessage, setNewMessage] = useState("")
+    const [isOtherUserTyping, setIsOtherUserTyping] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const typingTimeoutRef = useRef<NodeJS.Timeout>()
     const { toast } = useToast()
+
+    const otherParticipant = conversation.participants.find(p => p.userId !== user.id)
+
+    useEffect(() => {
+        if (conversation.id) {
+            messageService.joinConversation(conversation.id)
+            
+            const unsubMessage = messageService.onNewMessage((message) => {
+                if (message.conversationId === conversation.id) {
+                    setMessages((prev: Message[]) => [...prev, message])
+                }
+            })
+
+            const unsubTyping = messageService.onTypingStatus(({ userId, isTyping }) => {
+                if (userId !== user.id) {
+                    setIsOtherUserTyping(isTyping)
+                }
+            })
+
+            const unsubRead = messageService.onMessageRead(({ messageId, userId }) => {
+                if (userId !== user.id) {
+                    setMessages((prev: Message[]) => 
+                        prev.map((msg: Message) => 
+                            msg.id === messageId 
+                                ? {
+                                    ...msg,
+                                    readBy: [...(msg.readBy || []), { userId, readAt: new Date() }]
+                                }
+                                : msg
+                        )
+                    )
+                }
+            })
+
+            return () => {
+                messageService.leaveConversation(conversation.id)
+                unsubMessage()
+                unsubTyping()
+                unsubRead()
+            }
+        }
+    }, [conversation.id, user.id])
 
     useEffect(() => {
         scrollToBottom()
@@ -56,18 +91,50 @@ export function MessageThread({
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }
 
-    const handleSendMessage = async () => {
-        if (!newMessage.trim()) return
+    const handleFileUpload = async (files: FileList) => {
+        if (!files.length) return
+        
         try {
-            await onSendMessage(newMessage, 'text')
-            setNewMessage("")
+            setIsUploading(true)
+            const file = files[0]
+            const type = file.type.startsWith('image/') ? 'image' : 'file'
+            
+            await messageService.sendMessage(
+                conversation.id,
+                type === 'image' ? 'Sent an image' : `Sent a file: ${file.name}`,
+                type,
+                [file]
+            )
         } catch (error) {
+            console.error('File upload error:', error)
             toast({
                 title: "Error",
-                description: error instanceof Error ? error.message : "Failed to send message",
+                description: "Failed to upload file. Please try again.",
+                variant: "destructive"
+            })
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const handleSendMessage = async () => {
+        if (!newMessage.trim()) return
+        
+        try {
+            await messageService.sendMessage(conversation.id, newMessage, 'text')
+            setNewMessage("")
+        } catch (error) {
+            console.error('Send message error:', error)
+            toast({
+                title: "Error",
+                description: "Failed to send message. Please try again.",
                 variant: "destructive"
             })
         }
+    }
+
+    const handleTyping = (isTyping: boolean) => {
+        messageService.setTypingStatus(conversation.id, isTyping)
     }
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -77,252 +144,134 @@ export function MessageThread({
         }
     }
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        try {
-            const formData = new FormData()
-            formData.append('file', file)
-            const token = localStorage.getItem('token')
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/messages/upload`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                body: formData,
-            })
-            if (!response.ok) throw new Error('File upload failed')
-            const { url } = await response.json()
-
-            const type = file.type.startsWith('image/') ? 'image' : 'file'
-            const attachment = {
-                url,
-                type: file.type,
-                name: file.name,
-                size: file.size,
-            }
-            await onSendMessage('', type, [attachment])
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error instanceof Error ? error.message : "Failed to upload file",
-                variant: "destructive"
-            })
-        }
-    }
-
-    const handleReaction = async (messageId: string, reaction: string) => {
-        try {
-            await onReaction(messageId, reaction)
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error instanceof Error ? error.message : "Failed to add reaction",
-                variant: "destructive"
-            })
-        }
-    }
-
-    // Handle typing status
-    useEffect(() => {
-        if (newMessage && onTypingStatus) {
-            onTypingStatus(true)
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current)
-            }
-            typingTimeoutRef.current = setTimeout(() => {
-                onTypingStatus(false)
-            }, 3000)
-        }
-        return () => {
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current)
-            }
-        }
-    }, [newMessage, onTypingStatus])
-
-    if (!user) return null
+    if (!user || !otherParticipant) return null
 
     return (
         <div className="flex flex-col h-full">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center space-x-4">
-                    <Avatar>
-                        <AvatarImage src={conversation.participantImage} />
-                        <AvatarFallback>{conversation.participantName.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                        <h3 className="font-semibold">{conversation.participantName}</h3>
-                        <p className="text-sm text-muted-foreground">{conversation.participantRole}</p>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" disabled>
-                        <Phone className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" disabled>
-                        <Video className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" disabled>
-                        <MoreVertical className="h-4 w-4" />
-                    </Button>
+            <div className="border-b p-4 flex items-center gap-3">
+                <Avatar>
+                    <AvatarImage src={otherParticipant.imageUrl} />
+                    <AvatarFallback>
+                        {otherParticipant.name.charAt(0)}
+                    </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                    <h3 className="font-semibold">Dr. {otherParticipant.name}</h3>
+                    {isOtherUserTyping && (
+                        <p className="text-sm text-muted-foreground">Typing...</p>
+                    )}
                 </div>
             </div>
 
-            {/* Messages */}
             <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
                     {messages.map((message) => {
-                        const isUser = message.senderId === user?.id
-                        const showAvatar = !isUser || message.type === 'ai-suggestion'
-                        
+                        const isOwnMessage = message.senderId === user.id
+                        const messageUser = conversation.participants.find(
+                            p => p.userId === message.senderId
+                        )
+
                         return (
-                            <motion.div
+                            <div
                                 key={message.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
                                 className={cn(
-                                    "flex items-start space-x-2 mb-4",
-                                    isUser ? "flex-row-reverse space-x-reverse" : "flex-row"
+                                    "flex gap-3",
+                                    isOwnMessage ? "justify-end" : "justify-start"
                                 )}
                             >
-                                {showAvatar && (
+                                {!isOwnMessage && (
                                     <Avatar className="h-8 w-8">
-                                        <AvatarImage src={message.senderImage} />
+                                        <AvatarImage src={messageUser?.imageUrl} />
                                         <AvatarFallback>
-                                            {message.senderName?.charAt(0).toUpperCase()}
+                                            {messageUser?.name.charAt(0)}
                                         </AvatarFallback>
                                     </Avatar>
                                 )}
-                                <div className={cn(
-                                    "flex flex-col",
-                                    isUser ? "items-end" : "items-start"
-                                )}>
-                                    {showAvatar && (
-                                        <span className="text-sm font-medium mb-1">
-                                            {message.senderName}
-                                        </span>
+
+                                <div
+                                    className={cn(
+                                        "rounded-lg p-3 max-w-[70%]",
+                                        isOwnMessage
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted"
                                     )}
-                                    <div className="flex items-end gap-2">
-                                        <div className={cn(
-                                            "rounded-lg p-3 max-w-[70%]",
-                                            isUser ? "bg-primary text-primary-foreground" : "bg-muted"
-                                        )}>
-                                            {message.type === 'text' && (
-                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                            )}
-                                            {(message.type === 'image' || message.type === 'file') && message.attachments?.map((attachment, index) => (
-                                                <div key={index} className="flex flex-col gap-2">
-                                                    {attachment.type.startsWith('image/') ? (
-                                                        <img
-                                                            src={attachment.url}
-                                                            alt={attachment.name}
-                                                            className="max-w-xs rounded"
-                                                        />
-                                                    ) : (
-                                                        <a
-                                                            href={attachment.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-2 text-sm hover:underline"
-                                                        >
-                                                            <File className="h-4 w-4" />
-                                                            <span>{attachment.name}</span>
-                                                            <span className="text-xs opacity-70">
-                                                                ({Math.round(attachment.size / 1024)}KB)
-                                                            </span>
-                                                            <Download className="h-4 w-4" />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                            <span className="text-xs opacity-70">
-                                                {new Date(message.createdAt).toLocaleTimeString([], {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </span>
-                                            {isUser && (
-                                                message.status === 'read' ? (
-                                                    <CheckCircle className="h-3 w-3 text-primary-foreground" />
-                                                ) : (
-                                                    <Clock className="h-3 w-3 opacity-70" />
-                                                )
-                                            )}
-                                        </div>
-                                    </div>
-                                    {message.reactions?.length > 0 && (
-                                        <div className="flex gap-1 mt-1">
-                                            {message.reactions.map((reaction, index) => (
-                                                <span key={index} className="text-xl">
-                                                    {reaction.type === 'thumbs_up' ? '👍' : '👎'}
-                                                </span>
-                                            ))}
-                                        </div>
+                                >
+                                    {message.type === 'text' ? (
+                                        <p className="text-sm">{message.content}</p>
+                                    ) : message.type === 'image' ? (
+                                        <img
+                                            src={message.attachments?.[0]?.url}
+                                            alt="Sent image"
+                                            className="max-w-full rounded"
+                                        />
+                                    ) : (
+                                        <a
+                                            href={message.attachments?.[0]?.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm underline"
+                                        >
+                                            {message.attachments?.[0]?.name}
+                                        </a>
                                     )}
+                                    <span className="text-xs opacity-70 mt-1 block">
+                                        {format(new Date(message.createdAt), 'HH:mm')}
+                                    </span>
                                 </div>
-                                {!message.reactions?.some(r => r.userId === user?.id) && !isUser && (
-                                    <div className="flex space-x-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => handleReaction(message.id, 'thumbs_up')}
-                                        >
-                                            <ThumbsUp className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => handleReaction(message.id, 'thumbs_down')}
-                                        >
-                                            <ThumbsDown className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                )}
-                            </motion.div>
+                            </div>
                         )
                     })}
                     <div ref={messagesEndRef} />
                 </div>
             </ScrollArea>
 
-            {/* Input */}
-            <div className="p-4 border-t">
-                <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" disabled>
-                        <Smile className="h-4 w-4" />
-                    </Button>
+            <div className="border-t p-4">
+                <form
+                    className="flex items-center gap-2"
+                    onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSendMessage()
+                    }}
+                >
                     <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
+                        className="shrink-0"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
                     >
-                        <Paperclip className="h-4 w-4" />
+                        <Paperclip className="h-5 w-5" />
+                        <span className="sr-only">Attach file</span>
                     </Button>
                     <input
                         type="file"
                         ref={fileInputRef}
                         className="hidden"
-                        accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        onChange={handleFileSelect}
+                        onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
+                        accept="image/*,.pdf,.doc,.docx"
                     />
                     <Input
-                        placeholder="Type a message..."
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={(e) => {
+                            setNewMessage(e.target.value)
+                            handleTyping(e.target.value.length > 0)
+                        }}
                         onKeyPress={handleKeyPress}
+                        placeholder="Type a message..."
                         className="flex-1"
+                        disabled={isUploading}
                     />
-                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                        <Send className="h-4 w-4" />
+                    <Button
+                        type="submit"
+                        size="icon"
+                        className="shrink-0"
+                        disabled={!newMessage.trim() || isUploading}
+                    >
+                        <Send className="h-5 w-5" />
+                        <span className="sr-only">Send message</span>
                     </Button>
-                </div>
+                </form>
             </div>
         </div>
     )

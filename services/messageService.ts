@@ -1,303 +1,212 @@
-import { Socket, Manager } from 'socket.io-client';
-import io from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
+import { connect } from 'socket.io-client';
+import axios from 'axios';
 
 export interface Message {
     id: string;
     conversationId: string;
-    senderId: string;  // MySQL user ID
+    senderId: string;
     senderRole: 'patient' | 'doctor';
     senderName: string;
-    senderImage?: string;
     content: string;
-    type: 'text' | 'image' | 'file' | 'voice' | 'ai-suggestion';
-    status: 'sent' | 'delivered' | 'read';
-    attachments?: {
+    type: 'text' | 'image' | 'file';
+    attachments?: Array<{
         url: string;
+        type: string;
         name: string;
-        type: string;
         size: number;
-    }[];
-    readBy: {
+    }>;
+    readBy: Array<{
         userId: string;
-        timestamp: string;
-    }[];
-    reactions?: {
+        readAt: Date;
+    }>;
+    reactions: Array<{
         userId: string;
         type: string;
-        timestamp: string;
-    }[];
-    createdAt: string;
-    updatedAt: string;
+    }>;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface Conversation {
     id: string;
-    participantId: string;  // The other participant's MySQL user ID
-    participantName: string;
-    participantRole: 'patient' | 'doctor';
-    participantImage?: string;
-    unreadCount: number;
-    status: 'active' | 'archived';
+    participants: Array<{
+        userId: string;
+        role: 'patient' | 'doctor';
+        name: string;
+        imageUrl?: string;
+    }>;
     lastMessage?: {
-        id: string;
         content: string;
-        type: Message['type'];
-        createdAt: string;
+        senderId: string;
+        createdAt: Date;
+        type: 'text' | 'image' | 'file';
     };
-    updatedAt: string;
+    unreadCount: number;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 class MessageService {
     private socket: typeof Socket | null = null;
-    private messageCallbacks: ((message: Message) => void)[] = [];
-    private typingCallbacks: ((data: { userId: string; isTyping: boolean }) => void)[] = [];
-    private statusCallbacks: ((data: { messageId: string; status: Message['status'] }) => void)[] = [];
-    private apiUrl: string;
+    private token: string | null = null;
+    private reconnectAttempts = 0;
+    private maxReconnectAttempts = 5;
+    private reconnectDelay = 2000;
+    private messageCallbacks: Set<(message: Message) => void> = new Set();
+    private typingCallbacks: Set<(data: { userId: string; isTyping: boolean }) => void> = new Set();
+    private readCallbacks: Set<(data: { messageId: string; userId: string }) => void> = new Set();
 
     constructor() {
-        this.apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api';
+        this.initializeSocket = this.initializeSocket.bind(this);
+        this.handleSocketError = this.handleSocketError.bind(this);
+    }
+
+    setToken(token: string) {
+        this.token = token;
+        if (this.socket) {
+            this.socket.disconnect();
+        }
         this.initializeSocket();
     }
 
     private initializeSocket() {
-        if (typeof window === 'undefined') {
-            console.log('Socket initialization skipped: Not in browser environment');
-            return;
-        }
+        if (!this.token) return;
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.log('Socket initialization skipped: No auth token found');
-            return;
-        }
-
-        console.log('Initializing socket connection to:', this.apiUrl);
-
-        this.socket = io(this.apiUrl, {
-            auth: { token },
+        this.socket = connect(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
             path: '/socket.io',
+            auth: { token: this.token },
             transports: ['websocket', 'polling'],
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            autoConnect: true,
-            forceNew: true
+            reconnection: true,
+            reconnectionAttempts: this.maxReconnectAttempts,
+            reconnectionDelay: this.reconnectDelay
         });
 
-        if (this.socket) {
-            this.socket.on('connect', () => {
-                console.log('Socket connected successfully', {
-                    id: this.socket?.id,
-                    transport: (this.socket as any)?.io?.engine?.transport?.name
-                });
-            });
+        this.socket.on('connect', () => {
+            console.log('Socket connected');
+            this.reconnectAttempts = 0;
+        });
 
-            this.socket.on('connect_error', (error: Error) => {
-                console.error('Socket connection error:', {
-                    message: error.message,
-                    type: error.name,
-                    transport: (this.socket as any)?.io?.engine?.transport?.name
-                });
-                
-                // Try to reconnect with websocket transport only
-                if ((this.socket as any)?.io?.engine?.transport?.name === 'polling') {
-                    console.log('Retrying connection with WebSocket transport only');
-                    (this.socket as any).io.opts.transports = ['websocket'];
+        this.socket.on('connect_error', this.handleSocketError);
+        this.socket.on('disconnect', () => console.log('Socket disconnected'));
+
+        this.socket.on('message:new', (message: Message) => {
+            this.messageCallbacks.forEach(callback => callback(message));
+        });
+
+        this.socket.on('user:typing', (data: { userId: string; isTyping: boolean }) => {
+            this.typingCallbacks.forEach(callback => callback(data));
+        });
+
+        this.socket.on('message:read', (data: { messageId: string; userId: string }) => {
+            this.readCallbacks.forEach(callback => callback(data));
+        });
+    }
+
+    private handleSocketError(error: Error) {
+        console.error('Socket connection error:', error);
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++;
+            setTimeout(() => this.initializeSocket(), this.reconnectDelay);
+        }
+    }
+
+    joinConversation(conversationId: string) {
+        if (this.socket?.connected) {
+            this.socket.emit('join:conversation', conversationId);
+        }
+    }
+
+    leaveConversation(conversationId: string) {
+        if (this.socket?.connected) {
+            this.socket.emit('leave:conversation', conversationId);
+        }
+    }
+
+    async sendMessage(conversationId: string, content: string, type: 'text' | 'image' | 'file' = 'text', attachments?: File[]) {
+        if (!this.socket?.connected) {
+            throw new Error('Socket not connected');
+        }
+
+        const formData = new FormData();
+        formData.append('conversationId', conversationId);
+        formData.append('content', content);
+        formData.append('type', type);
+        
+        if (attachments?.length) {
+            attachments.forEach(file => {
+                formData.append('attachments', file);
+            });
+        }
+
+        const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/messages`,
+            formData,
+            {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'multipart/form-data'
                 }
-            });
+            }
+        );
 
-            this.socket.on('disconnect', (reason: string) => {
-                console.log('Socket disconnected:', { reason });
-            });
+        return response.data;
+    }
 
-            this.socket.on('reconnect', (attemptNumber: number) => {
-                console.log('Socket reconnected after attempts:', attemptNumber);
-            });
+    async getConversations(): Promise<Conversation[]> {
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations`,
+            {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            }
+        );
+        return response.data;
+    }
 
-            this.socket.on('reconnect_attempt', (attemptNumber: number) => {
-                console.log('Socket reconnection attempt:', attemptNumber);
-            });
+    async getMessages(conversationId: string): Promise<Message[]> {
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${conversationId}`,
+            {
+                headers: { 'Authorization': `Bearer ${this.token}` }
+            }
+        );
+        return response.data;
+    }
 
-            this.socket.on('message:new', (message: Message) => {
-                console.log('New message received:', {
-                    id: message.id,
-                    conversationId: message.conversationId
-                });
-                this.messageCallbacks.forEach(callback => callback(message));
-            });
+    async markMessageAsRead(messageId: string) {
+        if (!this.socket?.connected) {
+            throw new Error('Socket not connected');
+        }
 
-            this.socket.on('user:typing', (data: { userId: string; isTyping: boolean }) => {
-                console.log('Typing status update:', data);
-                this.typingCallbacks.forEach(callback => callback(data));
-            });
+        this.socket.emit('message:read', { messageId });
+    }
 
-            this.socket.on('message:status', (data: { messageId: string; status: Message['status'] }) => {
-                console.log('Message status update:', data);
-                this.statusCallbacks.forEach(callback => callback(data));
-            });
+    setTypingStatus(conversationId: string, isTyping: boolean) {
+        if (this.socket?.connected) {
+            this.socket.emit('user:typing', { conversationId, isTyping });
         }
     }
 
     onNewMessage(callback: (message: Message) => void) {
-        this.messageCallbacks.push(callback);
-        return () => {
-            this.messageCallbacks = this.messageCallbacks.filter(cb => cb !== callback);
-        };
+        this.messageCallbacks.add(callback);
+        return () => this.messageCallbacks.delete(callback);
     }
 
     onTypingStatus(callback: (data: { userId: string; isTyping: boolean }) => void) {
-        this.typingCallbacks.push(callback);
-        return () => {
-            this.typingCallbacks = this.typingCallbacks.filter(cb => cb !== callback);
-        };
+        this.typingCallbacks.add(callback);
+        return () => this.typingCallbacks.delete(callback);
     }
 
-    onMessageStatus(callback: (data: { messageId: string; status: Message['status'] }) => void) {
-        this.statusCallbacks.push(callback);
-        return () => {
-            this.statusCallbacks = this.statusCallbacks.filter(cb => cb !== callback);
-        };
+    onMessageRead(callback: (data: { messageId: string; userId: string }) => void) {
+        this.readCallbacks.add(callback);
+        return () => this.readCallbacks.delete(callback);
     }
 
-    joinConversation(conversationId: string) {
-        console.log('Joining conversation:', conversationId);
-        this.socket?.emit('join:conversation', conversationId);
-    }
-
-    leaveConversation(conversationId: string) {
-        console.log('Leaving conversation:', conversationId);
-        this.socket?.emit('leave:conversation', conversationId);
-    }
-
-    emitTyping(conversationId: string, isTyping: boolean) {
-        console.log('Emitting typing status:', { conversationId, isTyping });
-        this.socket?.emit('user:typing', { conversationId, isTyping });
-    }
-
-    async getConversations(): Promise<Conversation[]> {
-        const response = await fetch(`${this.apiUrl}/messages/conversations`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-        return data.data;
-    }
-
-    async getMessages(conversationId: string): Promise<Message[]> {
-        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}/messages`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-        return data.data;
-    }
-
-    async sendMessage(
-        conversationId: string,
-        content: string,
-        type: Message['type'] = 'text',
-        attachments?: Message['attachments']
-    ): Promise<Message> {
-        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}/messages`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ content, type, attachments })
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-        return data.data;
-    }
-
-    async createConversation(doctorId: string): Promise<Conversation> {
-        const response = await fetch(`${this.apiUrl}/messages/conversations`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ doctorId })
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-        return data.data;
-    }
-
-    async updateMessageStatus(messageId: string, status: Message['status']): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/messages/${messageId}/status`, {
-            method: 'PUT',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status })
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-    }
-
-    async addReaction(messageId: string, reaction: string): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/messages/${messageId}/reaction`, {
-            method: 'PUT',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ reaction })
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-    }
-
-    async uploadFile(file: File): Promise<{ url: string; type: string; name: string; size: number }> {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch(`${this.apiUrl}/messages/upload`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-        return data.data;
-    }
-
-    async deleteMessage(conversationId: string, messageId: string): Promise<void> {
-        const response = await fetch(
-            `${this.apiUrl}/messages/conversations/${conversationId}/messages/${messageId}`,
-            {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                }
-            }
-        );
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-    }
-
-    async archiveConversation(conversationId: string): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/messages/conversations/${conversationId}`, {
-            method: 'DELETE',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        const data = await response.json();
-        if (!data.success) throw new Error(data.message);
-    }
-
-    formatTimestamp(timestamp: string): string {
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    disconnect() {
+        if (this.socket) {
+            this.socket.disconnect();
+            this.socket = null;
+        }
     }
 }
 
