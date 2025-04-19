@@ -47,10 +47,18 @@ class MessageService {
     }
 
     private initializeSocket() {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined') {
+            console.log('Socket initialization skipped: Not in browser environment');
+            return;
+        }
 
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            console.log('Socket initialization skipped: No auth token found');
+            return;
+        }
+
+        console.log('Initializing socket connection to:', this.apiUrl);
 
         this.socket = io(this.apiUrl, {
             auth: { token },
@@ -61,22 +69,47 @@ class MessageService {
 
         if (this.socket) {
             this.socket.on('connect', () => {
-                console.log('Socket connected successfully');
+                console.log('Socket connected successfully', {
+                    id: this.socket?.id,
+                    transport: this.socket?.connected ? 'connected' : 'disconnected'
+                });
             });
 
             this.socket.on('connect_error', (error: Error) => {
-                console.error('Socket connection error:', error);
+                console.error('Socket connection error:', {
+                    message: error.message,
+                    type: error.name,
+                    transport: this.socket?.connected ? 'connected' : 'disconnected'
+                });
+            });
+
+            this.socket.on('disconnect', (reason: string) => {
+                console.log('Socket disconnected:', { reason });
+            });
+
+            this.socket.on('reconnect', (attemptNumber: number) => {
+                console.log('Socket reconnected after attempts:', attemptNumber);
+            });
+
+            this.socket.on('reconnect_attempt', (attemptNumber: number) => {
+                console.log('Socket reconnection attempt:', attemptNumber);
             });
 
             this.socket.on('message:new', (message: Message) => {
+                console.log('New message received:', {
+                    id: message.id,
+                    conversationId: message.conversationId
+                });
                 this.messageCallbacks.forEach(callback => callback(message));
             });
 
             this.socket.on('user:typing', (data: { userId: string; isTyping: boolean }) => {
+                console.log('Typing status update:', data);
                 this.typingCallbacks.forEach(callback => callback(data));
             });
 
             this.socket.on('message:status', (data: { messageId: string; status: Message['status'] }) => {
+                console.log('Message status update:', data);
                 this.statusCallbacks.forEach(callback => callback(data));
             });
         }
@@ -104,21 +137,18 @@ class MessageService {
     }
 
     joinConversation(conversationId: string) {
-        if (this.socket) {
-            this.socket.emit('join:conversation', conversationId);
-        }
+        console.log('Joining conversation:', conversationId);
+        this.socket?.emit('join:conversation', conversationId);
     }
 
     leaveConversation(conversationId: string) {
-        if (this.socket) {
-            this.socket.emit('leave:conversation', conversationId);
-        }
+        console.log('Leaving conversation:', conversationId);
+        this.socket?.emit('leave:conversation', conversationId);
     }
 
     emitTyping(conversationId: string, isTyping: boolean) {
-        if (this.socket) {
-            this.socket.emit('user:typing', { conversationId, isTyping });
-        }
+        console.log('Emitting typing status:', { conversationId, isTyping });
+        this.socket?.emit('user:typing', { conversationId, isTyping });
     }
 
     async getConversations(): Promise<Conversation[]> {
