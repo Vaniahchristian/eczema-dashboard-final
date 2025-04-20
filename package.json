@@ -49,6 +49,7 @@
     "input-otp": "1.4.1",
     "lodash": "latest",
     "lucide-react": "^0.454.0",
+    "my-v0-project": "file:",
     "next": "15.1.0",
     "next-pwa": "^5.6.0",
     "next-themes": "latest",

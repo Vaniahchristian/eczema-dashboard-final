@@ -1,41 +1,65 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft } from "lucide-react"
-import { useAuth } from "@/lib/auth"
-import { toast } from "sonner"
+import type React from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export default function RegisterForm() {
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [dateOfBirth, setDateOfBirth] = useState("")
-  const [gender, setGender] = useState("")
-  const [role, setRole] = useState("")
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
-  const { register, error, clearError } = useAuth()
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+  const [role, setRole] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { register, error, clearError } = useAuth();
+
+  // Test toast to verify sonner is working
+  useEffect(() => {
+    console.log('RegisterForm component mounted');
+    toast.info("Register form loaded. Testing toast functionality...");
+  }, []);
+
+  // Global error handler to catch uncaught errors
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Uncaught error:', event.error);
+      toast.error("An unexpected error occurred. Please check the console.");
+    };
+
+    window.addEventListener('error', handleError);
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
+    console.log('Form submission triggered');
+    e.preventDefault();
+    console.log('After e.preventDefault()');
+
     if (!agreedToTerms) {
-      toast.error("Please agree to the terms and conditions")
-      return
+      console.log('Terms not agreed');
+      toast.error("Please agree to the terms and conditions");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
+    console.log('Set isLoading to true');
 
     try {
+      console.log('Calling register with:', { email, password, firstName, lastName, dateOfBirth, gender, role });
       await register({
         email,
         password,
@@ -43,18 +67,25 @@ export default function RegisterForm() {
         lastName,
         dateOfBirth,
         gender,
-        role: role || "patient" // Default to patient if no role selected
-      })
-      
-      toast.success("Registration successful!")
-      router.push("/dashboard")
+        role: role || "patient", // Default to patient if no role selected
+      });
+
+      console.log('Registration successful');
+      toast.success("Registration successful! Redirecting to login...");
+
+      setTimeout(() => {
+        console.log('Redirecting to /login');
+        router.push("/login");
+      }, 2000);
     } catch (err) {
-      toast.error(error || "Registration failed. Please try again.")
-      clearError()
+      console.error('Form registration error:', err);
+      toast.error(error || (err instanceof Error ? err.message : "Registration failed. Please try again."));
+      clearError();
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
+      console.log('Set isLoading to false');
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -184,5 +215,5 @@ export default function RegisterForm() {
         </p>
       </div>
     </div>
-  )
+  );
 }
