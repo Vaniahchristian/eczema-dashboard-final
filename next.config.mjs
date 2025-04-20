@@ -64,4 +64,5 @@ export default withPWA({
   dest: 'public',
   register: true,
   skipWaiting: true,
+  disable: true, // Disable PWA for this build
 })(nextConfig);
