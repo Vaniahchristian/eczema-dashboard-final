@@ -73,9 +73,14 @@ class MessageService {
     private initializeSocket() {
         if (!this.token) return;
 
-        this.socket = connect(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        console.log(' Initializing WebSocket connection to:', apiUrl);
+
+        this.socket = connect(apiUrl, {
             path: '/socket.io',
-            auth: { token: this.token },
+            auth: { 
+                token: this.token 
+            },
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: this.maxReconnectAttempts,
@@ -83,23 +88,63 @@ class MessageService {
         });
 
         this.socket.on('connect', () => {
-            console.log('Socket connected');
+            console.log(' Socket connected:', {
+                id: this.socket?.id,
+                transport: this.socket?.connect.name
+            });
             this.reconnectAttempts = 0;
         });
 
-        this.socket.on('connect_error', this.handleSocketError);
-        this.socket.on('disconnect', () => console.log('Socket disconnected'));
+        this.socket.on('connect_error', (error: Error) => {
+            console.error(' Socket connection error:', {
+                message: error.message,
+                description: (error as any).description,
+                type: (error as any).type,
+                token: this.token ? '***' : 'missing'
+            });
+            this.handleSocketError(error);
+        });
 
+        this.socket.on('disconnect', (reason: string) => {
+            console.log(' Socket disconnected:', {
+                reason,
+                id: this.socket?.id,
+                willReconnect: this.reconnectAttempts < this.maxReconnectAttempts
+            });
+            // Create an Error object from the disconnect reason
+            this.handleSocketError(new Error(`Socket disconnected: ${reason}`));
+        });
+
+        // Message events
         this.socket.on('message:new', (message: Message) => {
+            console.log(' New message received:', {
+                messageId: message.id,
+                conversationId: message.conversationId,
+                type: message.type
+            });
             this.messageCallbacks.forEach(callback => callback(message));
         });
 
+        this.socket.on('message:reaction', (data: { messageId: string, reactions: any[] }) => {
+            console.log(' Message reaction:', data);
+            // Handle reactions if needed
+        });
+
+        // Typing events
         this.socket.on('user:typing', (data: { userId: string; isTyping: boolean }) => {
+            console.log(' User typing status:', data);
             this.typingCallbacks.forEach(callback => callback(data));
         });
 
+        // Read receipt events
         this.socket.on('message:read', (data: { messageId: string; userId: string }) => {
+            console.log(' Message read:', data);
             this.readCallbacks.forEach(callback => callback(data));
+        });
+
+        // Error events
+        this.socket.on('error', (error: any) => {
+            console.error(' Socket error:', error);
         });
     }
 
@@ -113,20 +158,31 @@ class MessageService {
 
     joinConversation(conversationId: string) {
         if (this.socket?.connected) {
+            console.log(' Joining conversation:', conversationId);
             this.socket.emit('join:conversation', conversationId);
+        } else {
+            console.warn(' Cannot join conversation - socket not connected');
         }
     }
 
     leaveConversation(conversationId: string) {
         if (this.socket?.connected) {
+            console.log(' Leaving conversation:', conversationId);
             this.socket.emit('leave:conversation', conversationId);
         }
     }
 
     async sendMessage(conversationId: string, content: string, type: 'text' | 'image' | 'file' = 'text', attachments?: File[]) {
         if (!this.socket?.connected) {
+            console.error(' Cannot send message - socket not connected');
             throw new Error('Socket not connected');
         }
+
+        console.log(' Sending message:', {
+            conversationId,
+            type,
+            hasAttachments: !!attachments?.length
+        });
 
         const formData = new FormData();
         formData.append('conversationId', conversationId);
@@ -139,18 +195,31 @@ class MessageService {
             });
         }
 
-        const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/messages`,
-            formData,
-            {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'Content-Type': 'multipart/form-data'
+        try {
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations/${conversationId}/messages`,
+                formData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'Content-Type': 'multipart/form-data'
+                    }
                 }
-            }
-        );
+            );
 
-        return response.data;
+            console.log(' Message sent successfully:', {
+                messageId: response.data.id,
+                conversationId
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error(' Error sending message:', {
+                error: error.message,
+                conversationId
+            });
+            throw error;
+        }
     }
 
     async getConversations(): Promise<Conversation[]> {
@@ -163,9 +232,46 @@ class MessageService {
         return response.data;
     }
 
+    async createConversation(doctorId: string): Promise<Conversation> {
+        try {
+            console.log(' Creating new conversation with doctor:', doctorId);
+            
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations`,
+                { doctorId },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const conversation = response.data;
+
+            // Join the conversation room for real-time updates
+            if (this.socket?.connected) {
+                this.socket.emit('join:conversation', conversation.id);
+            }
+
+            console.log(' Conversation created successfully:', {
+                conversationId: conversation.id,
+                participants: conversation.participants
+            });
+
+            return conversation;
+        } catch (error: any) {
+            console.error(' Error creating conversation:', {
+                error: error.message,
+                doctorId
+            });
+            throw new Error(error.response?.data?.error || 'Failed to create conversation');
+        }
+    }
+
     async getMessages(conversationId: string): Promise<Message[]> {
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${conversationId}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations/${conversationId}/messages`,
             {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             }
@@ -184,6 +290,48 @@ class MessageService {
     setTypingStatus(conversationId: string, isTyping: boolean) {
         if (this.socket?.connected) {
             this.socket.emit('user:typing', { conversationId, isTyping });
+        }
+    }
+
+    async reactToMessage(messageId: string, type: string) {
+        if (!this.socket?.connected) {
+            console.error(' Cannot react to message - socket not connected');
+            throw new Error('Socket not connected');
+        }
+
+        console.log(' Reacting to message:', {
+            messageId,
+            type
+        });
+
+        try {
+            const response = await axios.put(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${messageId}/reaction`,
+                { type },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                }
+            );
+
+            // Emit socket event for real-time updates
+            this.socket.emit('message:react', { messageId, type });
+
+            console.log(' Reaction sent successfully:', {
+                messageId,
+                type,
+                response: response.data
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error(' Error reacting to message:', {
+                error: error.message,
+                messageId,
+                type
+            });
+            throw error;
         }
     }
 
