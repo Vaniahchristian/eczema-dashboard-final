@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Camera, Upload, Clock, AlertTriangle, FileText, Calendar, Download, Share2 } from "lucide-react";
 import { diagnosisApi } from "@/services/api/diagnosis";
+import { PreDiagnosisSurvey, PreDiagnosisData } from "./pre-diagnosis-survey";
+import { PostDiagnosisSurvey, PostDiagnosisData } from "./post-diagnosis-survey";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface DiagnosisHeaderProps {
   onNewDiagnosis?: (diagnosisId: string) => void;
@@ -13,6 +16,12 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({ total: 0, lastDate: '', progress: 0 });
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [showPreSurvey, setShowPreSurvey] = useState(false);
+  const [preDiagnosisData, setPreDiagnosisData] = useState<PreDiagnosisData | null>(null);
+  const [showPostSurvey, setShowPostSurvey] = useState(false);
+  const [diagnosisId, setDiagnosisId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -29,26 +38,62 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
     }).catch((err) => setError(err.message));
   }, []);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(f);
+      setError(null);
+    }
+  };
 
-    setError(null);
-    setUploading(true);
+  const removeFile = () => {
+    setFile(null);
+    setPreview(null);
+    setPreDiagnosisData(null);
+  };
 
+  const handlePreDiagnosisComplete = async (data: PreDiagnosisData) => {
+    setPreDiagnosisData(data);
+    setShowPreSurvey(false);
+    await analyzeImage(data);
+  };
+
+  const handlePostDiagnosisComplete = async (data: PostDiagnosisData) => {
     try {
-      if (!file.type.startsWith('image/')) throw new Error('Please upload an image file');
-      if (file.size > 5 * 1024 * 1024) throw new Error('Image size should be less than 5MB');
+      await diagnosisApi.submitFeedback(diagnosisId!, {
+        ...data,
+        preDiagnosisData: preDiagnosisData!
+      });
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+    }
+    setShowPostSurvey(false);
+    setDiagnosisId(null);
+    setPreDiagnosisData(null);
+    setFile(null);
+    setPreview(null);
+  };
 
-      const response = await diagnosisApi.uploadImage(file);
-      if (!response.success) throw new Error(response.message || 'Failed to process image');
-
-      onNewDiagnosis?.(response.data.diagnosisId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+  const analyzeImage = async (preData: PreDiagnosisData) => {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const response = await diagnosisApi.uploadImage(file, preData);
+      if (response.success) {
+        setDiagnosisId(response.data.diagnosisId);
+        setShowPostSurvey(true);
+        onNewDiagnosis?.(response.data.diagnosisId);
+      } else {
+        throw new Error(response.message || 'Failed to analyze image');
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to analyze image');
     } finally {
       setUploading(false);
-      event.target.value = '';
     }
   };
 
@@ -80,7 +125,7 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={handleImageUpload}
+              onChange={handleFileChange}
               disabled={uploading}
               className="hidden"
             />
@@ -95,13 +140,83 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
             <input
               type="file"
               accept="image/*"
-              onChange={handleImageUpload}
+              onChange={handleFileChange}
               disabled={uploading}
               className="hidden"
             />
           </label>
         </div>
       </motion.div>
+
+      {/* Image Preview and Continue Button */}
+      {preview && (
+        <div className="max-w-md mx-auto mt-6 space-y-4">
+          <div className="relative">
+            <img
+              src={preview}
+              alt="Eczema upload preview"
+              className="mx-auto rounded-xl shadow-md max-w-xs h-48 object-contain"
+            />
+            <button
+              className="absolute top-2 right-2 h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md"
+              onClick={removeFile}
+              disabled={uploading}
+            >
+              <span className="sr-only">Remove</span>X
+            </button>
+          </div>
+          <button
+            className="w-full py-2 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center"
+            onClick={() => setShowPreSurvey(true)}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <>
+                <Clock className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              "Continue to Pre-Diagnosis Questions"
+            )}
+          </button>
+        </div>
+      )}
+
+      <Dialog open={showPreSurvey} onOpenChange={setShowPreSurvey}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Before Your Diagnosis</DialogTitle>
+          </DialogHeader>
+          <PreDiagnosisSurvey
+            onComplete={handlePreDiagnosisComplete}
+            onSkip={async () => {
+              setShowPreSurvey(false);
+              await analyzeImage({} as PreDiagnosisData);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPostSurvey} onOpenChange={setShowPostSurvey}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Diagnosis Feedback</DialogTitle>
+          </DialogHeader>
+          {diagnosisId && (
+            <PostDiagnosisSurvey
+              diagnosisId={diagnosisId}
+              onComplete={handlePostDiagnosisComplete}
+              onSkip={() => {
+                setShowPostSurvey(false);
+                setDiagnosisId(null);
+                setPreDiagnosisData(null);
+                setFile(null);
+                setPreview(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
