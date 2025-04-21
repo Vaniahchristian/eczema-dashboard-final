@@ -45,6 +45,11 @@ export interface Diagnosis {
   };
 }
 
+export interface DiagnosisFeedback {
+  preDiagnosisSurvey?: PreDiagnosisData;
+  postDiagnosisSurvey?: PostDiagnosisData;
+}
+
 interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -164,15 +169,21 @@ export const diagnosisApi = {
     }
   },
 
-  // Submit post-diagnosis feedback
-  submitFeedback: async (
+  
+
+  // Submit feedback (pre/post diagnosis)
+submitFeedback: async (
     diagnosisId: string,
-    feedbackData: PostDiagnosisData
+    feedbackData: Partial<{
+      preDiagnosisSurvey: PreDiagnosisData;
+      postDiagnosisSurvey: PostDiagnosisData;
+    }> & Partial<PostDiagnosisData> // for legacy support
   ): Promise<ApiResponse<{ success: boolean }>> => {
     try {
       const response = await apiClient.post(
         `/eczema/diagnoses/${diagnosisId}/feedback`,
-        feedbackData
+        feedbackData,
+        getAuthHeaders()
       );
       return response.data;
     } catch (error: unknown) {
@@ -182,4 +193,22 @@ export const diagnosisApi = {
       throw error;
     }
   },
-};
+  
+  // Get feedback (pre/post diagnosis)
+  getFeedback: async (
+    diagnosisId: string
+  ): Promise<ApiResponse<DiagnosisFeedback>> => {
+    try {
+      const response = await apiClient.get(
+        `/eczema/diagnoses/${diagnosisId}/feedback`,
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to fetch feedback');
+      }
+      throw error;
+    }
+  },
+};      

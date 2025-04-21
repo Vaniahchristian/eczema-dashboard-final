@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { MapPin, Calendar, User, Clock, AlertTriangle, Pill, FileText, ImageIcon, Maximize2, Download } from "lucide-react";
-import { diagnosisApi, type Diagnosis } from "@/services/api/diagnosis";
+import { diagnosisApi, type Diagnosis, type DiagnosisFeedback } from "@/services/api/diagnosis";
 import Image from "next/image";
 
 interface DiagnosisDetailProps {
@@ -11,6 +11,7 @@ interface DiagnosisDetailProps {
 
 export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [feedback, setFeedback] = useState<DiagnosisFeedback | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -25,6 +26,9 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
       try {
         const response = await diagnosisApi.getDiagnosis(diagnosisId);
         setDiagnosis(response.data);
+        // Fetch feedback (pre/post diagnosis)
+        const feedbackRes = await diagnosisApi.getFeedback(diagnosisId);
+        setFeedback(feedbackRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch diagnosis');
       } finally {
@@ -217,6 +221,46 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey) && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center mb-2">
+                <FileText className="h-4 w-4 text-sky-500 mr-2" />
+                <h3 className="font-medium">Patient Background (Pre-Diagnosis Survey)</h3>
+              </div>
+              <ul className="text-slate-700 dark:text-slate-300 text-sm space-y-1">
+                <li><span className="font-medium">Eczema History:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.eczemaHistory}</li>
+                <li><span className="font-medium">Last Flare-up:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.lastFlareup}</li>
+                <li><span className="font-medium">Flare-up Triggers:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.flareupTriggers?.length > 0 ? (feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.flareupTriggers.join(', ') : 'None'}</li>
+                <li><span className="font-medium">Current Symptoms:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.currentSymptoms}</li>
+                <li><span className="font-medium">Previous Treatments:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.previousTreatments}</li>
+                <li><span className="font-medium">Severity:</span> {(feedback?.preDiagnosisSurvey || diagnosis?.preDiagnosisSurvey)?.severity}</li>
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey) && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center mb-2">
+                <FileText className="h-4 w-4 text-sky-500 mr-2" />
+                <h3 className="font-medium">Patient Feedback (Post-Diagnosis Survey)</h3>
+              </div>
+              <ul className="text-slate-700 dark:text-slate-300 text-sm space-y-1">
+                <li><span className="font-medium">Diagnosis Accuracy:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.diagnosisAccuracy} / 5</li>
+                <li><span className="font-medium">Helpfulness:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.diagnosisHelpfulness} / 5</li>
+                <li><span className="font-medium">Treatment Clarity:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.treatmentClarity} / 5</li>
+                <li><span className="font-medium">User Confidence:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.userConfidence} / 5</li>
+                <li><span className="font-medium">Would Recommend:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.wouldRecommend ? 'Yes' : 'No'}</li>
+                {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.feedback && (
+                  <li><span className="font-medium">Additional Feedback:</span> {(feedback?.postDiagnosisSurvey || diagnosis?.postDiagnosisSurvey)?.feedback}</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end space-x-3">
