@@ -6,6 +6,9 @@ import { useState } from "react"
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react"
 import { diagnosisApi } from "@/services/api/diagnosis"
 import { useRouter } from "next/navigation"
+import { PreDiagnosisSurvey, PreDiagnosisData } from "./pre-diagnosis-survey"
+import { PostDiagnosisSurvey, PostDiagnosisData } from "./post-diagnosis-survey"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface UploadSectionProps {
   setIsLoading: (loading: boolean) => void
@@ -17,6 +20,10 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [showPreSurvey, setShowPreSurvey] = useState(false)
+  const [preDiagnosisData, setPreDiagnosisData] = useState<PreDiagnosisData | null>(null)
+  const [showPostSurvey, setShowPostSurvey] = useState(false)
+  const [diagnosisId, setDiagnosisId] = useState<string | null>(null)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -58,6 +65,25 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
     setPreview(null)
   }
 
+  const handlePreDiagnosisComplete = async (data: PreDiagnosisData) => {
+    setPreDiagnosisData(data)
+    setShowPreSurvey(false)
+    await analyzeImage()
+  }
+
+  const handlePostDiagnosisComplete = async (data: PostDiagnosisData) => {
+    try {
+      await diagnosisApi.submitFeedback(diagnosisId!, {
+        ...data,
+        preDiagnosisData: preDiagnosisData!
+      })
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
+    }
+    setShowPostSurvey(false)
+    router.push(`/diagnoses/${diagnosisId}`)
+  }
+
   const analyzeImage = async () => {
     if (!file) return
 
@@ -65,9 +91,10 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
     setIsLoading(true)
     
     try {
-      const response = await diagnosisApi.uploadImage(file)
+      const response = await diagnosisApi.uploadImage(file, preDiagnosisData || undefined)
       if (response.success) {
-        router.push(`/diagnoses/${response.data.diagnosisId}`)
+        setDiagnosisId(response.data.diagnosisId)
+        setShowPostSurvey(true)
       } else {
         throw new Error(response.message || 'Failed to analyze image')
       }
@@ -80,70 +107,105 @@ export default function UploadSection({ setIsLoading }: UploadSectionProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border-none shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30 h-full">
-      <div className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white p-6">
-        <h2 className="text-xl font-semibold flex items-center">
-          <ImageIcon className="mr-2 h-5 w-5" />
-          Upload Skin Image
-        </h2>
-      </div>
-      <div className="p-6">
-        {!preview ? (
-          <div
-            className={`border-2 border-dashed rounded-xl p-6 text-center ${
-              dragActive ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20" : "border-slate-300 dark:border-slate-700"
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <input type="file" id="file-upload" className="hidden" accept="image/*" onChange={handleChange} />
-            <Upload className="mx-auto h-12 w-12 text-sky-400" />
-            <p className="mt-4 text-sm font-medium">Drag and drop your eczema image here</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Supports JPG, PNG, HEIC up to 10MB</p>
-            <button
-              className="mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
-              onClick={() => document.getElementById("file-upload")?.click()}
+    <>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border-none shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30 h-full">
+        <div className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white p-6">
+          <h2 className="text-xl font-semibold flex items-center">
+            <ImageIcon className="mr-2 h-5 w-5" />
+            Upload Skin Image
+          </h2>
+        </div>
+        <div className="p-6">
+          {!preview ? (
+            <div
+              className={`border-2 border-dashed rounded-xl p-6 text-center ${
+                dragActive ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20" : "border-slate-300 dark:border-slate-700"
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
             >
-              Select File
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="relative">
-              <img
-                src={preview || "/placeholder.svg"}
-                alt="Eczema upload preview"
-                className="w-full h-auto rounded-xl shadow-md"
-              />
+              <input type="file" id="file-upload" className="hidden" accept="image/*" onChange={handleChange} />
+              <Upload className="mx-auto h-12 w-12 text-sky-400" />
+              <p className="mt-4 text-sm font-medium">Drag and drop your eczema image here</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Supports JPG, PNG, HEIC up to 10MB</p>
               <button
-                className="absolute top-2 right-2 h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md"
-                onClick={removeFile}
+                className="mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                onClick={() => document.getElementById("file-upload")?.click()}
               >
-                <X className="h-4 w-4" />
+                Select File
               </button>
             </div>
-            <button
-              className="w-full py-2 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center"
-              onClick={analyzeImage}
-              disabled={analyzing}
-            >
-              {analyzing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                "Analyze Image"
-              )}
-            </button>
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-              Your image will be analyzed by our AI to provide a diagnosis and treatment recommendations.
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-4">
+              <div className="relative">
+                <img
+                  src={preview || "/placeholder.svg"}
+                  alt="Eczema upload preview"
+                  className="w-full h-auto rounded-xl shadow-md"
+                />
+                <button
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md"
+                  onClick={removeFile}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                className="w-full py-2 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 flex items-center justify-center"
+                onClick={() => setShowPreSurvey(true)}
+                disabled={analyzing}
+              >
+                {analyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Continue to Pre-Diagnosis Questions"
+                )}
+              </button>
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                Your image will be analyzed by our AI to provide a diagnosis and treatment recommendations.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <Dialog open={showPreSurvey} onOpenChange={setShowPreSurvey}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Before Your Diagnosis</DialogTitle>
+          </DialogHeader>
+          <PreDiagnosisSurvey
+            onComplete={handlePreDiagnosisComplete}
+            onSkip={() => {
+              setShowPreSurvey(false)
+              analyzeImage()
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPostSurvey} onOpenChange={setShowPostSurvey}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Diagnosis Feedback</DialogTitle>
+          </DialogHeader>
+          {diagnosisId && (
+            <PostDiagnosisSurvey
+              diagnosisId={diagnosisId}
+              onComplete={handlePostDiagnosisComplete}
+              onSkip={() => {
+                setShowPostSurvey(false)
+                router.push(`/diagnoses/${diagnosisId}`)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

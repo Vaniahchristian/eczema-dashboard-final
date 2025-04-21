@@ -1,13 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { motion } from "framer-motion"
-import { Calendar, ChevronDown, BarChart2, Activity, Cpu, Users, Zap, Filter, RefreshCw, Download } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Calendar, ChartBarIcon, LineChart, BarChart2 } from "lucide-react"
 import type { TimeRange, MetricType } from "./analytics-page"
-import { analyticsService, type ExportType } from "@/services/analyticsService"
-import { toast } from "sonner"
+import DateRangePicker from "../shared/date-range-picker"
 
 interface AnalyticsHeaderProps {
   timeRange: TimeRange
@@ -30,295 +26,113 @@ export default function AnalyticsHeader({
   comparisonMode,
   onToggleComparisonMode,
 }: AnalyticsHeaderProps) {
-  const [calendarOpen, setCalendarOpen] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [isSelectingStartDate, setIsSelectingStartDate] = useState(true)
-  const [isExporting, setIsExporting] = useState(false)
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return
-
-    if (isSelectingStartDate) {
-      onDateRangeChange([date, dateRange[1]])
-      setIsSelectingStartDate(false)
-    } else {
-      // Ensure end date is not before start date
-      if (date < dateRange[0]) {
-        onDateRangeChange([date, dateRange[0]])
-      } else {
-        onDateRangeChange([dateRange[0], date])
-      }
-      setCalendarOpen(false)
-      setIsSelectingStartDate(true)
-    }
-
-    setSelectedDate(date)
-  }
-
-  const formatDateRange = () => {
-    const formatDate = (date: Date) => {
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    }
-
-    return `${formatDate(dateRange[0])} - ${formatDate(dateRange[1])}`
-  }
-
-  const getTimeRangeLabel = (range: TimeRange) => {
-    switch (range) {
-      case "24h":
-        return "Last 24 Hours"
-      case "7d":
-        return "Last 7 Days"
-      case "30d":
-        return "Last 30 Days"
-      case "90d":
-        return "Last 90 Days"
-      case "1y":
-        return "Last Year"
-      case "custom":
-        return formatDateRange()
-    }
-  }
-
-  const getMetricIcon = (metric: MetricType) => {
-    switch (metric) {
-      case "engagement":
-        return <BarChart2 className="h-4 w-4 mr-2" />
-      case "health":
-        return <Activity className="h-4 w-4 mr-2" />
-      case "system":
-        return <Cpu className="h-4 w-4 mr-2" />
-      case "demographics":
-        return <Users className="h-4 w-4 mr-2" />
-      case "realtime":
-        return <Zap className="h-4 w-4 mr-2" />
-    }
-  }
-
-  const getMetricLabel = (metric: MetricType) => {
-    switch (metric) {
-      case "engagement":
-        return "Engagement"
-      case "health":
-        return "Health Metrics"
-      case "system":
-        return "System Performance"
-      case "demographics":
-        return "Demographics"
-      case "realtime":
-        return "Real-time Activity"
-    }
-  }
-
-  const handleExport = async (type: ExportType) => {
-    try {
-      setIsExporting(true)
-      await analyticsService.exportData(type, dateRange)
-      toast.success(`Successfully exported ${type} data`)
-    } catch (error) {
-      toast.error(`Failed to export ${type} data`)
-      console.error('Export error:', error)
-    } finally {
-      setIsExporting(false)
-    }
-  }
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   return (
-    <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between"
-      >
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-            Analytics Dashboard
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2">
-            Track your eczema management metrics and system performance
-          </p>
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Analytics Dashboard</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Monitor and analyze user engagement, survey responses, and system performance
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onToggleMetric("overview")}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+              activeMetrics.includes("overview")
+                ? "bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-400"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            }`}
+          >
+            <ChartBarIcon className="h-4 w-4" />
+            Overview
+          </button>
+
+          <button
+            onClick={() => onToggleMetric("engagement")}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+              activeMetrics.includes("engagement")
+                ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            }`}
+          >
+            <LineChart className="h-4 w-4" />
+            Engagement
+          </button>
+
+          <button
+            onClick={() => onToggleMetric("survey")}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+              activeMetrics.includes("survey")
+                ? "bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            }`}
+          >
+            <BarChart2 className="h-4 w-4" />
+            Survey Analytics
+          </button>
         </div>
-        <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span>{getTimeRangeLabel(timeRange)}</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <div className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex space-x-2 mb-3">
-                  <button
-                    onClick={() => onTimeRangeChange("24h")}
-                    className={`px-3 py-1 text-xs rounded-lg ${
-                      timeRange === "24h"
-                        ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    24h
-                  </button>
-                  <button
-                    onClick={() => onTimeRangeChange("7d")}
-                    className={`px-3 py-1 text-xs rounded-lg ${
-                      timeRange === "7d"
-                        ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    7d
-                  </button>
-                  <button
-                    onClick={() => onTimeRangeChange("30d")}
-                    className={`px-3 py-1 text-xs rounded-lg ${
-                      timeRange === "30d"
-                        ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    30d
-                  </button>
-                  <button
-                    onClick={() => onTimeRangeChange("90d")}
-                    className={`px-3 py-1 text-xs rounded-lg ${
-                      timeRange === "90d"
-                        ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    90d
-                  </button>
-                  <button
-                    onClick={() => onTimeRangeChange("1y")}
-                    className={`px-3 py-1 text-xs rounded-lg ${
-                      timeRange === "1y"
-                        ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
-                    1y
-                  </button>
-                </div>
-                <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  {isSelectingStartDate ? "Select start date" : "Select end date"}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{formatDateRange()}</div>
-              </div>
-              <CalendarComponent mode="single" selected={selectedDate} onSelect={handleDateSelect} initialFocus />
-            </PopoverContent>
-          </Popover>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700">
-                <Filter className="h-4 w-4 mr-2" />
-                <span>Metrics</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
-              <div className="space-y-2">
-                <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">
-                  Select Metrics to Display
-                </div>
-                {(["engagement", "health", "system", "demographics", "realtime"] as MetricType[]).map((metric) => (
-                  <div key={metric} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`metric-${metric}`}
-                      checked={activeMetrics.includes(metric)}
-                      onChange={() => onToggleMetric(metric)}
-                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
-                    />
-                    <label
-                      htmlFor={`metric-${metric}`}
-                      className="ml-2 flex items-center text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      {getMetricIcon(metric)}
-                      {getMetricLabel(metric)}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+        <div className="flex gap-2">
+          <div className="relative">
+            <button
+              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-all ${
+                timeRange === "custom"
+                  ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              }`}
+            >
+              <Calendar className="h-4 w-4" />
+              {timeRange === "custom"
+                ? `${dateRange[0].toLocaleDateString()} - ${dateRange[1].toLocaleDateString()}`
+                : timeRange.toUpperCase()}
+            </button>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <button 
-                className="flex items-center px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700"
-                disabled={isExporting}
+            {isDatePickerOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50">
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={(range) => {
+                    onDateRangeChange(range)
+                    setIsDatePickerOpen(false)
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+            {(["24h", "7d", "30d", "90d", "1y"] as TimeRange[]).map((range) => (
+              <button
+                key={range}
+                onClick={() => onTimeRangeChange(range)}
+                className={`px-2 py-1 text-xs rounded transition-all ${
+                  timeRange === range
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                }`}
               >
-                <Download className="h-4 w-4 mr-2" />
-                <span>Export</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
+                {range.toUpperCase()}
               </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
-              <div className="space-y-2">
-                <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">
-                  Export Data
-                </div>
-                <button
-                  onClick={() => handleExport('patients')}
-                  disabled={isExporting}
-                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  Patient Records (CSV)
-                </button>
-                <button
-                  onClick={() => handleExport('diagnoses')}
-                  disabled={isExporting}
-                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  Diagnosis Data (CSV)
-                </button>
-                <button
-                  onClick={() => handleExport('analytics')}
-                  disabled={isExporting}
-                  className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                >
-                  Analytics Report (PDF)
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+            ))}
+          </div>
 
           <button
             onClick={onToggleComparisonMode}
-            className={`flex items-center px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-shadow border ${
+            className={`px-3 py-1.5 text-sm rounded-lg transition-all ${
               comparisonMode
-                ? "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border-sky-300 dark:border-sky-700"
-                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                ? "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400"
+                : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             }`}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            <span>Compare</span>
+            Compare
           </button>
         </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="bg-gradient-to-r from-sky-50 to-teal-50 dark:from-sky-900/20 dark:to-teal-900/20 p-6 rounded-2xl shadow-sm"
-      >
-        <div className="flex items-start md:items-center">
-          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm mr-4">
-            <BarChart2 className="h-6 w-6 text-teal-500" />
-          </div>
-          <div>
-            <h2 className="text-lg font-medium text-slate-900 dark:text-white">Analytics Overview</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Track your eczema management progress, user engagement, and system performance metrics
-            </p>
-          </div>
-        </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

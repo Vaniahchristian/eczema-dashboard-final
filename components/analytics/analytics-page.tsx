@@ -6,13 +6,10 @@ import DashboardLayout from "@/components/layout/dashboard-layout"
 import AnalyticsHeader from "@/components/analytics/analytics-header"
 import OverviewMetrics from "@/components/analytics/overview-metrics"
 import EngagementAnalytics from "@/components/analytics/engagement-analytics"
-import HealthMetrics from "@/components/analytics/health-metrics"
-import SystemPerformance from "@/components/analytics/system-performance"
-import UserDemographics from "@/components/analytics/user-demographics"
-import RealTimeActivity from "@/components/analytics/real-time-activity"
+import SurveyAnalytics from "@/components/analytics/survey-analytics"
 
 export type TimeRange = "24h" | "7d" | "30d" | "90d" | "1y" | "custom"
-export type MetricType = "engagement" | "health" | "system" | "demographics" | "realtime"
+export type MetricType = "engagement" | "survey" | "overview"
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d")
@@ -21,11 +18,9 @@ export default function AnalyticsPage() {
     new Date(),
   ])
   const [activeMetrics, setActiveMetrics] = useState<MetricType[]>([
+    "overview",
     "engagement",
-    "health",
-    "system",
-    "demographics",
-    "realtime",
+    "survey"
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [comparisonMode, setComparisonMode] = useState(false)
@@ -113,19 +108,10 @@ export default function AnalyticsPage() {
             onToggleComparisonMode={toggleComparisonMode}
           />
 
-          <div className="mt-8">
-            <OverviewMetrics timeRange={timeRange} dateRange={dateRange} isLoading={isLoading} />
-          </div>
-
-          {activeMetrics.includes("realtime") && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="mt-8"
-            >
-              <RealTimeActivity />
-            </motion.div>
+          {activeMetrics.includes("overview") && (
+            <div className="mt-8">
+              <OverviewMetrics timeRange={timeRange} dateRange={dateRange} isLoading={isLoading} />
+            </div>
           )}
 
           {activeMetrics.includes("engagement") && (
@@ -144,46 +130,21 @@ export default function AnalyticsPage() {
             </motion.div>
           )}
 
-          {activeMetrics.includes("health") && (
+          {activeMetrics.includes("survey") && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
               className="mt-8"
             >
-              <HealthMetrics
+              <SurveyAnalytics
                 timeRange={timeRange}
                 dateRange={dateRange}
-                isLoading={isLoading}
-                comparisonMode={comparisonMode}
               />
             </motion.div>
           )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-            {activeMetrics.includes("system") && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <SystemPerformance timeRange={timeRange} dateRange={dateRange} isLoading={isLoading} />
-              </motion.div>
-            )}
-
-            {activeMetrics.includes("demographics") && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-              >
-                <UserDemographics timeRange={timeRange} dateRange={dateRange} isLoading={isLoading} />
-              </motion.div>
-            )}
-          </div>
         </motion.div>
       </div>
     </DashboardLayout>
   )
 }
-

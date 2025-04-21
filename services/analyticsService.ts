@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../lib/config';
+import { apiClient } from './apiClient';
 
 export interface AgeDistribution {
   ageRange: string;
@@ -30,6 +31,86 @@ export interface DiagnosisHistory {
 }
 
 export type ExportType = 'patients' | 'diagnoses' | 'analytics';
+
+export interface AnalyticsTimeRange {
+  start: Date;
+  end: Date;
+}
+
+export interface PreDiagnosisAnalytics {
+  totalResponses: number;
+  eczemaHistoryDistribution: Record<string, number>;
+  commonTriggers: Record<string, number>;
+  severityDistribution: Record<string, number>;
+}
+
+export interface PostDiagnosisAnalytics {
+  totalFeedbacks: number;
+  avgDiagnosisAccuracy: number;
+  avgHelpfulness: number;
+  avgTreatmentClarity: number;
+  avgUserConfidence: number;
+  recommendationRate: number;
+  feedbackSentiments: string[];
+}
+
+export interface SurveyAnalytics {
+  preDiagnosisAnalytics: PreDiagnosisAnalytics;
+  postDiagnosisAnalytics: PostDiagnosisAnalytics;
+}
+
+export interface SurveyAnalyticsNew {
+  preDiagnosis: {
+    totalResponses: number;
+    eczemaHistoryDistribution: { history: string; count: number }[];
+    commonTriggers: { trigger: string; count: number }[];
+    severityDistribution: { severity: string; count: number }[];
+  };
+  postDiagnosis: {
+    totalFeedbacks: number;
+    avgDiagnosisAccuracy: number;
+    avgHelpfulness: number;
+    avgTreatmentClarity: number;
+    avgUserConfidence: number;
+    recommendationRate: number;
+    feedbackSentiments: string[];
+  };
+}
+
+export interface CorrelationAnalytics {
+  severity: string;
+  avgAccuracy: number;
+  avgConfidence: number;
+  count: number;
+}
+
+export interface TimeRange {
+  start: Date;
+  end: Date;
+}
+
+export interface DailyActiveUser {
+  date: string;
+  count: number;
+}
+
+export interface HourlyDiagnosis {
+  hour: number;
+  count: number;
+}
+
+export interface UserRetention {
+  week: string;
+  retained: number;
+  total: number;
+}
+
+export interface UserActivity {
+  date: string;
+  diagnoses: number;
+  messages: number;
+  appointments: number;
+}
 
 class AnalyticsService {
   private axiosInstance = axios.create({
@@ -207,6 +288,115 @@ class AnalyticsService {
       throw error;
     }
   }
+
+  async getUserDemographics(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/user-demographics', { params: timeRange });
+    return response.data;
+  }
+
+  async getDiagnosisPatterns(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/diagnosis-patterns', { params: timeRange });
+    return response.data;
+  }
+
+  async getTreatmentAnalytics(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/treatment-analytics', { params: timeRange });
+    return response.data;
+  }
+
+  async getSurveyAnalytics(timeRange: TimeRange): Promise<SurveyAnalytics> {
+    const response = await apiClient.get('/analytics/survey-analytics', { params: timeRange });
+    return response.data;
+  }
+
+  async getSurveyAnalyticsNew(timeRange: TimeRange): Promise<SurveyAnalyticsNew> {
+    try {
+      const response = await apiClient.get('/analytics/surveys', { params: timeRange });
+      return response.data;
+    } catch (error) {
+      if (error instanceof axios.AxiosError) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch survey analytics');
+      }
+      throw error;
+    }
+  }
+
+  async getCorrelationAnalytics(timeRange: TimeRange): Promise<CorrelationAnalytics[]> {
+    try {
+      const response = await apiClient.get('/analytics/correlations', { params: timeRange });
+      return response.data;
+    } catch (error) {
+      if (error instanceof axios.AxiosError) {
+        throw new Error(error.response?.data?.message || 'Failed to fetch correlation analytics');
+      }
+      throw error;
+    }
+  }
+
+  async getDoctorPerformance(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/doctor-performance', { params: timeRange });
+    return response.data;
+  }
+
+  async getAppointmentAnalytics(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/appointment-analytics', { params: timeRange });
+    return response.data;
+  }
+
+  async getClinicalInsights(timeRange: TimeRange) {
+    const response = await apiClient.get('/analytics/clinical-insights', { params: timeRange });
+    return response.data;
+  }
+
+  async getDailyActiveUsers(timeRange: TimeRange): Promise<DailyActiveUser[]> {
+    const response = await apiClient.get('/analytics/daily-active-users', { params: timeRange });
+    return response.data;
+  }
+
+  async getHourlyDiagnosisDistribution(timeRange: TimeRange): Promise<HourlyDiagnosis[]> {
+    const response = await apiClient.get('/analytics/hourly-diagnoses', { params: timeRange });
+    return response.data;
+  }
+
+  async getUserRetention(timeRange: TimeRange): Promise<UserRetention[]> {
+    const response = await apiClient.get('/analytics/user-retention', { params: timeRange });
+    return response.data;
+  }
+
+  async getUserActivity(timeRange: TimeRange): Promise<UserActivity[]> {
+    const response = await apiClient.get('/analytics/user-activity', { params: timeRange });
+    return response.data;
+  }
+
+  async exportEngagementData(type: ExportType, timeRange: TimeRange) {
+    const response = await apiClient.get(`/analytics/export/${type}`, {
+      params: {
+        start: timeRange.start.toISOString(),
+        end: timeRange.end.toISOString(),
+      },
+      responseType: "blob",
+    });
+
+    // Create a blob URL and trigger download
+    const blob = new Blob([response.data], {
+      type: type === "analytics" ? "application/pdf" : "text/csv",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${type}-${timeRange.start.toISOString().split("T")[0]}-to-${
+      timeRange.end.toISOString().split("T")[0]
+    }.${type === "analytics" ? "pdf" : "csv"}`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
 }
 
 export const analyticsService = new AnalyticsService();
+
+export const analyticsApi = {
+  getSurveyAnalytics: analyticsService.getSurveyAnalyticsNew.bind(analyticsService),
+  getCorrelationAnalytics: analyticsService.getCorrelationAnalytics.bind(analyticsService)
+};
