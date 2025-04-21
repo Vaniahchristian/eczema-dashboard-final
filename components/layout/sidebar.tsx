@@ -47,7 +47,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Diagnoses", href: "/diagnoses", icon: Image },
     { name: "Appointments", href: "/appointments", icon: Calendar },
-    { name: "Messages", href: "/messages", icon: MessageSquare },
+    // { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Analytics", href: "/analytics", icon: PieChart },
     { name: "Profile", href: "/profile", icon: User },
     { name: "Settings", href: "/settings", icon: Settings },
