@@ -139,20 +139,34 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         throw new Error(responseData.message || "Registration failed")
       }
 
-      if (!responseData.success || !responseData.data?.user) {
-        throw new Error("Invalid response format")
+      if (!responseData.success) {
+        throw new Error(responseData.message || "Registration failed")
       }
 
-      const userData = responseData.data.user
+      // Get user data and token from the response structure
+      const userData = {
+        id: responseData.data.id,
+        email: responseData.data.email,
+        firstName: responseData.data.first_name,
+        lastName: responseData.data.last_name,
+        role: responseData.data.role
+      }
       const token = responseData.data.token
+
+      if (!userData || !token) {
+        console.error('Response data:', responseData)
+        throw new Error("Invalid response format - missing user or token")
+      }
 
       // Store token in cookies and user data in localStorage
       setCookie("token", token)
       setCookie("userRole", userData.role)
       localStorage.setItem("user", JSON.stringify(userData))
+      localStorage.setItem("token", token)
 
       setUser(userData)
     } catch (err) {
+      console.error('Registration error:', err)
       setError(err instanceof Error ? err.message : "Registration failed")
       throw err
     } finally {

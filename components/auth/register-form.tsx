@@ -58,16 +58,6 @@ export default function RegisterForm() {
 
       setIsLoading(true);
       console.log('Set isLoading to true');
-
-      // // Temporarily simplify submission to test toast and redirection
-      // console.log('Skipping register function for testing...');
-      // toast.success("Test submission successful! Redirecting to login...");
-      // setTimeout(() => {
-      //   console.log('Redirecting to /login');
-      //   router.push("/login");
-      // }, 2000);
-
-      // Uncomment the following block to re-enable the register function
       
       console.log('Calling register with:', { email, password, firstName, lastName, dateOfBirth, gender, role });
       await register({
@@ -82,10 +72,12 @@ export default function RegisterForm() {
 
       console.log('Registration successful');
       toast.success("Registration successful! Redirecting to login...");
+      
+      // Use window.location for a hard redirect after a short delay
       setTimeout(() => {
         console.log('Redirecting to /login');
-        router.push("/login");
-      }, 2000);
+        window.location.href = "/login";
+      }, 1000);
       
     } catch (err) {
       console.error('Form registration error:', err);
