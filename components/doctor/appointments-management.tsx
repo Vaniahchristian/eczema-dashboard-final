@@ -35,8 +35,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { appointmentService, Appointment } from "@/services/appointmentService"
 import { toast } from "@/components/ui/use-toast"
+import { useAuth } from "@/lib/auth"
 
 export default function AppointmentsManagement() {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -45,10 +47,13 @@ export default function AppointmentsManagement() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
   useEffect(() => {
-    loadAppointments()
-  }, [selectedDate, view, statusFilter])
+    if (user?.id) {
+      loadAppointments()
+    }
+  }, [selectedDate, view, statusFilter, user?.id])
 
   const loadAppointments = async () => {
+    if (!user?.id) return;
     try {
       setLoading(true)
       const startDate = new Date(selectedDate)
@@ -71,7 +76,7 @@ export default function AppointmentsManagement() {
         filters.status = statusFilter
       }
 
-      const response = await appointmentService.getAppointments(filters)
+      const response = await appointmentService.getDoctorAppointments(user.id, filters)
       setAppointments(response.data)
     } catch (error) {
       console.error("Error loading appointments:", error)
@@ -196,12 +201,15 @@ export default function AppointmentsManagement() {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={appointment.patient.imageUrl} alt={appointment.patient.name} />
-                    <AvatarFallback>{appointment.patient.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={appointment.patient?.imageUrl} alt={appointment.patient ? `${appointment.patient.first_name} ${appointment.patient.last_name}` : ""} />
+                    <AvatarFallback>{appointment.patient ? (appointment.patient.first_name?.charAt(0) || appointment.patient.last_name?.charAt(0) || "P") : "P"}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <CardTitle className="text-base">{appointment.patient.name}</CardTitle>
-                    <CardDescription>{appointment.patient.email}</CardDescription>
+                    <CardTitle className="text-base">{appointment.patient ? `${appointment.patient.first_name} ${appointment.patient.last_name}` : "Patient"}</CardTitle>
+                    <CardDescription>{appointment.patient?.email}</CardDescription>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {appointment.appointment_date ? new Date(appointment.appointment_date.replace(' ', 'T')).toLocaleString() : "No date"}
+                    </div>
                   </div>
                 </div>
                 <Badge variant={getStatusBadgeVariant(appointment.status)}>
@@ -212,11 +220,11 @@ export default function AppointmentsManagement() {
                 <div className="flex items-center space-x-4 text-sm">
                   <div className="flex items-center text-muted-foreground">
                     <Calendar className="mr-1 h-4 w-4" />
-                    {new Date(appointment.appointmentDate).toLocaleDateString()}
+                    {new Date(appointment.appointment_date).toLocaleDateString()}
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     <Clock className="mr-1 h-4 w-4" />
-                    {new Date(appointment.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(appointment.appointment_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div className="flex items-center text-muted-foreground">
                     {appointment.mode === "Video" ? (
