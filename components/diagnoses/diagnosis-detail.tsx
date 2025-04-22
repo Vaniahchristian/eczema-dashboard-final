@@ -48,6 +48,18 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
     }
   };
 
+  const handleRequestDoctorReview = async () => {
+    if (!diagnosis) return;
+    try {
+      // Correct endpoint: submit feedback to request doctor review, NOT claimDiagnosis
+      await diagnosisApi.submitFeedback(diagnosis._id, { needsDoctorReview: true });
+      setDiagnosis({ ...diagnosis, needsDoctorReview: true });
+      alert("Doctor review requested! A doctor will review your case soon.");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to request doctor review");
+    }
+  };
+
   const handleImageDownload = async () => {
     if (!diagnosis?.imageUrl) return;
     try {
@@ -264,6 +276,16 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
         </div>
 
         <div className="mt-6 flex justify-end space-x-3">
+          {/* Show the request button if doctor review not yet requested and not reviewed */}
+          {!diagnosis.needsDoctorReview && diagnosis.status !== 'reviewed' && (
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-xl shadow-sm hover:bg-blue-700 transition-shadow"
+              onClick={handleRequestDoctorReview}
+            >
+              Not sure? Request Doctor Review
+            </button>
+          )}
+          {/* Show pending message if requested but not yet reviewed */}
           {diagnosis.needsDoctorReview && diagnosis.status !== 'reviewed' && (
             <div className="px-4 py-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded-xl">
               Pending Doctor Review
