@@ -18,18 +18,31 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { appointmentService, Appointment } from '@/services/appointmentService';
+import { diagnosisApi, Diagnosis } from '@/services/api/diagnosis';
+import { useAuth } from "@/lib/auth"
 
 export default function DoctorDashboard() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("overview")
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingDiagnoses, setPendingDiagnoses] = useState<Diagnosis[]>([]);
+  const [isLoadingDiagnoses, setIsLoadingDiagnoses] = useState(true);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
+  const [reviewText, setReviewText] = useState("");
+  const [updatedSeverity, setUpdatedSeverity] = useState<string>("");
+  const [treatmentPlan, setTreatmentPlan] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const fetchTodayAppointments = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const response = await appointmentService.getAppointments({
+        const response = await appointmentService.getDoctorAppointments(user?.id, {
           startDate: today,
           endDate: today
         });
@@ -45,6 +58,59 @@ export default function DoctorDashboard() {
 
     fetchTodayAppointments();
   }, []);
+
+  useEffect(() => {
+    const fetchPendingDiagnoses = async () => {
+      setIsLoadingDiagnoses(true);
+      try {
+        const response = await diagnosisApi.getDoctorReviewRequests();
+        setPendingDiagnoses(response.data);
+      } catch (error) {
+        console.error('Error fetching diagnoses:', error);
+        setPendingDiagnoses([]);
+      } finally {
+        setIsLoadingDiagnoses(false);
+      }
+    };
+    fetchPendingDiagnoses();
+  }, []);
+
+  const handleOpenReviewDialog = (diag: Diagnosis) => {
+    setSelectedDiagnosis(diag);
+    setReviewText("");
+    setUpdatedSeverity(diag.severity || "");
+    setTreatmentPlan("");
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
+
+  const handleSubmitReview = async () => {
+    if (!selectedDiagnosis) return;
+    setIsSubmitting(true);
+    setSuccessMessage("");
+    setErrorMessage("");
+    try {
+      await diagnosisApi.addDoctorReview(selectedDiagnosis._id, {
+        review: reviewText,
+        updatedSeverity: updatedSeverity as any,
+        treatmentPlan,
+      });
+      setSuccessMessage("Review submitted successfully.");
+      setTimeout(() => {
+        setSelectedDiagnosis(null);
+        setSuccessMessage("");
+        // Refresh the list
+        (async () => {
+          const response = await diagnosisApi.getDoctorReviewRequests();
+          setPendingDiagnoses(response.data);
+        })();
+      }, 1000);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to submit review");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="container px-4 py-6 md:px-6 max-w-7xl mx-auto">
@@ -74,7 +140,7 @@ export default function DoctorDashboard() {
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="patients">Patients</TabsTrigger>
+          <TabsTrigger value="reviews">Previous Reviews</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
         </TabsList>
 
@@ -82,42 +148,42 @@ export default function DoctorDashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-                <Users className="h-4 w-4 text-indigo-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">128</div>
-                <p className="text-xs text-muted-foreground">+6 from last month</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
                 <Calendar className="h-4 w-4 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground">2 remaining</p>
+                <div className="text-2xl font-bold">{todayAppointments.length}</div>
+                <p className="text-xs text-muted-foreground">Today's scheduled appointments</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Reports</CardTitle>
+                <CardTitle className="text-sm font-medium">Pending Doctor Reviews</CardTitle>
                 <FileText className="h-4 w-4 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">4 urgent</p>
+                <div className="text-2xl font-bold">{pendingDiagnoses.length}</div>
+                <p className="text-xs text-muted-foreground">Diagnoses waiting for your review</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-                <MessageSquare className="h-4 w-4 text-indigo-600" />
+                <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
+                <Bell className="h-4 w-4 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">24</div>
-                <p className="text-xs text-muted-foreground">+5 since yesterday</p>
+                <div className="text-2xl font-bold">4</div>
+                <p className="text-xs text-muted-foreground">Urgent alerts</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Reviews Completed</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">56</div>
+                <p className="text-xs text-muted-foreground">Total reviews completed</p>
               </CardContent>
             </Card>
           </div>
@@ -367,6 +433,102 @@ export default function DoctorDashboard() {
                         </span>
                       </div>
                     </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reviews" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Doctor Reviews</CardTitle>
+              <CardDescription>Diagnoses that need your review</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingDiagnoses ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : pendingDiagnoses.length === 0 ? (
+                <p className="text-muted-foreground text-center">No diagnoses currently waiting for review</p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingDiagnoses.map((diag) => (
+                    <Dialog key={diag._id} open={selectedDiagnosis?._id === diag._id} onOpenChange={(open) => { if (!open) setSelectedDiagnosis(null); }}>
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <div className="font-medium">Patient ID: {diag.patientId}</div>
+                          <div className="text-sm text-muted-foreground">Severity: {diag.severity} | Confidence: {diag.confidenceScore}</div>
+                          <div className="text-sm text-muted-foreground">Status: {diag.status}</div>
+                          <div className="text-sm text-muted-foreground">Created: {new Date(diag.createdAt).toLocaleString()}</div>
+                        </div>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" onClick={() => handleOpenReviewDialog(diag)}>
+                            Review
+                          </Button>
+                        </DialogTrigger>
+                      </div>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Submit Doctor Review</DialogTitle>
+                          <DialogDescription>
+                            Add your review and update the severity or treatment plan for this diagnosis.
+                          </DialogDescription>
+                        </DialogHeader>
+                        {selectedDiagnosis && selectedDiagnosis._id === diag._id && (
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Severity</label>
+                              <select
+                                className="w-full border rounded px-2 py-1"
+                                value={updatedSeverity}
+                                onChange={e => setUpdatedSeverity(e.target.value)}
+                              >
+                                <option value="">Select severity</option>
+                                <option value="mild">mild</option>
+                                <option value="moderate">moderate</option>
+                                <option value="severe">severe</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Review</label>
+                              <textarea
+                                className="w-full border rounded px-2 py-1"
+                                rows={3}
+                                value={reviewText}
+                                onChange={e => setReviewText(e.target.value)}
+                                placeholder="Enter your review here..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Treatment Plan</label>
+                              <textarea
+                                className="w-full border rounded px-2 py-1"
+                                rows={2}
+                                value={treatmentPlan}
+                                onChange={e => setTreatmentPlan(e.target.value)}
+                                placeholder="Enter treatment plan..."
+                              />
+                            </div>
+                            {successMessage && <div className="text-green-600 text-sm">{successMessage}</div>}
+                            {errorMessage && <div className="text-red-600 text-sm">{errorMessage}</div>}
+                          </div>
+                        )}
+                        <DialogFooter>
+                          <Button
+                            onClick={handleSubmitReview}
+                            disabled={isSubmitting || !updatedSeverity || !reviewText || !treatmentPlan}
+                          >
+                            {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                          </Button>
+                          <DialogClose asChild>
+                            <Button variant="outline">Cancel</Button>
+                          </DialogClose>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   ))}
                 </div>
               )}
