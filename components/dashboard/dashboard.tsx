@@ -58,44 +58,46 @@ export default function Dashboard() {
               Here's an overview of your eczema management journey
             </p>
           </div>
+        </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <motion.div
-              className="lg:col-span-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <SummarySection />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <UploadSection setIsLoading={setIsLoading} />
-            </motion.div>
-          </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <motion.div
+            className="lg:col-span-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8"
+            transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <AnalyticsSection />
+            <SummarySection />
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-8"
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <AppointmentWidget />
+            <UploadSection setIsLoading={setIsLoading} />
           </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="mt-8"
+        >
+          <AnalyticsSection />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-8"
+        >
+          <AppointmentWidget />
         </motion.div>
       </div>
     </DashboardLayout>
   )
 }
+
