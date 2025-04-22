@@ -211,4 +211,21 @@ submitFeedback: async (
       throw error;
     }
   },
-};      
+
+  // Claim diagnosis
+  claimDiagnosis: async (diagnosisId: string): Promise<ApiResponse<Diagnosis>> => {
+    try {
+      const response = await apiClient.post(
+        `/eczema/diagnoses/${diagnosisId}/claim`,
+        {},
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to claim diagnosis');
+      }
+      throw error;
+    }
+  },
+};
