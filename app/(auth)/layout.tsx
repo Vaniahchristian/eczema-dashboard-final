@@ -1,6 +1,22 @@
-import type React from "react"
-import { ThemeProvider } from "@/components/theme-provider"
-import "@/app/globals.css"
+import type React from "react";
+import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
+import "@/app/globals.css";
+
+// Metadata export for auth pages
+export const metadata: Metadata = {
+  title: "Auth - EczemaAI",
+  description: "Authentication pages for EczemaAI",
+};
+
+// Separate viewport export to fix metadata warnings
+export const viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false
+};
 
 export default function AuthLayout({
   children,
@@ -8,13 +24,10 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-  )
+    <div className="auth-layout">
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {children}
+      </ThemeProvider>
+    </div>
+  );
 }
-

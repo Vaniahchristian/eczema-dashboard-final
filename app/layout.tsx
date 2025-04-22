@@ -1,31 +1,34 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { AuthProvider } from "@/lib/auth"
-import { Toaster } from "sonner"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/lib/auth";
+import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
+// Metadata export without themeColor and viewport
 export const metadata: Metadata = {
   title: "EczemaAI - Smart Eczema Management",
   description: "AI-powered eczema diagnosis and management platform",
   generator: 'vc',
   manifest: '/manifest.json',
-  themeColor: '#000000',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'EczemaAI'
-  },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false
   }
-}
+};
+
+// Separate viewport export to fix metadata warnings
+export const viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false
+};
 
 export default function RootLayout({
   children,
@@ -43,5 +46,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
