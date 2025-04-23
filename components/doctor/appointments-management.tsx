@@ -36,6 +36,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { appointmentService, Appointment } from "@/services/appointmentService"
 import { toast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/auth"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogClose } from "@/components/ui/dialog"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar as DateCalendar } from "@/components/ui/calendar"
 
 export default function AppointmentsManagement() {
   const { user } = useAuth();
@@ -45,6 +48,9 @@ export default function AppointmentsManagement() {
   const [view, setView] = useState<"day" | "week" | "month">("day")
   const [activeTab, setActiveTab] = useState("calendar")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -92,13 +98,14 @@ export default function AppointmentsManagement() {
 
   const handleStatusUpdate = async (appointmentId: string, status: string) => {
     try {
-      await appointmentService.updateAppointmentStatus(appointmentId, status)
+      const response = await appointmentService.updateAppointmentStatus(appointmentId, status)
       toast({
         title: "Success",
-        description: `Appointment ${status.toLowerCase()} successfully.`
+        description: response.message || `Appointment ${status.toLowerCase()} successfully.`,
+        variant: "default"
       })
       loadAppointments()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating appointment:", error)
       toast({
         title: "Error",
@@ -190,7 +197,7 @@ export default function AppointmentsManagement() {
           <Card>
             <CardContent className="p-6">
               <div className="flex flex-col items-center justify-center h-[200px] space-y-4">
-                <Calendar className="h-8 w-8 text-muted-foreground" />
+                <CalendarIcon className="h-8 w-8 text-muted-foreground" />
                 <p className="text-lg font-medium text-muted-foreground">No appointments found</p>
               </div>
             </CardContent>
@@ -219,7 +226,7 @@ export default function AppointmentsManagement() {
               <CardContent>
                 <div className="flex items-center space-x-4 text-sm">
                   <div className="flex items-center text-muted-foreground">
-                    <Calendar className="mr-1 h-4 w-4" />
+                    <CalendarIcon className="mr-1 h-4 w-4" />
                     {new Date(appointment.appointment_date).toLocaleDateString()}
                   </div>
                   <div className="flex items-center text-muted-foreground">
@@ -262,6 +269,19 @@ export default function AppointmentsManagement() {
                           <X className="mr-1 h-4 w-4" />
                           Cancel
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600"
+                          onClick={() => {
+                            setSelectedAppointmentId(appointment.id);
+                            setRescheduleDate(new Date(appointment.appointment_date));
+                            setRescheduleDialogOpen(true);
+                          }}
+                        >
+                          <CalendarClock className="mr-1 h-4 w-4" />
+                          Reschedule
+                        </Button>
                       </>
                     )}
                     {appointment.status === "confirmed" && (
@@ -285,9 +305,9 @@ export default function AppointmentsManagement() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuItem
                         onClick={() => {
-                          const tomorrow = new Date()
-                          tomorrow.setDate(tomorrow.getDate() + 1)
-                          handleReschedule(appointment.id, tomorrow.toISOString())
+                          setSelectedAppointmentId(appointment.id);
+                          setRescheduleDate(new Date(appointment.appointment_date));
+                          setRescheduleDialogOpen(true);
                         }}
                       >
                         <CalendarClock className="mr-2 h-4 w-4" />
@@ -306,6 +326,40 @@ export default function AppointmentsManagement() {
           ))
         )}
       </div>
+      {/* Reschedule Dialog */}
+      <Dialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reschedule Appointment</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            <DateCalendar
+              mode="single"
+              selected={rescheduleDate}
+              onSelect={setRescheduleDate}
+              initialFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={async () => {
+                if (selectedAppointmentId && rescheduleDate) {
+                  await handleReschedule(selectedAppointmentId, rescheduleDate.toISOString());
+                  setRescheduleDialogOpen(false);
+                  setSelectedAppointmentId(null);
+                  setRescheduleDate(null);
+                }
+              }}
+              disabled={!rescheduleDate}
+            >
+              Confirm
+            </Button>
+            <DialogClose asChild>
+              <Button variant="outline" onClick={() => setRescheduleDialogOpen(false)}>Cancel</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
