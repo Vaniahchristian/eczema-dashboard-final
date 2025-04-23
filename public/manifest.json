@@ -2,7 +2,7 @@
   "name": "Eczema Dashboard",
   "short_name": "Eczema",
   "description": "Track and manage eczema conditions",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
@@ -17,6 +17,18 @@
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
       "type": "image/png",
       "purpose": "any maskable"
     }
