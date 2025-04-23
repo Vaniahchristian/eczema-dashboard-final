@@ -189,6 +189,26 @@ export const diagnosisApi = {
     }
   },
 
+  // Fetch diagnoses reviewed by the logged-in doctor (for doctors)
+  getReviewedDiagnosesByDoctor: async (): Promise<ApiResponse<Diagnosis[]>> => {
+    try {
+      const response = await apiClient.get('/eczema/doctor/reviewed-diagnoses');
+      return {
+        ...response.data,
+        data: response.data.data.map((d: any) => ({
+          ...d,
+          _id: d.diagnosisId || d._id,
+          confidenceScore: d.confidence || d.confidenceScore,
+        })),
+      };
+    } catch (error: unknown) {
+      if (error instanceof AxiosError) {
+        throw new Error((error.response?.data as any)?.message || 'Failed to fetch reviewed diagnoses');
+      }
+      throw error;
+    }
+  },
+
   // Submit feedback (pre/post diagnosis)
   submitFeedback: async (
     diagnosisId: string,
