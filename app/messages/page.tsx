@@ -49,18 +49,12 @@ export default function MessagesPage() {
       log('Socket connected', socket.id);
       socket.emit('register', user.id);
     });
-    socket.on('message:new', (msg: any) => {
-      log('Received message:new', msg);
-      if (msg.conversationId === selectedConversation) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    });
     socket.on('disconnect', () => log('Socket disconnected'));
     return () => {
       socket.disconnect();
       log('Socket cleanup');
     };
-  }, [user, selectedConversation]);
+  }, [user]);
 
   // Fetch conversations on mount
   useEffect(() => {
@@ -108,6 +102,14 @@ export default function MessagesPage() {
       const msg = await sendMessage(selectedConversation, messageInput);
       setMessages((prev) => [...prev, msg]);
       setMessageInput("");
+      // Update lastMessage for the conversation in the sidebar
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === selectedConversation
+            ? { ...conv, lastMessage: msg }
+            : conv
+        )
+      );
       log('Message sent:', msg);
     } catch (err: any) {
       log('Error sending message:', err);
@@ -116,6 +118,29 @@ export default function MessagesPage() {
       setLoading(false);
     }
   };
+
+  // Update lastMessage when receiving a new message via socket
+  useEffect(() => {
+    if (!socketRef.current) return;
+    const socket = socketRef.current;
+    const handleNewMessage = (msg: any) => {
+      log('Received message:new', msg);
+      if (msg.conversationId === selectedConversation) {
+        setMessages((prev) => [...prev, msg]);
+      }
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === msg.conversationId
+            ? { ...conv, lastMessage: msg }
+            : conv
+        )
+      );
+    };
+    socket.on('message:new', handleNewMessage);
+    return () => {
+      socket.off('message:new', handleNewMessage);
+    };
+  }, [selectedConversation]);
 
   const handleStartChat = async (doctor: any) => {
     setShowNewChat(false);
