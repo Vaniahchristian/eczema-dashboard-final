@@ -12,7 +12,7 @@ import {
 } from "../../services/chatService";
 import { doctorService } from "../../services/doctorService";
 import DashboardLayout from "@/components/layout/dashboard-layout";
-import { FaCheck, FaCheckDouble } from 'react-icons/fa';
+import { FaCheckDouble } from 'react-icons/fa';
 
 // Extensive logging helper
 function log(...args: any[]) {
@@ -21,6 +21,20 @@ function log(...args: any[]) {
 }
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+
+// Avatar fallback component
+function Avatar({ src, alt, name }: { src?: string | null; alt?: string; name?: string }) {
+  if (src) {
+    return <img src={src} alt={alt || name || ''} className="w-10 h-10 rounded-full object-cover bg-gray-200" />;
+  }
+  // Fallback: initials
+  const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+  return (
+    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white text-lg font-bold">
+      {initials}
+    </div>
+  );
+}
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -101,6 +115,18 @@ export default function MessagesPage() {
       .catch(() => setDoctorResults([]))
       .finally(() => setDoctorLoading(false));
   }, [doctorSearch, showNewChat]);
+
+  // When opening the New Chat modal, fetch all doctors if not searching
+  useEffect(() => {
+    if (showNewChat && !doctorSearch) {
+      setDoctorLoading(true);
+      doctorService.getDoctors().then(res => {
+        setDoctorResults(res);
+        setDoctorLoading(false);
+      }).catch(() => setDoctorLoading(false));
+    }
+    // eslint-disable-next-line
+  }, [showNewChat]);
 
   // --- Mark as Read when opening conversation ---
   useEffect(() => {
@@ -222,208 +248,146 @@ export default function MessagesPage() {
     return 'unread'; // double grey
   }
 
+  const selectedConversationObj = conversations.find(conv => conv.id === selectedConversation);
+
   return (
     <DashboardLayout>
-    <div className="flex h-[calc(100vh-4rem)] bg-white dark:bg-slate-900">
-      {/* Conversations Sidebar */}
-      <div className="w-80 border-r border-gray-200 dark:border-gray-800 flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Messages</h2>
-          <button
-            className="ml-2 px-3 py-1 rounded bg-sky-500 text-white hover:bg-sky-600"
-            onClick={() => setShowNewChat(true)}
-          >
-            New Chat
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {loading && <div className="p-4 text-gray-500">Loading conversations...</div>}
-          {error && <div className="p-4 text-red-500">{error}</div>}
-          <div className="space-y-1 p-2">
-            {conversations.map((conv, idx) => {
-              // For doctors, show patient info; for patients, show doctor info
-              const isDoctor = user?.role === 'doctor';
-              const sidebarName = isDoctor ? conv.patientName : conv.participantName;
-              const sidebarImage = isDoctor ? conv.patientImage : conv.participantImage;
+      <div className="flex h-[calc(100vh-4rem)] bg-white dark:bg-slate-900">
+        {/* Sidebar (Conversation List) */}
+        <aside className="w-80 bg-white border-r flex flex-col">
+          <div className="flex items-center justify-between p-4 font-bold text-lg border-b">
+            <span>Chats</span>
+            <button
+              className="ml-2 px-3 py-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 text-sm font-medium shadow"
+              onClick={() => setShowNewChat(true)}
+            >
+              New Chat
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {conversations.map(conv => (
+              <div key={conv.id} className={`flex items-center px-4 py-3 cursor-pointer transition hover:bg-gray-50 ${conv.id === selectedConversation ? 'bg-emerald-50' : ''}`}
+                onClick={() => setSelectedConversation(conv.id)}>
+                <Avatar src={conv.participantImage} name={conv.participantName} />
+                <div className="ml-3 flex-1">
+                  <div className="font-semibold text-gray-900 dark:text-white">{conv.participantName}</div>
+                  <div className="text-xs text-gray-500 truncate max-w-[150px]">{conv.lastMessage?.content || ''}</div>
+                </div>
+                {conv.unreadCount > 0 && (
+                  <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">{conv.unreadCount}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        {/* Chat Area */}
+        <section className="flex-1 flex flex-col bg-gray-50">
+          {/* Header */}
+          <div className="flex items-center px-6 py-4 border-b bg-white">
+            <Avatar src={selectedConversationObj?.participantImage} name={selectedConversationObj?.participantName} />
+            <div className="ml-4">
+              <div className="font-bold text-lg text-gray-900 dark:text-white">{selectedConversationObj?.participantName}</div>
+              <div className="text-xs text-emerald-500">{selectedConversationObj?.isOnline ? 'Online' : ''}</div>
+            </div>
+          </div>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+            {/* Date separator (group messages by date) */}
+            {messages.length > 0 && (
+              <div className="flex justify-center text-xs text-gray-400 my-2">
+                {(() => {
+                  const firstMsg = messages[0];
+                  const dateString = firstMsg.timestamp || firstMsg.createdAt;
+                  const date = dateString ? new Date(dateString) : null;
+                  return date && !isNaN(date.getTime())
+                    ? date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })
+                    : '';
+                })()}
+              </div>
+            )}
+            {messages.map((msg, idx) => {
+              const tickStatus = getMessageTickStatus(msg, conversations.find(c => c.id === selectedConversation));
+              const isOwn = msg.senderId === user.id;
               return (
-                <button
-                  key={conv.id || idx}
-                  onClick={() => setSelectedConversation(conv.id)}
-                  className={`w-full p-3 rounded-lg transition-colors ${
-                    conv.id === selectedConversation
-                      ? 'bg-sky-50 dark:bg-sky-900/20'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    {sidebarImage ? (
-                      <img
-                        src={sidebarImage}
-                        alt={sidebarName}
-                        className="w-10 h-10 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center">
-                        <span className="text-sky-600 dark:text-sky-400 font-medium">
-                          {sidebarName?.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {sidebarName} {isDoctor && <span className="text-xs text-gray-400">(patient)</span>}
-                        </p>
-                        {conv.lastMessage && (
-                          <span className="text-xs text-gray-500">
-                            {(() => {
-                              const dateString = conv.lastMessage.timestamp || conv.lastMessage.createdAt;
-                              const date = dateString ? new Date(dateString) : null;
-                              return date && !isNaN(date.getTime())
-                                ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                : '';
-                            })()}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">
-                        {conv.lastMessage?.content || 'No messages yet'}
-                      </p>
+                <div key={idx} className={`flex items-end ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  {!isOwn && <Avatar src={msg.senderImage} name={msg.senderName} />}
+                  <div className={`rounded-2xl px-4 py-2 max-w-md shadow ${isOwn ? 'bg-emerald-500 text-white ml-2' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white mr-2'}`}>
+                    <div className="text-sm whitespace-pre-wrap break-words">{msg.content}</div>
+                    <div className="flex items-center justify-end mt-1 text-xs opacity-70">
+                      {(() => {
+                        const dateString = msg.timestamp || msg.createdAt;
+                        const date = dateString ? new Date(dateString) : null;
+                        return date && !isNaN(date.getTime())
+                          ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : '';
+                      })()}
+                      {tickStatus === 'unread' && <FaCheckDouble className="text-gray-400 ml-1" />}
+                      {tickStatus === 'read' && <FaCheckDouble className="text-blue-500 ml-1" />}
                     </div>
                   </div>
-                </button>
+                  {isOwn && <Avatar src={msg.senderImage} name={msg.senderName} />}
+                </div>
               );
             })}
-          </div>
-        </div>
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedConversation ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-              {conversations.find(c => c.id === selectedConversation)?.participantName && (
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                    {conversations.find(c => c.id === selectedConversation)?.participantName}
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    ({conversations.find(c => c.id === selectedConversation)?.participantRole})
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {Object.entries(typingUsers).map(([uid, isTyping]) =>
-                isTyping && uid !== user.id ? (
-                  <div key={uid} className="text-xs text-gray-500 italic mb-2">
-                    User {uid} is typing...
-                  </div>
-                ) : null
-              )}
-              {messages.map((msg, idx) => {
-                const tickStatus = getMessageTickStatus(msg, conversations.find(c => c.id === selectedConversation));
-                return (
-                  <div key={idx} className={`mb-2 flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`rounded-lg px-4 py-2 max-w-xs ${msg.senderId === user.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}`}>
-                      {msg.content}
-                      <div className="flex items-center justify-end mt-1 text-xs opacity-70">
-                        {(() => {
-                          const dateString = msg.timestamp || msg.createdAt;
-                          const date = dateString ? new Date(dateString) : null;
-                          return date && !isNaN(date.getTime())
-                            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : '';
-                        })()}
-                        {tickStatus === 'unread' && <FaCheckDouble className="text-gray-400 ml-1" />}
-                        {tickStatus === 'read' && <FaCheckDouble className="text-blue-500 ml-1" />}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <p>No messages yet. Start the conversation!</p>
-                </div>
-              )}
-            </div>
-
-            {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={handleInputChange}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  placeholder="Type your message..."
-                  className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 dark:text-white"
-                  disabled={loading}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={loading || !messageInput.trim()}
-                  className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Send
-                </button>
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-2">
+                <span className="text-2xl">No messages yet</span>
               </div>
+            )}
+          </div>
+          {/* Input */}
+          <form onSubmit={handleSend} className="p-4 bg-white border-t flex items-center gap-2">
+            <input
+              className="flex-1 rounded-full border px-4 py-2 mr-2 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 transition"
+              placeholder="Type a message..."
+              value={messageInput}
+              onChange={handleInputChange}
+              onFocus={() => console.log('input focus')}
+              onBlur={() => console.log('input blur')}
+            />
+            <button type="submit" className="bg-emerald-500 text-white px-6 py-2 rounded-full font-semibold shadow hover:bg-emerald-600 transition">Send</button>
+          </form>
+        </section>
+        {showNewChat && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Start New Chat</h3>
+                <button onClick={() => setShowNewChat(false)} className="text-gray-500 hover:text-gray-900">✕</button>
+              </div>
+              <input
+                type="text"
+                value={doctorSearch}
+                onChange={e => setDoctorSearch(e.target.value)}
+                placeholder="Search doctors by name or email"
+                className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
+              />
+              {doctorLoading ? (
+                <div className="text-gray-500">Searching...</div>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {doctorResults.map(doc => (
+                    <li key={doc.id} className="py-2 flex items-center justify-between">
+                      <span>{doc.name} <span className="text-xs text-gray-400">({doc.email})</span></span>
+                      <button
+                        className="ml-2 px-3 py-1 rounded bg-emerald-500 text-white hover:bg-emerald-600"
+                        onClick={() => handleStartChat(doc)}
+                      >
+                        Start Chat
+                      </button>
+                    </li>
+                  ))}
+                  {doctorResults.length === 0 && doctorSearch && (
+                    <li className="text-gray-500 py-2">No doctors found.</li>
+                  )}
+                </ul>
+              )}
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Select a conversation to start messaging
           </div>
         )}
       </div>
-      {showNewChat && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Start New Chat</h3>
-              <button onClick={() => setShowNewChat(false)} className="text-gray-500 hover:text-gray-900">✕</button>
-            </div>
-            <input
-              type="text"
-              value={doctorSearch}
-              onChange={e => setDoctorSearch(e.target.value)}
-              placeholder="Search doctors by name or email"
-              className="w-full mb-4 px-3 py-2 border rounded focus:outline-none focus:ring"
-            />
-            {doctorLoading ? (
-              <div className="text-gray-500">Searching...</div>
-            ) : (
-              <ul className="divide-y divide-gray-200">
-                {doctorResults.map(doc => (
-                  <li key={doc.id} className="py-2 flex items-center justify-between">
-                    <span>{doc.name} <span className="text-xs text-gray-400">({doc.email})</span></span>
-                    <button
-                      className="ml-2 px-3 py-1 rounded bg-emerald-500 text-white hover:bg-emerald-600"
-                      onClick={() => handleStartChat(doc)}
-                    >
-                      Start Chat
-                    </button>
-                  </li>
-                ))}
-                {doctorResults.length === 0 && doctorSearch && (
-                  <li className="text-gray-500 py-2">No doctors found.</li>
-                )}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
 
     </DashboardLayout>
   );
-  
 }
