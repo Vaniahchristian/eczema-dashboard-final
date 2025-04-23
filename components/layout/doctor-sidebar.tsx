@@ -46,7 +46,6 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
 
   const navItems = [
     { name: "Dashboard", href: "/doctor", icon: Home },
-    { name: "Patients", href: "/doctor/patients", icon: Users },
     { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
     { name: "Medical Records", href: "/doctor/records", icon: FileText },
     { name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },
