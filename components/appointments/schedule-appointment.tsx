@@ -193,38 +193,25 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
             {step === "doctor" && (
               <div className="space-y-4">
                 <p className="text-slate-500 dark:text-slate-400 mb-4">Select a specialist for your appointment:</p>
-                {doctors.map((doctor) => (
-                  <div
-                    key={doctor.id}
-                    onClick={() => setSelectedDoctor(doctor)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                      selectedDoctor?.id === doctor.id
-                        ? "border-sky-500 bg-sky-50 dark:bg-sky-900/20"
-                        : "border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-700"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <img
-                        src={"/placeholder.svg"}
-                        alt={`${doctor.name}`}
-                        className="h-12 w-12 rounded-full object-cover mr-4"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium text-slate-900 dark:text-white">{doctor.name}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{doctor.specialty}</p>
-                      </div>
-                      <div
-                        className={`h-5 w-5 rounded-full border-2 ${
-                          selectedDoctor?.id === doctor.id
-                            ? "border-sky-500 bg-sky-500"
-                            : "border-slate-300 dark:border-slate-600"
-                        }`}
-                      >
-                        {selectedDoctor?.id === doctor.id && <Check className="h-4 w-4 text-white" />}
+                {Array.isArray(doctors) && doctors.length > 0 ? (
+                  doctors.map((doctor) => (
+                    <div
+                      key={doctor.id}
+                      onClick={() => setSelectedDoctor(doctor)}
+                      className={`cursor-pointer p-4 rounded-lg border ${selectedDoctor?.id === doctor.id ? "border-sky-500 bg-sky-50 dark:bg-sky-900/10" : "border-slate-200 dark:border-slate-700"}`}
+                    >
+                      <div className="flex items-center">
+                        <User className="h-6 w-6 text-sky-500 mr-3" />
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white">{doctor.name}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{doctor.specialty}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-slate-500 dark:text-slate-400">No doctors available.</div>
+                )}
               </div>
             )}
 

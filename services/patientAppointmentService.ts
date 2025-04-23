@@ -203,5 +203,23 @@ export const patientAppointmentService = {
       console.error('Error cancelling appointment:', error)
       throw error
     }
-  }
+  },
+
+  // Delete appointment
+  deleteAppointment: async (id: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No auth token found')
+      }
+      const response = await axios.delete(
+        `${API_URL}/appointments/${id}`,
+        getAuthHeaders()
+      )
+      return response.data
+    } catch (error) {
+      console.error('Error deleting appointment:', error)
+      throw error
+    }
+  },
 }

@@ -133,6 +133,37 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
     })
   }
 
+  const handleDelete = async (appointmentId: string) => {
+    try {
+      setIsLoading(true)
+      await patientAppointmentService.deleteAppointment(appointmentId)
+      toast({
+        title: "Success",
+        description: "Appointment deleted successfully."
+      })
+      onRefresh()
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete appointment. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <svg className="animate-spin h-8 w-8 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30">
       <div className="bg-gradient-to-r from-sky-500 to-teal-500 text-white p-6">
@@ -172,12 +203,7 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
       </div>
       <div className="p-6">
         <div className="space-y-6">
-          {isLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto"></div>
-              <p className="mt-4 text-slate-500 dark:text-slate-400">Loading appointments...</p>
-            </div>
-          ) : sortedAppointments.length > 0 ? (
+          {sortedAppointments.length > 0 ? (
             sortedAppointments.map((appointment, index) => (
               <motion.div
                 key={appointment.id}
@@ -223,7 +249,7 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
                     </div>
 
                     <div className="mt-4 flex justify-end space-x-3">
-                      {["pending", "confirmed"].includes(appointment.status) && (
+                      {['pending', 'confirmed'].includes(appointment.status) && (
                         <>
                           <button 
                             onClick={() => handleReschedule(appointment.id)}
@@ -236,6 +262,12 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
                             className="px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                           >
                             Cancel
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(appointment.id)}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors"
+                          >
+                            Delete
                           </button>
                         </>
                       )}
@@ -260,7 +292,7 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
                     ? "You don't have any past appointments."
                     : "You don't have any appointments."}
               </p>
-              <button className="mt-6 px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow">
+              <button className="mt-6 px-4 py-2 bg-gradient-to-r from-sky-500 to-teal-500 text-white rounded-xl shadow-sm hover:shadow-md transition-shadow" onClick={() => window.dispatchEvent(new CustomEvent('open-schedule-modal'))}>
                 Schedule New Appointment
               </button>
             </div>
