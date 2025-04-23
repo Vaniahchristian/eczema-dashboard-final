@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   TrendingUp,
   CheckCircle2,
+  User,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -459,99 +461,131 @@ export default function DoctorDashboard() {
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-4">
-            <Card>
+            <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Pending Doctor Reviews</CardTitle>
-                <CardDescription>Diagnoses that need your review</CardDescription>
+                <CardDescription>Diagnoses that require your review and action.</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingDiagnoses ? (
-                  <div className="flex justify-center items-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
+                  <div className="text-center py-8 text-muted-foreground">Loading pending diagnoses...</div>
                 ) : pendingDiagnoses.length === 0 ? (
-                  <p className="text-muted-foreground text-center">No diagnoses currently waiting for review</p>
+                  <div className="text-center py-8 text-muted-foreground flex flex-col items-center">
+                    <AlertTriangle className="w-8 h-8 mb-2 text-amber-500" />
+                    No pending diagnoses found. You're all caught up!
+                  </div>
                 ) : (
-                  <div className="space-y-4">
-                    {pendingDiagnoses.map((diag) => (
-                      <Dialog key={diag._id} open={selectedDiagnosis?._id === diag._id} onOpenChange={(open) => { if (!open) setSelectedDiagnosis(null); }}>
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                          <div>
-                            <div className="font-medium">Patient ID: {diag.patientId}</div>
-                            <div className="text-sm text-muted-foreground">Severity: {diag.severity} | Confidence: {diag.confidenceScore}</div>
-                            <div className="text-sm text-muted-foreground">Status: {diag.status}</div>
-                            <div className="text-sm text-muted-foreground">Created: {new Date(diag.createdAt).toLocaleString()}</div>
-                          </div>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" onClick={() => handleOpenReviewDialog(diag)}>
-                              Review
-                            </Button>
-                          </DialogTrigger>
-                        </div>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Submit Doctor Review</DialogTitle>
-                            <DialogDescription>
-                              Add your review and update the severity or treatment plan for this diagnosis.
-                            </DialogDescription>
-                          </DialogHeader>
-                          {selectedDiagnosis && selectedDiagnosis._id === diag._id && (
-                            <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {pendingDiagnoses.map((diag) => {
+                      const patient = diag.patient;
+                      return (
+                        <Card key={diag._id} className="shadow-md border border-muted">
+                          <CardContent className="py-4">
+                            <div className="flex items-center gap-4 mb-2">
+                              <User className="w-5 h-5 text-primary" />
                               <div>
-                                <label className="block text-sm font-medium mb-1">Severity</label>
-                                <select
-                                  className="w-full border rounded px-2 py-1"
-                                  value={updatedSeverity}
-                                  onChange={e => setUpdatedSeverity(e.target.value)}
-                                >
-                                  <option value="">Select severity</option>
-                                  <option value="mild">mild</option>
-                                  <option value="moderate">moderate</option>
-                                  <option value="severe">severe</option>
-                                </select>
+                                <div className="font-semibold">{patient ? `${patient.firstName} ${patient.lastName}` : diag.patientId}</div>
+                                <div className="text-xs text-muted-foreground">{patient?.email}</div>
+                                <div className="text-xs text-muted-foreground">{patient?.gender} | {patient?.dateOfBirth && new Date(patient.dateOfBirth).toLocaleDateString()}</div>
                               </div>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">Review</label>
-                                <textarea
-                                  className="w-full border rounded px-2 py-1"
-                                  rows={3}
-                                  value={reviewText}
-                                  onChange={e => setReviewText(e.target.value)}
-                                  placeholder="Enter your review here..."
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium mb-1">Treatment Plan</label>
-                                <textarea
-                                  className="w-full border rounded px-2 py-1"
-                                  rows={2}
-                                  value={treatmentPlan}
-                                  onChange={e => setTreatmentPlan(e.target.value)}
-                                  placeholder="Enter treatment plan..."
-                                />
-                              </div>
-                              {successMessage && <div className="text-green-600 text-sm">{successMessage}</div>}
-                              {errorMessage && <div className="text-red-600 text-sm">{errorMessage}</div>}
                             </div>
-                          )}
-                          <DialogFooter>
-                            <Button
-                              onClick={handleSubmitReview}
-                              disabled={isSubmitting || !updatedSeverity || !reviewText || !treatmentPlan}
-                            >
-                              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                            <div className="mb-2 flex flex-wrap gap-2">
+                              <Badge variant="outline">{diag.mlResults?.prediction}</Badge>
+                              <Badge color={diag.mlResults?.severity === "severe" ? "destructive" : diag.mlResults?.severity === "moderate" ? "warning" : "success"}>
+                                {diag.mlResults?.severity}
+                              </Badge>
+                            </div>
+                            <div className="text-sm mb-2">
+                              <b>Confidence:</b> {diag.mlResults?.confidence}
+                            </div>
+                            <div className="text-sm mb-2">
+                              <b>Affected Areas:</b> {diag.mlResults?.affectedAreas?.join(", ")}
+                            </div>
+                            <div className="text-sm mb-2">
+                              <b>Status:</b> {diag.status}
+                            </div>
+                            <div className="text-sm mb-2">
+                              <b>Diagnosis ID:</b> {diag.diagnosisId}
+                            </div>
+                            <div className="text-sm mb-2">
+                              <b>Created At:</b> {diag.createdAt && new Date(diag.createdAt).toLocaleString()}
+                            </div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <a href={diag.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline flex items-center">
+                                <Eye className="w-4 h-4 mr-1" /> View Image
+                              </a>
+                            </div>
+                            <Button size="sm" onClick={() => handleOpenReviewDialog(diag)}>
+                              Review Diagnosis
                             </Button>
-                            <DialogClose asChild>
-                              <Button variant="outline">Cancel</Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
             </Card>
+            {selectedDiagnosis && (
+              <Dialog open={true} onOpenChange={(open) => { if (!open) setSelectedDiagnosis(null); }}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Submit Doctor Review</DialogTitle>
+                    <DialogDescription>
+                      Add your review and update the severity or treatment plan for this diagnosis.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Severity</label>
+                      <select
+                        className="w-full border rounded px-2 py-1"
+                        value={updatedSeverity}
+                        onChange={e => setUpdatedSeverity(e.target.value)}
+                      >
+                        <option value="">Select severity</option>
+                        <option value="mild">mild</option>
+                        <option value="moderate">moderate</option>
+                        <option value="severe">severe</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Review</label>
+                      <textarea
+                        className="w-full border rounded px-2 py-1"
+                        rows={3}
+                        value={reviewText}
+                        onChange={e => setReviewText(e.target.value)}
+                        placeholder="Enter your review here..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Treatment Plan</label>
+                      <textarea
+                        className="w-full border rounded px-2 py-1"
+                        rows={2}
+                        value={treatmentPlan}
+                        onChange={e => setTreatmentPlan(e.target.value)}
+                        placeholder="Enter treatment plan..."
+                      />
+                    </div>
+                    {successMessage && <div className="text-green-600 text-sm">{successMessage}</div>}
+                    {errorMessage && <div className="text-red-600 text-sm">{errorMessage}</div>}
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      onClick={handleSubmitReview}
+                      disabled={isSubmitting || !updatedSeverity || !reviewText || !treatmentPlan}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </Button>
+                    <DialogClose asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </TabsContent>
 
           <TabsContent value="alerts" className="space-y-4">
