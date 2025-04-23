@@ -81,3 +81,44 @@ export async function createConversation(participantId: string) {
   log('Created conversation:', data);
   return data.data;
 }
+
+export async function markConversationAsRead(conversationId: string) {
+  log('Marking conversation as read', conversationId);
+  const res = await fetch(`${API_URL}/conversations/${conversationId}/read`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders().headers,
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  log('Mark as read response:', res.status);
+  if (!res.ok) {
+    log('Error marking as read:', res.statusText);
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  const data = await res.json();
+  log('Marked as read:', data);
+  return data;
+}
+
+export async function setTypingStatus(conversationId: string, isTyping: boolean) {
+  log('Setting typing status for conversation', conversationId, 'isTyping:', isTyping);
+  const res = await fetch(`${API_URL}/conversations/${conversationId}/typing`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders().headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ isTyping }),
+    credentials: 'include',
+  });
+  log('Set typing status response:', res.status);
+  if (!res.ok) {
+    log('Error setting typing status:', res.statusText);
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  const data = await res.json();
+  log('Set typing status:', data);
+  return data;
+}

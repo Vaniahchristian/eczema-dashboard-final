@@ -7,9 +7,12 @@ import {
   fetchMessages,
   sendMessage,
   createConversation,
+  markConversationAsRead,
+  setTypingStatus,
 } from "../../services/chatService";
 import { doctorService } from "../../services/doctorService";
 import DashboardLayout from "@/components/layout/dashboard-layout";
+import { FaCheck, FaCheckDouble } from 'react-icons/fa';
 
 // Extensive logging helper
 function log(...args: any[]) {
@@ -32,6 +35,10 @@ export default function MessagesPage() {
   const [doctorResults, setDoctorResults] = useState<any[]>([]);
   const [doctorLoading, setDoctorLoading] = useState(false);
   const socketRef = useRef<IOSocket | null>(null);
+
+  // --- Typing Status State ---
+  const [typingUsers, setTypingUsers] = useState<{ [userId: string]: boolean }>({});
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Connect to socket and register user
   useEffect(() => {
@@ -95,6 +102,31 @@ export default function MessagesPage() {
       .finally(() => setDoctorLoading(false));
   }, [doctorSearch, showNewChat]);
 
+  // --- Mark as Read when opening conversation ---
+  useEffect(() => {
+    if (!selectedConversation) return;
+    console.log('[Patient] Mark conversation as read:', selectedConversation);
+    markConversationAsRead(selectedConversation);
+  }, [selectedConversation]);
+
+  // --- Typing Status: send to backend ---
+  const sendTypingStatus = (isTyping: boolean) => {
+    if (!selectedConversation) return;
+    console.log(`[Patient] Set typing status for ${selectedConversation}:`, isTyping);
+    setTypingStatus(selectedConversation, isTyping);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageInput(e.target.value);
+    console.log('[Patient] User is typing in conversation:', selectedConversation);
+    sendTypingStatus(true);
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      console.log('[Patient] User stopped typing in conversation:', selectedConversation);
+      sendTypingStatus(false);
+    }, 1500);
+  };
+
   const handleSend = async () => {
     if (!messageInput.trim() || !selectedConversation) return;
     setLoading(true);
@@ -142,6 +174,23 @@ export default function MessagesPage() {
     };
   }, [selectedConversation]);
 
+  // --- Listen for WebSocket events ---
+  useEffect(() => {
+    if (!socketRef.current) return;
+    const socket = socketRef.current;
+
+    const handleTyping = ({ conversationId, userId, isTyping }: any) => {
+      if (conversationId !== selectedConversation) return;
+      console.log(`[Patient] Typing event from user ${userId} in conversation ${conversationId}:`, isTyping);
+      setTypingUsers(prev => ({ ...prev, [userId]: isTyping }));
+    };
+
+    socket.on('conversation:typing', handleTyping);
+    return () => {
+      socket.off('conversation:typing', handleTyping);
+    };
+  }, [selectedConversation, socketRef.current]);
+
   const handleStartChat = async (doctor: any) => {
     setShowNewChat(false);
     setLoading(true);
@@ -161,6 +210,17 @@ export default function MessagesPage() {
       setLoading(false);
     }
   };
+
+  // Helper for tick status (for all messages)
+  function getMessageTickStatus(msg: any, conversation: any) {
+    const participantIds = (conversation?.participants || []).map((p: any) => p.userId);
+    const readByIds = (msg.readBy || []).map((r: any) => r.userId);
+    if (participantIds.length === 0) return 'unread';
+    if (participantIds.every((id: string) => readByIds.includes(id))) {
+      return 'read'; // double blue
+    }
+    return 'unread'; // double grey
+  }
 
   return (
     <DashboardLayout>
@@ -216,10 +276,13 @@ export default function MessagesPage() {
                         </p>
                         {conv.lastMessage && (
                           <span className="text-xs text-gray-500">
-                            {new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            {(() => {
+                              const dateString = conv.lastMessage.timestamp || conv.lastMessage.createdAt;
+                              const date = dateString ? new Date(dateString) : null;
+                              return date && !isNaN(date.getTime())
+                                ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                : '';
+                            })()}
                           </span>
                         )}
                       </div>
@@ -255,61 +318,34 @@ export default function MessagesPage() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className="flex items-end gap-2 max-w-[75%]">
-                    {msg.senderId !== user?.id && (
-                      <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sky-600 dark:text-sky-400 text-sm font-medium">
-                          {msg.senderName?.charAt(0)}
-                        </span>
+              {Object.entries(typingUsers).map(([uid, isTyping]) =>
+                isTyping && uid !== user.id ? (
+                  <div key={uid} className="text-xs text-gray-500 italic mb-2">
+                    User {uid} is typing...
+                  </div>
+                ) : null
+              )}
+              {messages.map((msg, idx) => {
+                const tickStatus = getMessageTickStatus(msg, conversations.find(c => c.id === selectedConversation));
+                return (
+                  <div key={idx} className={`mb-2 flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`rounded-lg px-4 py-2 max-w-xs ${msg.senderId === user.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}`}>
+                      {msg.content}
+                      <div className="flex items-center justify-end mt-1 text-xs opacity-70">
+                        {(() => {
+                          const dateString = msg.timestamp || msg.createdAt;
+                          const date = dateString ? new Date(dateString) : null;
+                          return date && !isNaN(date.getTime())
+                            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : '';
+                        })()}
+                        {tickStatus === 'unread' && <FaCheckDouble className="text-gray-400 ml-1" />}
+                        {tickStatus === 'read' && <FaCheckDouble className="text-blue-500 ml-1" />}
                       </div>
-                    )}
-                    <div
-                      className={`relative px-4 py-2 rounded-2xl ${
-                        msg.senderId === user?.id
-                          ? 'bg-emerald-500 text-white ml-2'
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white mr-2'
-                      } ${
-                        msg.senderId === user?.id
-                          ? 'rounded-tr-none'
-                          : 'rounded-tl-none'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                      <div
-                        className={`text-[11px] mt-1 ${
-                          msg.senderId === user?.id
-                            ? 'text-emerald-100'
-                            : 'text-gray-500'
-                        }`}
-                      >
-                        {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </div>
-                      {/* Message tail */}
-                      <div
-                        className={`absolute top-0 w-2 h-4 ${
-                          msg.senderId === user?.id
-                            ? 'right-0 bg-emerald-500'
-                            : 'left-0 bg-white dark:bg-gray-800'
-                        }`}
-                        style={{
-                          [msg.senderId === user?.id ? 'right' : 'left']: '-8px',
-                          clipPath: msg.senderId === user?.id
-                            ? 'polygon(100% 0, 0 0, 100% 100%)'
-                            : 'polygon(0 0, 100% 0, 0 100%)',
-                        }}
-                      />
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500 space-y-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -326,7 +362,7 @@ export default function MessagesPage() {
                 <input
                   type="text"
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder="Type your message..."
                   className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 dark:text-white"

@@ -6,10 +6,13 @@ import {
   fetchConversations,
   fetchMessages,
   sendMessage,
+  markConversationAsRead,
+  setTypingStatus,
 } from "../../../services/chatService";
 import PatientInfoCard from "../../../components/patient/PatientInfoCard";
 import DoctorDashboard from "@/components/doctor/doctor-dashboard";
 import DoctorLayout from "@/components/layout/doctor-layout";
+import { FaCheck, FaCheckDouble } from 'react-icons/fa';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
 
@@ -29,6 +32,21 @@ export default function DoctorMessagesPage() {
     conv.participantRole === 'patient' ? conv.participantName : conv.patientName;
   const getPatientImage = (conv: any) =>
     conv.participantRole === 'patient' ? conv.participantImage : conv.patientImage;
+
+  // Helper for tick status (for all messages)
+  function getMessageTickStatus(msg: any, conversation: any) {
+    const participantIds = (conversation?.participants || []).map((p: any) => p.userId);
+    const readByIds = (msg.readBy || []).map((r: any) => r.userId);
+    if (participantIds.length === 0) return 'unread';
+    if (participantIds.every((id: string) => readByIds.includes(id))) {
+      return 'read'; // double blue
+    }
+    return 'unread'; // double grey
+  }
+
+  // --- Typing Status State ---
+  const [typingUsers, setTypingUsers] = useState<{ [userId: string]: boolean }>({});
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Connect to socket and register user
   useEffect(() => {
@@ -67,6 +85,13 @@ export default function DoctorMessagesPage() {
       .finally(() => setLoading(false));
   }, [selectedConversation]);
 
+  // Mark as Read when opening conversation
+  useEffect(() => {
+    if (!selectedConversation) return;
+    console.log('[Doctor] Mark conversation as read:', selectedConversation);
+    markConversationAsRead(selectedConversation);
+  }, [selectedConversation]);
+
   // Send message
   const handleSend = async () => {
     if (!messageInput.trim() || !selectedConversation) return;
@@ -88,6 +113,41 @@ export default function DoctorMessagesPage() {
       setLoading(false);
     }
   };
+
+  // Send typing status to backend
+  const sendTypingStatus = (isTyping: boolean) => {
+    if (!selectedConversation) return;
+    console.log(`[Doctor] Set typing status for ${selectedConversation}:`, isTyping);
+    setTypingStatus(selectedConversation, isTyping);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageInput(e.target.value);
+    console.log('[Doctor] User is typing in conversation:', selectedConversation);
+    sendTypingStatus(true);
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
+      console.log('[Doctor] User stopped typing in conversation:', selectedConversation);
+      sendTypingStatus(false);
+    }, 1500);
+  };
+
+  // Listen for WebSocket events
+  useEffect(() => {
+    if (!socketRef.current) return;
+    const socket = socketRef.current;
+
+    const handleTyping = ({ conversationId, userId, isTyping }: any) => {
+      if (conversationId !== selectedConversation) return;
+      console.log(`[Doctor] Typing event from user ${userId} in conversation ${conversationId}:`, isTyping);
+      setTypingUsers(prev => ({ ...prev, [userId]: isTyping }));
+    };
+
+    socket.on('conversation:typing', handleTyping);
+    return () => {
+      socket.off('conversation:typing', handleTyping);
+    };
+  }, [selectedConversation, socketRef.current]);
 
   // Filter conversations by patient name (use correct field)
   const filteredConversations = conversations.filter((conv) =>
@@ -146,10 +206,13 @@ export default function DoctorMessagesPage() {
                       </p>
                       {conv.lastMessage && (
                         <span className="text-xs text-gray-500">
-                          {new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                          {(() => {
+                            const dateString = conv.lastMessage.timestamp || conv.lastMessage.createdAt;
+                            const date = dateString ? new Date(dateString) : null;
+                            return date && !isNaN(date.getTime())
+                              ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : '';
+                          })()}
                         </span>
                       )}
                     </div>
@@ -173,14 +236,34 @@ export default function DoctorMessagesPage() {
             </div>
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`mb-2 flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`rounded-lg px-4 py-2 max-w-xs ${msg.senderId === user.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}`}>
-                    {msg.content}
-                    <div className="text-xs text-right mt-1 opacity-70">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+              {Object.entries(typingUsers).map(([uid, isTyping]) =>
+                isTyping && uid !== user.id ? (
+                  <div key={uid} className="text-xs text-gray-500 italic mb-2">
+                    User {uid} is typing...
                   </div>
-                </div>
-              ))}
+                ) : null
+              )}
+              {messages.map((msg, idx) => {
+                const tickStatus = getMessageTickStatus(msg, filteredConversations.find(c => c.id === selectedConversation));
+                return (
+                  <div key={idx} className={`mb-2 flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`rounded-lg px-4 py-2 max-w-xs ${msg.senderId === user.id ? 'bg-emerald-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'}`}>
+                      {msg.content}
+                      <div className="flex items-center justify-end mt-1 text-xs opacity-70">
+                        {(() => {
+                          const dateString = msg.timestamp || msg.createdAt;
+                          const date = dateString ? new Date(dateString) : null;
+                          return date && !isNaN(date.getTime())
+                            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            : '';
+                        })()}
+                        {tickStatus === 'unread' && <FaCheckDouble className="text-gray-400 ml-1" />}
+                        {tickStatus === 'read' && <FaCheckDouble className="text-blue-500 ml-1" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             {/* Typing pad */}
             <form
@@ -190,7 +273,7 @@ export default function DoctorMessagesPage() {
               <input
                 type="text"
                 value={messageInput}
-                onChange={e => setMessageInput(e.target.value)}
+                onChange={handleInputChange}
                 placeholder="Type your message..."
                 className="flex-1 px-4 py-2 rounded border focus:outline-none focus:ring"
               />
