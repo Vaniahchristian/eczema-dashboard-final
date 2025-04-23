@@ -515,6 +515,28 @@ export default function DoctorDashboard() {
                                 <Eye className="w-4 h-4 mr-1" /> View Image
                               </a>
                             </div>
+                            {/* Pre-Diagnosis Survey (if exists) */}
+                            {diag.preDiagnosisSurvey && (
+                              <div className="mb-2 p-2 bg-slate-50 rounded border border-slate-200">
+                                <div className="font-semibold mb-1 text-sm text-indigo-700">Pre-Diagnosis Survey</div>
+                                {Object.entries(diag.preDiagnosisSurvey).map(([key, value]) => (
+                                  <div key={key} className="text-xs text-muted-foreground">
+                                    <b>{key}:</b> {Array.isArray(value) ? value.join(", ") : String(value)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {/* Post-Diagnosis Survey (if exists) */}
+                            {diag.postDiagnosisSurvey && (
+                              <div className="mb-2 p-2 bg-slate-50 rounded border border-slate-200">
+                                <div className="font-semibold mb-1 text-sm text-indigo-700">Post-Diagnosis Survey</div>
+                                {Object.entries(diag.postDiagnosisSurvey).map(([key, value]) => (
+                                  <div key={key} className="text-xs text-muted-foreground">
+                                    <b>{key}:</b> {Array.isArray(value) ? value.join(", ") : String(value)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <Button size="sm" onClick={() => handleOpenReviewDialog(diag)}>
                               Review Diagnosis
                             </Button>
