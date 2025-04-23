@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - diagnosis_integration
 
 jobs:
   deploy:
