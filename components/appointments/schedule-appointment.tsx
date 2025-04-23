@@ -34,7 +34,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
       patientAppointmentService
         .getDoctorAvailability(selectedDoctor.id, appointmentDate.toISOString().split('T')[0])
         .then((response) => {
-          setAvailableSlots(response.data.slots || [])
+          setAvailableSlots(response.availableSlots || [])
         })
         .catch((error) => {
           console.error('Error fetching doctor availability:', error)
