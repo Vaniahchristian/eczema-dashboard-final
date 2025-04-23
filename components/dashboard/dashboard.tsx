@@ -1,31 +1,31 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import DashboardLayout from "@/components/layout/dashboard-layout";
-import SummarySection from "@/components/dashboard/summary-section";
-import UploadSection from "@/components/dashboard/upload-section";
-import AnalyticsSection from "@/components/dashboard/analytics-section";
-import AppointmentWidget from "@/components/dashboard/appointment-widget";
-import { useAuth } from "@/lib/auth";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import DashboardLayout from "@/components/layout/dashboard-layout"
+import SummarySection from "@/components/dashboard/summary-section"
+import UploadSection from "@/components/dashboard/upload-section"
+import AnalyticsSection from "@/components/dashboard/analytics-section"
+import AppointmentWidget from "@/components/dashboard/appointment-widget"
+import { useAuth } from "@/lib/auth"
+import { useRouter } from "next/navigation"
 
 export default function Dashboard() {
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true)
+  const { user } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     // If no user after a short delay, redirect to login
     const timer = setTimeout(() => {
       if (!user) {
-        router.replace("/login");
+        router.replace("/login")
       }
-      setIsLoading(false);
-    }, 500);
+      setIsLoading(false)
+    }, 500)
 
-    return () => clearTimeout(timer);
-  }, [user, router]);
+    return () => clearTimeout(timer)
+  }, [user, router])
 
   if (isLoading) {
     return (
@@ -34,11 +34,11 @@ export default function Dashboard() {
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
         </div>
       </DashboardLayout>
-    );
+    )
   }
 
   if (!user) {
-    return null; // This will be handled by the useEffect redirect
+    return null // This will be handled by the useEffect redirect
   }
 
   return (
@@ -58,46 +58,44 @@ export default function Dashboard() {
               Here's an overview of your eczema management journey
             </p>
           </div>
-        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <motion.div
+              className="lg:col-span-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <SummarySection />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <UploadSection setIsLoading={setIsLoading} />
+            </motion.div>
+          </div>
+
           <motion.div
-            className="lg:col-span-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-8"
           >
-            <SummarySection />
+            <AnalyticsSection />
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-8"
           >
-            <UploadSection />
+            <AppointmentWidget />
           </motion.div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8"
-        >
-          <AnalyticsSection />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-8"
-        >
-          <AppointmentWidget />
         </motion.div>
       </div>
     </DashboardLayout>
-  );
+  )
 }
-
