@@ -180,51 +180,57 @@ export default function MessagesPage() {
           {loading && <div className="p-4 text-gray-500">Loading conversations...</div>}
           {error && <div className="p-4 text-red-500">{error}</div>}
           <div className="space-y-1 p-2">
-            {conversations.map((conv, idx) => (
-              <button
-                key={conv.id || idx}
-                onClick={() => setSelectedConversation(conv.id)}
-                className={`w-full p-3 rounded-lg transition-colors ${
-                  conv.id === selectedConversation
-                    ? 'bg-sky-50 dark:bg-sky-900/20'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  {conv.participantImage ? (
-                    <img
-                      src={conv.participantImage}
-                      alt={conv.participantName}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center">
-                      <span className="text-sky-600 dark:text-sky-400 font-medium">
-                        {conv.participantName?.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {conv.participantName}
-                      </p>
-                      {conv.lastMessage && (
-                        <span className="text-xs text-gray-500">
-                          {new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+            {conversations.map((conv, idx) => {
+              // For doctors, show patient info; for patients, show doctor info
+              const isDoctor = user?.role === 'doctor';
+              const sidebarName = isDoctor ? conv.patientName : conv.participantName;
+              const sidebarImage = isDoctor ? conv.patientImage : conv.participantImage;
+              return (
+                <button
+                  key={conv.id || idx}
+                  onClick={() => setSelectedConversation(conv.id)}
+                  className={`w-full p-3 rounded-lg transition-colors ${
+                    conv.id === selectedConversation
+                      ? 'bg-sky-50 dark:bg-sky-900/20'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    {sidebarImage ? (
+                      <img
+                        src={sidebarImage}
+                        alt={sidebarName}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center">
+                        <span className="text-sky-600 dark:text-sky-400 font-medium">
+                          {sidebarName?.charAt(0)}
                         </span>
-                      )}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {sidebarName} {isDoctor && <span className="text-xs text-gray-400">(patient)</span>}
+                        </p>
+                        {conv.lastMessage && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(conv.lastMessage.createdAt).toLocaleTimeString([], { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 truncate">
+                        {conv.lastMessage?.content || 'No messages yet'}
+                      </p>
                     </div>
-                    <p className="text-sm text-gray-500 truncate">
-                      {conv.lastMessage?.content || 'No messages yet'}
-                    </p>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
