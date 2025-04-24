@@ -210,6 +210,26 @@ export default function MessagesPage() {
     };
   }, [selectedConversation, socketRef.current]);
 
+  // --- Real-time unread badge updates ---
+  useEffect(() => {
+    if (!socketRef.current) return;
+    function handleNewMessageEvent({ conversationId, message, unreadCount }) {
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversationId
+          ? {
+              ...conv,
+              lastMessage: message,
+              unreadCount: unreadCount
+            }
+          : conv
+      ));
+    }
+    socketRef.current.on('message:new', handleNewMessageEvent);
+    return () => {
+      socketRef.current.off('message:new', handleNewMessageEvent);
+    };
+  }, []);
+
   const handleStartChat = async (doctor: any) => {
     setShowNewChat(false);
     setLoading(true);

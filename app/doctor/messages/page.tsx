@@ -153,6 +153,26 @@ export default function DoctorMessagesPage() {
     };
   }, [selectedConversation, socketRef.current]);
 
+  // --- Real-time unread badge updates ---
+  useEffect(() => {
+    if (!socketRef.current) return;
+    function handleNewMessageEvent({ conversationId, message, unreadCount }) {
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversationId
+          ? {
+              ...conv,
+              lastMessage: message,
+              unreadCount: unreadCount
+            }
+          : conv
+      ));
+    }
+    socketRef.current.on('message:new', handleNewMessageEvent);
+    return () => {
+      socketRef.current.off('message:new', handleNewMessageEvent);
+    };
+  }, []);
+
   // Filter conversations by patient name (use correct field)
   const filteredConversations = conversations.filter((conv) =>
     getPatientName(conv)?.toLowerCase().includes(search.toLowerCase())
@@ -205,6 +225,9 @@ export default function DoctorMessagesPage() {
                         {conv.lastMessage?.content || 'No messages yet'}
                       </p>
                     </div>
+                    {conv.unreadCount > 0 && (
+                      <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">{conv.unreadCount}</span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
