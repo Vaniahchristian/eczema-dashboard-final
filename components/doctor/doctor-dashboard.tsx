@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -24,9 +24,15 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, Dialo
 import { appointmentService, Appointment } from '@/services/appointmentService';
 import { diagnosisApi, Diagnosis } from '@/services/api/diagnosis';
 import { useAuth } from "@/lib/auth"
+import { useToast } from "@/components/ui/use-toast";
+import { io as socketIOClient, type Socket as IOSocket } from "socket.io-client";
+import { fetchConversations } from "@/services/chatService";
+
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
 
 export default function DoctorDashboard() {
   const { user } = useAuth()
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview")
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,8 +46,13 @@ export default function DoctorDashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [monthlyAppointments, setMonthlyAppointments] = useState<Appointment[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationBadge, setNotificationBadge] = useState(0);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const socketRef = useRef<IOSocket | null>(null);
 
   useEffect(() => {
+    console.log('[DoctorDashboard] Mounting. User:', user);
     const fetchTodayAppointments = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
@@ -97,6 +108,84 @@ export default function DoctorDashboard() {
     fetchMonthlyAppointments();
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!user) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const socket = socketIOClient(SOCKET_URL, {
+      path: "/socket.io",
+      auth: { token },
+      withCredentials: true,
+    });
+    socketRef.current = socket;
+    socket.on('connect', () => {
+      console.log('[DoctorDashboard] Connected to socket server');
+      socket.emit('register', user.id);
+    });
+    socket.on('disconnect', () => {
+      console.log('[DoctorDashboard] Disconnected from socket server');
+    });
+    // Listen for new message notifications
+    socket.on('message:new', ({ conversationId, message, unreadCount }) => {
+      console.log('[DoctorDashboard] Received message:new event:', { conversationId, message, unreadCount });
+      setNotificationBadge(prev => prev + 1);
+      setNotifications(prev => {
+        // Prefer senderDisplayName, fallback to senderName, then senderId
+        const displayName = message?.senderDisplayName || message?.senderName || message?.senderId || 'Unknown';
+        const newNotifs = [
+          {
+            type: 'message',
+            senderName: displayName,
+            content: message?.content || '',
+            timestamp: message?.createdAt || new Date().toISOString(),
+          },
+          ...prev
+        ];
+        console.log('[DoctorDashboard] Updated notifications:', newNotifs);
+        return newNotifs;
+      });
+    });
+    // Optionally listen for review:requested or other events here
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    // Fetch conversations and sum unread counts
+    async function fetchUnread() {
+      try {
+        const data = await fetchConversations();
+        const unread = data.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0);
+        setNotificationBadge(unread);
+
+        // Populate notifications with unread messages (if desired)
+        const unreadNotifs = data
+          .filter((conv: any) => conv.unreadCount && conv.lastMessage)
+          .map((conv: any) => ({
+            type: 'message',
+            senderName:
+              (conv.lastMessage.senderId === conv.participantId && conv.participantName) ||
+              conv.lastMessage.senderDisplayName ||
+              conv.lastMessage.senderName ||
+              conv.lastMessage.senderId ||
+              'Unknown',
+            content: conv.lastMessage.content || '',
+            timestamp: conv.lastMessage.createdAt || new Date().toISOString(),
+          }));
+        setNotifications(unreadNotifs);
+
+        console.log('[DoctorDashboard] Initial unread notifications:', unreadNotifs);
+      } catch (err) {
+        console.error('[DoctorDashboard] Failed to fetch conversations:', err);
+      }
+    }
+    if (user) fetchUnread();
+  }, [user]);
+
+  useEffect(() => {
+    console.log('[DoctorDashboard] notificationBadge changed:', notificationBadge);
+  }, [notificationBadge]);
+
   const handleOpenReviewDialog = (diag: Diagnosis) => {
     setSelectedDiagnosis(diag);
     setReviewText("");
@@ -149,13 +238,47 @@ export default function DoctorDashboard() {
             <p className="text-slate-600 dark:text-slate-400">Welcome back, Dr. Johnson</p>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                4
-              </span>
-            </Button>
-            <Button>Schedule Appointment</Button>
+            <div className="relative">
+              <Button variant="outline" className="relative" onClick={() => setDropdownOpen((open) => !open)}>
+                <Bell className="w-6 h-6" />
+                {notificationBadge > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {notificationBadge}
+                  </span>
+                )}
+              </Button>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg z-50">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-800 font-semibold">Notifications</div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.length === 0 && (
+                      <div className="p-4 text-gray-500 text-sm">No new notifications</div>
+                    )}
+                    {notifications.length > 0 && notifications.slice(0, 10).map((notif, idx) => (
+                      <div key={idx} className="p-4 border-b last:border-0">
+                        {notif.type === 'message' ? (
+                          <div>
+                            <span className="font-medium">New message</span> from <span className="font-semibold">{notif.senderName || 'Unknown'}</span>:<br />
+                            <span className="text-gray-700 dark:text-gray-300">{notif.content}</span>
+                          </div>
+                        ) : notif.type === 'review' ? (
+                          <div>
+                            <span className="font-medium">Review requested</span> for <span className="font-semibold">{notif.patientName || 'Unknown'}</span>
+                          </div>
+                        ) : (
+                          <div>{notif.content || 'Notification'}</div>
+                        )}
+                        <div className="text-xs text-gray-400 mt-1">{notif.timestamp ? new Date(notif.timestamp).toLocaleString() : ''}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-2 text-center text-xs text-indigo-600 hover:underline cursor-pointer" onClick={() => setDropdownOpen(false)}>
+                    Close
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* <Button>Schedule Appointment</Button> */}
           </div>
         </div>
 
