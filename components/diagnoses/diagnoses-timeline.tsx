@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
 import { motion } from "framer-motion";
 import { CheckCircle, AlertCircle, XCircle, ImageIcon } from "lucide-react";
 import type { Diagnosis } from "@/services/api/diagnosis";
+import Image from "next/image";
 
 interface DiagnosesTimelineProps {
   diagnoses: Diagnosis[];
-  selectedId?: string; // Optional to match the second version's prop
+  selectedId?: string;
   onSelect: (id: string) => void;
 }
 
@@ -49,64 +50,84 @@ export default function DiagnosesTimeline({ diagnoses, selectedId, onSelect }: D
       </div>
       <div className="p-4">
         <div className="space-y-4">
-          {sortedDiagnoses.map((diagnosis, index) => (
-            <motion.div
-              key={diagnosis._id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`p-4 rounded-xl cursor-pointer transition-all ${selectedId === diagnosis._id
+          {sortedDiagnoses.map((diagnosis, index) => {
+            // Debug: Log imageUrl to check if it's present
+            console.log(`Diagnosis ${diagnosis._id} imageUrl:`, diagnosis.imageUrl);
+
+            return (
+              <motion.div
+                key={diagnosis._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`p-4 rounded-xl cursor-pointer transition-all ${selectedId === diagnosis._id
                   ? "bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-300 dark:border-indigo-700"
                   : "bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                }`}
-              onClick={() => onSelect(diagnosis._id)}
-            >
-              <div className="flex items-start gap-4">
-                <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
-                  <img
-                    src={diagnosis.imageUrl ? `${process.env.NEXT_PUBLIC_API_URL}${diagnosis.imageUrl}` : '/placeholder.png'}
-                    alt="Skin condition"
-                    className="object-cover w-full h-full"
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center">
-                      {getSeverityIcon(diagnosis.severity)}
-                      <span className="ml-2 font-medium">
-                        {diagnosis.isEczema }
+                  }`}
+                onClick={() => onSelect(diagnosis._id)}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="relative shrink-0 w-32 aspect-video rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
+                    {diagnosis.imageUrl ? (
+                      <div className="relative w-full h-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <Image
+                          src={diagnosis.imageUrl}
+                          alt={`Skin condition - ${diagnosis.bodyPart}`}
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          priority
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            img.src = '/placeholder-image.jpg';
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg">
+                        <ImageIcon className="h-8 w-8 text-slate-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center">
+                        {getSeverityIcon(diagnosis.severity)}
+                        <span className="ml-2 font-medium">
+                          {diagnosis.isEczema}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {formatDate(diagnosis.createdAt)}
                       </span>
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {formatDate(diagnosis.createdAt)}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span
-                      className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(diagnosis.severity)}`}
-                    >
-                      {diagnosis.severity}
-                    </span>
-                    <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                      {diagnosis.bodyPart}
-                    </span>
-                  </div>
-                  <div className="mt-3">
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Analysis Confidence</div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                      <div
-                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full"
-                        style={{ width: `${calculateProgress(diagnosis.confidenceScore)}%` }}
-                      ></div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(diagnosis.severity)}`}
+                      >
+                        {diagnosis.severity}
+                      </span>
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                        {diagnosis.bodyPart}
+                      </span>
                     </div>
-                    <div className="text-xs text-right mt-1 text-slate-500 dark:text-slate-400">
-                      {calculateProgress(diagnosis.confidenceScore)}%
+                    <div className="mt-3">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Analysis Confidence</div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full"
+                          style={{ width: `${calculateProgress(diagnosis.confidenceScore)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-right mt-1 text-slate-500 dark:text-slate-400">
+                        {calculateProgress(diagnosis.confidenceScore)}%
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
           {sortedDiagnoses.length === 0 && (
             <div className="p-8 text-center">
               <ImageIcon className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto" />
