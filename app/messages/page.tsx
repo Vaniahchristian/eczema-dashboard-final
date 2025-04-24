@@ -153,7 +153,9 @@ export default function MessagesPage() {
     }, 1500);
   };
 
-  const handleSend = async () => {
+  // --- Send message handler ---
+  const handleSend = async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) e.preventDefault(); // Prevent page reload on form submit
     if (!messageInput.trim() || !selectedConversation) return;
     setLoading(true);
     try {
