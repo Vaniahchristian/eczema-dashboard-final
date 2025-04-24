@@ -36,7 +36,7 @@ export default function AppointmentsPage() {
   const loadDoctors = async () => {
     try {
       const response = await patientAppointmentService.getDoctors()
-      setDoctors(response.data)
+      setDoctors(response)
     } catch (error) {
       console.error("Error loading doctors:", error)
       toast({
@@ -68,8 +68,8 @@ export default function AppointmentsPage() {
         title: "Success",
         description: "Appointment scheduled successfully."
       })
+      await loadAppointments() // Await for appointments to refresh before closing
       setShowScheduleModal(false)
-      loadAppointments() // Refresh appointments list
     } catch (error) {
       console.error("Error scheduling appointment:", error)
       toast({

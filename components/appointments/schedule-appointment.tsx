@@ -27,13 +27,14 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
   const [appointmentType, setAppointmentType] = useState<AppointmentType>('first_visit')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [appointmentMode, setAppointmentMode] = useState<'video' | 'phone' | 'in_person'>('video')
 
   useEffect(() => {
     if (selectedDoctor && appointmentDate) {
       patientAppointmentService
         .getDoctorAvailability(selectedDoctor.id, appointmentDate.toISOString().split('T')[0])
         .then((response) => {
-          setAvailableSlots(response.data.slots || [])
+          setAvailableSlots(response.availableSlots || [])
         })
         .catch((error) => {
           console.error('Error fetching doctor availability:', error)
@@ -41,6 +42,21 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
         })
     }
   }, [selectedDoctor, appointmentDate])
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm()
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && Array.isArray(doctors) && doctors.length === 1) {
+      setSelectedDoctor(doctors[0])
+    }
+    if (isOpen && selectedDate) {
+      setAppointmentDate(selectedDate)
+    }
+  }, [isOpen, doctors, selectedDate])
 
   const resetForm = () => {
     setStep("doctor")
@@ -50,6 +66,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
     setAppointmentReason("")
     setAppointmentType('first_visit')
     setIsSubmitting(false)
+    setAppointmentMode('video')
   }
 
   const handleClose = () => {
@@ -57,46 +74,42 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
     setTimeout(resetForm, 300) // Reset after close animation
   }
 
-  const handleSubmit = () => {
-    if (!selectedDoctor || !appointmentDate || !appointmentTime) return
-
-    if (!user) {
+  const handleSubmit = async () => {
+    if (!selectedDoctor || !appointmentDate || !appointmentTime || !appointmentReason || !user) {
       toast({
-        title: "Error",
-        description: "You must be logged in to schedule an appointment",
+        title: "Missing fields",
+        description: "Please fill all fields",
         variant: "destructive"
       })
       return
     }
-
-    const appointmentData: CreateAppointmentData = {
+    const payload = {
       doctor_id: selectedDoctor.id,
       patient_id: user.id,
       appointment_date: `${appointmentDate.toISOString().split('T')[0]}T${appointmentTime}:00`,
-      reason_for_visit: appointmentReason.trim(),
+      reason_for_visit: appointmentReason,
       appointment_type: appointmentType,
+      mode: appointmentMode,
       status: 'pending'
     }
-
     setIsSubmitting(true)
-    onSubmit(appointmentData)
-      .then(() => {
-        setIsSubmitting(false)
-        handleClose()
-        toast({
-          title: "Success",
-          description: "Appointment scheduled successfully!"
-        })
+    try {
+      await patientAppointmentService.scheduleAppointment(payload)
+      setIsSubmitting(false)
+      handleClose()
+      toast({
+        title: "Success",
+        description: "Appointment scheduled successfully!"
       })
-      .catch((error) => {
-        setIsSubmitting(false)
-        console.error(error)
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to schedule appointment",
-          variant: "destructive"
-        })
+    } catch (error) {
+      setIsSubmitting(false)
+      console.error(error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to schedule appointment",
+        variant: "destructive"
       })
+    }
   }
 
   const nextStep = () => {
@@ -129,9 +142,9 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
       case "doctor":
         return !!selectedDoctor
       case "date":
-        return !!appointmentTime
+        return !!appointmentTime && !!appointmentDate && availableSlots.includes(appointmentTime)
       case "details":
-        return true
+        return appointmentReason.trim().length > 0 && !!appointmentType
       default:
         return false
     }
@@ -203,7 +216,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                       <div className="flex items-center">
                         <User className="h-6 w-6 text-sky-500 mr-3" />
                         <div>
-                          <div className="font-semibold text-slate-900 dark:text-white">{doctor.name}</div>
+                          <div className="font-semibold text-slate-900 dark:text-white">{doctor.name || `${doctor.first_name} ${doctor.last_name}`}</div>
                           <div className="text-xs text-slate-500 dark:text-slate-400">{doctor.specialty}</div>
                         </div>
                       </div>
@@ -218,7 +231,7 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
             {step === "date" && (
               <div>
                 <p className="text-slate-500 dark:text-slate-400 mb-4">
-                  Select a date for your appointment with {selectedDoctor?.name} 
+                  Select a date for your appointment with {selectedDoctor?.name || `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`} 
                 </p>
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="mb-4">
@@ -283,6 +296,20 @@ export default function ScheduleAppointment({ isOpen, onClose, doctors, selected
                       <option value="first_visit">First Visit</option>
                       <option value="follow_up">Follow-up</option>
                       <option value="emergency">Emergency</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Appointment Mode
+                    </label>
+                    <select
+                      value={appointmentMode}
+                      onChange={(e) => setAppointmentMode(e.target.value as 'video' | 'phone' | 'in_person')}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white"
+                    >
+                      <option value="video">Video Consultation</option>
+                      <option value="phone">Phone Consultation</option>
+                      <option value="in_person">In-Person Visit</option>
                     </select>
                   </div>
                 </div>
