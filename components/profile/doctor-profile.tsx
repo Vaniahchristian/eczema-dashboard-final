@@ -95,9 +95,11 @@ export default function DoctorProfile() {
 
   if (!profileData) {
     return (
+      <DoctorLayout>  
       <div className="relative bg-white dark:bg-gray-950 rounded-lg shadow-sm p-6">
         <p className="text-red-500">Error loading profile</p>
       </div>
+      </DoctorLayout>
     )
   }
 
