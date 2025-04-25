@@ -70,8 +70,8 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
       <motion.div
         ref={sidebarRef}
         className={`${isMobile
-            ? "fixed left-0 top-0 bottom-0 z-50 w-64"
-            : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
+          ? "fixed left-0 top-0 bottom-0 z-50 w-64"
+          : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
           } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
         initial={isMobile ? "closed" : "open"}
         animate={open || !isMobile ? "open" : "closed"}
@@ -81,7 +81,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200 dark:border-gray-800">
             <span className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
-              EczemaAI MD
+              Eczema Diagnosis and Advisory System
             </span>
             {isMobile && (
               <button
@@ -102,8 +102,8 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
                     key={item.name}
                     href={item.href}
                     className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
-                        ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+                      ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
                       }`}
                   >
                     <item.icon className={`mr-3 h-5 w-5 ${isActive ? "text-white" : ""}`} />

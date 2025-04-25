@@ -67,11 +67,10 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
 
       <motion.div
         ref={sidebarRef}
-        className={`${
-          isMobile
+        className={`${isMobile
             ? "fixed left-0 top-0 bottom-0 z-50 w-64"
             : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
-        } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
+          } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
         initial={isMobile ? "closed" : "open"}
         animate={open || !isMobile ? "open" : "closed"}
         variants={sidebarVariants}
@@ -81,7 +80,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
           <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200 dark:border-gray-800">
             <Link href="/dashboard">
               <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-                EczemaAI
+                Eczema Diagnosis and Advisory System
               </span>
             </Link>
             {isMobile && (
@@ -102,11 +101,10 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isActive
+                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
                         ? "bg-gradient-to-r from-sky-500 to-teal-500 text-white shadow-md"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-                    }`}
+                      }`}
                   >
                     <item.icon className={`mr-3 h-5 w-5 ${isActive ? "text-white" : ""}`} />
                     {item.name}
@@ -126,10 +124,10 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
                 Contact our support team for assistance with your eczema management.
               </p>
               <Link href="/support">
-              <button className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-center">
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Contact Support
-              </button>
+                <button className="w-full bg-gradient-to-r from-teal-500 to-emerald-500 text-white py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-center">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Contact Support
+                </button>
               </Link>
             </div>
           </div>
