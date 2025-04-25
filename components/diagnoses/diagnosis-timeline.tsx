@@ -61,7 +61,13 @@ export default function DiagnosisTimeline({
           <div className="flex items-start gap-4">
             <div className="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
               <img
-                src={diagnosis.imageUrl ? `${process.env.NEXT_PUBLIC_API_URL}${diagnosis.imageUrl}` : '/placeholder.png'}
+                src={
+                  diagnosis.imageUrl
+                    ? diagnosis.imageUrl.startsWith('http')
+                      ? diagnosis.imageUrl
+                      : `${process.env.NEXT_PUBLIC_API_URL}${diagnosis.imageUrl}`
+                    : '/placeholder.png'
+                }
                 alt="Skin condition"
                 className="object-cover w-full h-full"
               />
