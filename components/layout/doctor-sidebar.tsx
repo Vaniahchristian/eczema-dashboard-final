@@ -48,7 +48,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     { name: "Dashboard", href: "/doctor", icon: Home },
     { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
     { name: "Medical Records", href: "/doctor/records", icon: FileText },
-    { name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },
+    {/*{ name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },*/ },
     { name: "Analytics", href: "/doctor/analytics", icon: PieChart },
     { name: "Messages", href: "/doctor/messages", icon: Users },
     { name: "Profile", href: "/doctor/profile", icon: User },
@@ -69,11 +69,10 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
 
       <motion.div
         ref={sidebarRef}
-        className={`${
-          isMobile
+        className={`${isMobile
             ? "fixed left-0 top-0 bottom-0 z-50 w-64"
             : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
-        } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
+          } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
         initial={isMobile ? "closed" : "open"}
         animate={open || !isMobile ? "open" : "closed"}
         variants={sidebarVariants}
@@ -102,11 +101,10 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isActive
+                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
                         ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-                    }`}
+                      }`}
                   >
                     <item.icon className={`mr-3 h-5 w-5 ${isActive ? "text-white" : ""}`} />
                     {item.name}
