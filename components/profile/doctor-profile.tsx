@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import { API_URL } from "@/lib/config"
+import DoctorLayout from "../layout/doctor-layout"
 
 interface DoctorProfileData {
   id: string
@@ -77,9 +78,10 @@ export default function DoctorProfile() {
 
     fetchProfile()
   }, [])
-
+  
   if (isLoading) {
     return (
+      <DoctorLayout>
       <div className="relative bg-white dark:bg-gray-950 rounded-lg shadow-sm p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-20 w-20 bg-gray-200 dark:bg-gray-800 rounded-full" />
@@ -87,19 +89,24 @@ export default function DoctorProfile() {
           <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
         </div>
       </div>
+      </DoctorLayout>
     )
   }
 
   if (!profileData) {
     return (
+      <DoctorLayout>  
       <div className="relative bg-white dark:bg-gray-950 rounded-lg shadow-sm p-6">
         <p className="text-red-500">Error loading profile</p>
       </div>
+      </DoctorLayout>
     )
   }
 
   return (
+    <DoctorLayout>
     <motion.div
+
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -223,5 +230,6 @@ export default function DoctorProfile() {
         </DialogContent>
       </Dialog>
     </motion.div>
+    </DoctorLayout>
   )
 }
