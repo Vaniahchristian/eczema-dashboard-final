@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import { useEffect, useRef } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
+import { useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Calendar,
   ChevronLeft,
@@ -17,48 +17,55 @@ import {
   HelpCircle,
   Stethoscope,
   User,
-} from "lucide-react"
-import { useIsMobile } from "@/hooks/use-mobile"
+} from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+// Define the type for nav items to satisfy TypeScript
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 interface SidebarProps {
-  open: boolean
-  setOpen: (open: boolean) => void
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
 export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
-  const pathname = usePathname()
-  const isMobile = useIsMobile()
-  const sidebarRef = useRef<HTMLDivElement>(null)
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile && open && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isMobile, open, setOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMobile, open, setOpen]);
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { name: "Dashboard", href: "/doctor", icon: Home },
     { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
     { name: "Medical Records", href: "/doctor/records", icon: FileText },
-    {/*{ name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },*/ },
+    /*{ name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },*/
     { name: "Analytics", href: "/doctor/analytics", icon: PieChart },
     { name: "Messages", href: "/doctor/messages", icon: Users },
     { name: "Profile", href: "/doctor/profile", icon: User },
     { name: "Settings", href: "/doctor/settings", icon: Settings },
-  ]
+  ];
 
   const sidebarVariants = {
     open: { x: 0, opacity: 1 },
     closed: { x: isMobile ? -300 : 0, opacity: isMobile ? 0 : 1 },
-  }
+  };
 
   return (
     <>
@@ -69,10 +76,11 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
 
       <motion.div
         ref={sidebarRef}
-        className={`${isMobile
-          ? "fixed left-0 top-0 bottom-0 z-50 w-64"
-          : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
-          } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
+        className={`${
+          isMobile
+            ? "fixed left-0 top-0 bottom-0 z-50 w-64"
+            : "fixed left-0 top-0 bottom-0 z-40 w-64 border-r border-gray-200 dark:border-gray-800"
+        } bg-white/95 dark:bg-slate-900/95 backdrop-blur-md overflow-y-auto`}
         initial={isMobile ? "closed" : "open"}
         animate={open || !isMobile ? "open" : "closed"}
         variants={sidebarVariants}
@@ -96,20 +104,22 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
           <div className="flex-1 py-6">
             <nav className="space-y-2 px-3">
               {navItems.map((item) => {
-                const isActive = pathname === item.href
+                const isActive = pathname === item.href;
+                const Icon = item.icon; // Capitalize the component
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${isActive
-                      ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-                      }`}
+                    className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+                    }`}
                   >
-                    <item.icon className={`mr-3 h-5 w-5 ${isActive ? "text-white" : ""}`} />
+                    <Icon className={`mr-3 h-5 w-5 ${isActive ? "text-white" : ""}`} />
                     {item.name}
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
@@ -142,5 +152,5 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
         </button>
       )}
     </>
-  )
+  );
 }
