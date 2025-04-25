@@ -50,12 +50,12 @@ export default function Navbar({
         </button>
         <div className="hidden md:flex">
           <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-            EczemaAI
+            Eczema Diagnosis and Advisory System
           </span>
         </div>
         <div className="flex items-center space-x-4 ml-auto">
           <div className="hidden md:flex relative">
-            
+
           </div>
 
           <button
@@ -84,7 +84,7 @@ export default function Navbar({
                 <Avatar className="h-full w-full">
                   <AvatarImage src={user?.profileImage ||
                     `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
-                   />
+                  />
                   {/* <AvatarFallback>{user?.firstName?.[0] + user?.lastName?.[0]}</AvatarFallback> */}
                 </Avatar>
               </button>

@@ -9,7 +9,7 @@ import { Toaster } from "sonner"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "EczemaAI - Smart Eczema Management",
+  title: "Eczema Diagnosis and Advisory System - Smart Eczema Management",
   description: "AI-powered eczema diagnosis and management platform",
   generator: 'vc',
   manifest: '/manifest.json',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'EczemaAI'
+    title: 'Eczema Diagnosis and Advisory System'
   },
   viewport: {
     width: 'device-width',

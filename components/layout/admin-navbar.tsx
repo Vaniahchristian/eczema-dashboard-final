@@ -26,7 +26,7 @@ export default function AdminNavbar({ onMenuClick }: NavbarProps) {
         </button>
         <Link href="/admin" className="flex items-center">
           <span className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-            EczemaAI <span className="text-sm font-medium ml-1">Admin</span>
+            Eczema Diagnosis and Advisory System <span className="text-sm font-medium ml-1">Admin</span>
           </span>
         </Link>
       </div>
