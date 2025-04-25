@@ -66,7 +66,7 @@ export default function Navbar({
             <span className="sr-only">Toggle theme</span>
           </button>
 
-          <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
+          {/*<button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
@@ -76,7 +76,7 @@ export default function Navbar({
             <MessageSquare className="h-5 w-5" />
             <span className="sr-only">Messages</span>
 
-          </button>
+          </button>*/}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
