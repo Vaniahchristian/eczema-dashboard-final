@@ -235,16 +235,22 @@ export default function MessagesPage() {
     setLoading(true);
     try {
       const conversation = await createConversation(doctor.id);
-      const enriched = {
-        ...conversation,
-        participantName: doctor.name,
-        participantImage: doctor.imageUrl,
-      };
-      setConversations((prev) => [enriched, ...prev.filter(c => c.id !== conversation.id)]);
-      setSelectedConversation(conversation.id);
+      log('New conversation created:', conversation);
+      
+      // Refetch all conversations to ensure state is in sync
+      const updatedConversations = await fetchConversations();
+      log('Fetched updated conversations:', updatedConversations);
+      
+      setConversations(updatedConversations);
+      
+      // Set the selected conversation after a short delay to ensure state is updated
+      setTimeout(() => {
+        setSelectedConversation(conversation.id);
+        setLoading(false);
+      }, 100);
     } catch (err: any) {
+      log('Error in handleStartChat:', err);
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
