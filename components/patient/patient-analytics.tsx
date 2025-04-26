@@ -273,17 +273,17 @@ const PatientAnalytics = () => {
                     {recentDiagnoses.map((diagnosis) => (
                       <tr key={diagnosis.diagnosisId} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3">{new Date(diagnosis.createdAt).toLocaleDateString()}</td>
-                        <td className="px-4 py-3">{diagnosis.bodyPart}</td>
+                        <td className="px-4 py-3">{diagnosis.mlResults.affectedAreas?.join(", ") || "-"}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs ${
-                            diagnosis.severity === 'severe' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                            diagnosis.severity === 'moderate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            diagnosis.mlResults.severity === 'severe' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            diagnosis.mlResults.severity === 'moderate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                             'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           }`}>
-                            {diagnosis.severity}
+                            {diagnosis.mlResults.severity}
                           </span>
                         </td>
-                        <td className="px-4 py-3">{(diagnosis.confidence * 100).toFixed(1)}%</td>
+                        <td className="px-4 py-3">{(diagnosis.mlResults.confidence * 100).toFixed(1)}%</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             diagnosis.status === 'reviewed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :

@@ -128,22 +128,34 @@ export interface ConfidenceTrend {
   confidence: number;
 }
 
+export interface MLResults {
+  confidence: number;
+  severity: string;
+  affectedAreas: string[];
+}
+
+export interface DoctorReview {
+  doctorId: string;
+  review: string;
+  reviewedAt: string;
+  updatedSeverity: string;
+  treatmentPlan: string;
+}
+
 export interface RecentDiagnosis {
   diagnosisId: string;
-  severity: string;
-  confidence: number;
-  bodyPart: string;
-  recommendations: string[];
-  needsDoctorReview: boolean;
+  mlResults: MLResults;
+  recommendations: {
+    treatments: string[];
+    lifestyle: string[];
+    triggers: string[];
+    precautions: string[];
+  };
+  doctorReview?: DoctorReview;
   imageUrl: string;
   status: string;
+  needsDoctorReview: boolean;
   createdAt: string;
-  doctorReview: {
-    updatedSeverity?: string;
-    review?: string;
-    reviewedAt?: string;
-    treatmentPlan?: string;
-  };
 }
 
 class AnalyticsService {
