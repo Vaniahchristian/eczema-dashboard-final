@@ -12,9 +12,10 @@ interface MetricCardProps {
     isPositive: boolean
   }
   className?: string
+  children?: React.ReactNode
 }
 
-export function MetricCard({ title, value, description, icon, trend, className }: MetricCardProps) {
+export function MetricCard({ title, value, description, icon, trend, className, children }: MetricCardProps) {
   return (
     <Card className={cn("overflow-hidden", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -33,8 +34,8 @@ export function MetricCard({ title, value, description, icon, trend, className }
             <span className="text-xs text-muted-foreground ml-1">from last month</span>
           </div>
         )}
+        {children}
       </CardContent>
     </Card>
   )
 }
-
