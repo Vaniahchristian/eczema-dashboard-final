@@ -1,5 +1,7 @@
-import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client"
+
+import { Card } from "@/components/ui/card"
+import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface MetricCardProps {
@@ -7,35 +9,72 @@ interface MetricCardProps {
   value: string | number
   description?: string
   icon?: React.ReactNode
+  loading?: boolean
   trend?: {
     value: number
-    isPositive: boolean
+    label: string
+    inverse?: boolean
   }
-  className?: string
-  children?: React.ReactNode
 }
 
-export function MetricCard({ title, value, description, icon, trend, className, children }: MetricCardProps) {
+export function MetricCard({
+  title,
+  value,
+  description,
+  icon,
+  loading = false,
+  trend
+}: MetricCardProps) {
+  const isPositiveTrend = trend ? (trend.inverse ? trend.value < 0 : trend.value > 0) : false;
+
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-        {trend && (
-          <div className="flex items-center mt-1">
-            <span className={cn("text-xs font-medium", trend.isPositive ? "text-green-500" : "text-red-500")}>
-              {trend.isPositive ? "+" : "-"}
-              {Math.abs(trend.value)}%
-            </span>
-            <span className="text-xs text-muted-foreground ml-1">from last month</span>
+    <Card>
+      <div className="p-6 flex flex-col">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {icon && (
+              <div className="p-2 bg-primary/10 rounded-full">
+                {icon}
+              </div>
+            )}
+            <p className="text-sm font-medium text-muted-foreground">
+              {title}
+            </p>
           </div>
-        )}
-        {children}
-      </CardContent>
+        </div>
+        <div className="mt-3">
+          {loading ? (
+            <div className="h-8 w-24 bg-gray-200 animate-pulse rounded" />
+          ) : (
+            <h3 className="text-2xl font-bold">{value}</h3>
+          )}
+          {description && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {description}
+            </p>
+          )}
+          {trend && (
+            <div className="flex items-center mt-2">
+              <div
+                className={cn(
+                  "flex items-center text-sm",
+                  isPositiveTrend ? "text-green-600" : "text-red-600"
+                )}
+              >
+                {isPositiveTrend ? (
+                  <ArrowUpRight className="h-4 w-4 mr-1" />
+                ) : (
+                  <ArrowDownRight className="h-4 w-4 mr-1" />
+                )}
+                <span>{Math.abs(trend.value)}%</span>
+              </div>
+              <span className="text-sm text-muted-foreground ml-2">
+                {trend.label}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
     </Card>
   )
 }
