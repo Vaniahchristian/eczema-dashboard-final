@@ -1,1014 +1,321 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Calendar, TrendingUp, Clock, CheckCircle, Download, ChevronDown } from "lucide-react"
-import DashboardLayout from "@/components/layout/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { toast } from "sonner"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { 
+  Calendar, 
+  TrendingUp, 
+  Activity,
+  Target,
+  BarChart2,
+  PieChart as PieChartIcon,
+  Clock
+} from "lucide-react";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { MetricCard } from "@/components/ui/metric-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AreaChart,
   Area,
   BarChart,
   Bar,
-  LineChart,
-  Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
-import { analyticsService } from "@/services/analyticsService"
-import type { 
-  AgeDistribution, 
-  GeographicalDistribution, 
-  TreatmentEffectiveness,
-  ModelConfidence,
-  DiagnosisHistory,
-  ExportType
-} from "@/services/analyticsService"
+} from "recharts";
+import { analyticsService } from "@/services/analyticsService";
+import type { PatientSummary, BodyPartFrequency, ConfidenceTrend, RecentDiagnosis } from "@/services/analyticsService";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"]
+const COLORS = {
+  mild: "#10B981",
+  moderate: "#F59E0B",
+  severe: "#EF4444",
+  primary: "#3B82F6",
+  secondary: "#8B5CF6",
+  accent: "#EC4899"
+};
 
-const healthMetricsData = [
-  { date: "Jan", severity: 7.2, itching: 6.8, redness: 7.5, dryness: 6.5 },
-  { date: "Feb", severity: 6.8, itching: 6.5, redness: 7.0, dryness: 6.2 },
-  { date: "Mar", severity: 6.5, itching: 6.0, redness: 6.8, dryness: 5.8 },
-  { date: "Apr", severity: 5.8, itching: 5.5, redness: 6.0, dryness: 5.5 },
-  { date: "May", severity: 5.2, itching: 5.0, redness: 5.5, dryness: 5.0 },
-  { date: "Jun", severity: 4.8, itching: 4.5, redness: 5.0, dryness: 4.8 },
-  { date: "Jul", severity: 4.2, itching: 4.0, redness: 4.5, dryness: 4.2 },
-  { date: "Aug", severity: 3.8, itching: 3.5, redness: 4.0, dryness: 3.8 },
-  { date: "Sep", severity: 3.5, itching: 3.2, redness: 3.8, dryness: 3.5 },
-]
-
-const appointmentData = [
-  {
-    id: 1,
-    date: "2023-10-15",
-    doctor: "Dr. Emily Chen",
-    type: "Regular Checkup",
-    status: "Completed",
-    notes: "Patient showing improvement. Continue current treatment plan.",
-  },
-  {
-    id: 2,
-    date: "2023-11-02",
-    doctor: "Dr. James Wilson",
-    type: "Dermatology Consultation",
-    status: "Completed",
-    notes: "Adjusted medication dosage. Follow up in 3 weeks.",
-  },
-  {
-    id: 3,
-    date: "2023-12-10",
-    doctor: "Dr. Emily Chen",
-    type: "Follow-up",
-    status: "Completed",
-    notes: "Significant improvement in symptoms. Continue treatment.",
-  },
-  {
-    id: 4,
-    date: "2024-01-05",
-    doctor: "Dr. Sarah Johnson",
-    type: "Allergy Testing",
-    status: "Completed",
-    notes: "Identified potential food triggers. Recommended elimination diet.",
-  },
-  {
-    id: 5,
-    date: "2024-02-20",
-    doctor: "Dr. Emily Chen",
-    type: "Regular Checkup",
-    status: "Completed",
-    notes: "Continued improvement. Reduced medication frequency.",
-  },
-  {
-    id: 6,
-    date: "2024-03-15",
-    doctor: "Dr. James Wilson",
-    type: "Dermatology Consultation",
-    status: "Upcoming",
-    notes: "",
-  },
-]
-
-const treatmentData = [
-  { name: "Topical Steroids", progress: 85, status: "Active" },
-  { name: "Moisturizing Routine", progress: 92, status: "Active" },
-  { name: "Trigger Avoidance", progress: 78, status: "Active" },
-  { name: "Dietary Changes", progress: 65, status: "Active" },
-  { name: "Antihistamines", progress: 90, status: "Completed" },
-  { name: "Light Therapy", progress: 100, status: "Completed" },
-]
-
-const medicationAdherenceData = [
-  { date: "Week 1", adherence: 85 },
-  { date: "Week 2", adherence: 90 },
-  { date: "Week 3", adherence: 88 },
-  { date: "Week 4", adherence: 92 },
-  { date: "Week 5", adherence: 95 },
-  { date: "Week 6", adherence: 93 },
-  { date: "Week 7", adherence: 97 },
-  { date: "Week 8", adherence: 98 },
-]
-
-const triggerData = [
-  { name: "Stress", value: 35 },
-  { name: "Food Allergies", value: 25 },
-  { name: "Environmental", value: 20 },
-  { name: "Weather", value: 15 },
-  { name: "Other", value: 5 },
-]
-
-export default function PatientAnalytics() {
-  const [timeRange, setTimeRange] = useState("6m")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
-  const [dateRange, setDateRange] = useState<[Date, Date]>([
-    new Date(Date.now() - 180 * 24 * 60 * 60 * 1000), // 6 months ago
-    new Date()
-  ])
-
-  const [error, setError] = useState<string | null>(null)
-
-  // Analytics states
-  const [ageDistribution, setAgeDistribution] = useState<AgeDistribution[]>([])
-  const [geoDistribution, setGeoDistribution] = useState<GeographicalDistribution[]>([])
-  const [treatmentEffectiveness, setTreatmentEffectiveness] = useState<TreatmentEffectiveness[]>([])
-  const [modelConfidence, setModelConfidence] = useState<ModelConfidence[]>([])
-  const [diagnosisHistory, setDiagnosisHistory] = useState<DiagnosisHistory[]>([])
-
-  const handleTimeRangeChange = (value: string) => {
-    setTimeRange(value)
-    setIsLoading(true)
-
-    // Calculate new date range based on selected time range
-    const endDate = new Date()
-    let startDate = new Date()
-
-    switch (value) {
-      case "1m":
-        startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000)
-        break
-      case "3m":
-        startDate = new Date(endDate.getTime() - 90 * 24 * 60 * 60 * 1000)
-        break
-      case "6m":
-        startDate = new Date(endDate.getTime() - 180 * 24 * 60 * 60 * 1000)
-        break
-      case "1y":
-        startDate = new Date(endDate.getTime() - 365 * 24 * 60 * 60 * 1000)
-        break
-    }
-
-    setDateRange([startDate, endDate])
-
-    // Simulate loading
-    setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-  }
-
-  const handleExport = async (type: ExportType) => {
-    try {
-      setIsExporting(true)
-      await analyticsService.exportData(type, dateRange)
-      toast.success(`Successfully exported ${type} data`)
-    } catch (error) {
-      toast.error(`Failed to export ${type} data`)
-      console.error('Export error:', error)
-    } finally {
-      setIsExporting(false)
-    }
-  }
+const PatientAnalytics = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<PatientSummary | null>(null);
+  const [bodyPartFreq, setBodyPartFreq] = useState<BodyPartFrequency[]>([]);
+  const [confidenceTrend, setConfidenceTrend] = useState<ConfidenceTrend[]>([]);
+  const [recentDiagnoses, setRecentDiagnoses] = useState<RecentDiagnosis[]>([]);
+  const [severityDist, setSeverityDist] = useState<{ _id: string; count: number; }[]>([]);
+  const [avgConfBySeverity, setAvgConfBySeverity] = useState<{ _id: string; avgConfidence: number; count: number; }[]>([]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
-      setIsLoading(true)
-      setError(null)
-      
+      setIsLoading(true);
       try {
-        const [age, geo, treatment, confidence, history] = await Promise.all([
-          analyticsService.getAgeDistribution(),
-          analyticsService.getGeographicalDistribution(),
-          analyticsService.getTreatmentEffectiveness(),
-          analyticsService.getModelConfidence(),
-          analyticsService.getDiagnosisHistory()
-        ])
+        const [
+          summaryData,
+          bodyPartData,
+          confidenceData,
+          diagnosesData,
+          severityData,
+          avgConfData
+        ] = await Promise.all([
+          analyticsService.getPatientSummary(),
+          analyticsService.getPatientBodyPartFrequency(),
+          analyticsService.getPatientModelConfidenceTrend(),
+          analyticsService.getPatientRecentDiagnoses(),
+          analyticsService.getPatientSeverityDistribution(),
+          analyticsService.getPatientAvgConfidenceBySeverity()
+        ]);
 
-        setAgeDistribution(age)
-        setGeoDistribution(geo)
-        setTreatmentEffectiveness(treatment)
-        setModelConfidence(confidence)
-        setDiagnosisHistory(history)
+        setSummary(summaryData);
+        setBodyPartFreq(bodyPartData);
+        setConfidenceTrend(confidenceData);
+        setRecentDiagnoses(diagnosesData);
+        setSeverityDist(severityData);
+        setAvgConfBySeverity(avgConfData);
       } catch (err) {
-        setError('Failed to fetch analytics data')
-        console.error(err)
+        setError("Failed to fetch analytics data");
+        console.error(err);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchAnalytics()
-  }, [])
+    fetchAnalytics();
+  }, []);
 
   if (error) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center text-red-500">
-                <p>{error}</p>
-                <Button onClick={() => window.location.reload()} className="mt-4">
-                  Retry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="p-6 text-center text-red-500">
+          <p>{error}</p>
         </div>
       </DashboardLayout>
-    )
+    );
   }
 
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-                My Analytics
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2">
-                Track your eczema management progress and insights
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-              <Select value={timeRange} onValueChange={handleTimeRangeChange}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Select time range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1m">Last Month</SelectItem>
-                  <SelectItem value="3m">Last 3 Months</SelectItem>
-                  <SelectItem value="6m">Last 6 Months</SelectItem>
-                  <SelectItem value="1y">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
+      <div className="p-6 space-y-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard
+            title="Total Diagnoses"
+            value={summary?.totalDiagnoses ?? 0}
+            icon={<Activity className="h-4 w-4" />}
+            description="All-time diagnoses"
+            loading={isLoading}
+          />
+          <MetricCard
+            title="Avg. Confidence"
+            value={summary?.averageModelConfidence ? `${(summary.averageModelConfidence * 100).toFixed(1)}%` : "N/A"}
+            icon={<Target className="h-4 w-4" />}
+            description="Model confidence"
+            loading={isLoading}
+          />
+          <MetricCard
+            title="Common Severity"
+            value={summary?.mostCommonSeverity ?? "N/A"}
+            icon={<BarChart2 className="h-4 w-4" />}
+            description="Most frequent"
+            loading={isLoading}
+          />
+          <MetricCard
+            title="Recent Updates"
+            value={recentDiagnoses.length}
+            icon={<Clock className="h-4 w-4" />}
+            description="Last 10 diagnoses"
+            loading={isLoading}
+          />
+        </div>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center gap-2"
-                    disabled={isExporting}
-                  >
-                    <Download className="h-4 w-4" />
-                    Export
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56" align="end">
-                  <div className="space-y-2">
-                    <div className="font-medium text-sm text-slate-700 dark:text-slate-300 mb-2">
-                      Export Data
-                    </div>
-                    <button
-                      onClick={() => handleExport('diagnoses')}
-                      disabled={isExporting}
-                      className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Severity Distribution */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Severity Distribution</CardTitle>
+              <CardDescription>Distribution of diagnoses by severity level</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={severityDist}
+                      dataKey="count"
+                      nameKey="_id"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     >
-                      My Diagnosis History (CSV)
-                    </button>
-                    <button
-                      onClick={() => handleExport('analytics')}
-                      disabled={isExporting}
-                      className="w-full text-left px-2 py-1 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
-                    >
-                      Analytics Report (PDF)
-                    </button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="demographics">Demographics</TabsTrigger>
-              <TabsTrigger value="treatments">Treatments</TabsTrigger>
-              <TabsTrigger value="triggers">Triggers</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Diagnoses</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {isLoading ? "..." : diagnosisHistory.reduce((sum, item) => sum + item.totalCases, 0)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Average Severity</CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {isLoading ? "..." : (
-                        diagnosisHistory.reduce((sum, item) => 
-                          sum + (item.severeCases / item.totalCases), 0) / diagnosisHistory.length
-                      ).toFixed(1)}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Treatment Success Rate</CardTitle>
-                    <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {isLoading ? "..." : 
-                        `${(treatmentEffectiveness.reduce((sum, item) => 
-                          sum + item.effectiveness, 0) / treatmentEffectiveness.length).toFixed(1)}%`
-                      }
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">ML Confidence</CardTitle>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {isLoading ? "..." : 
-                        `${(modelConfidence.reduce((sum, item) => 
-                          sum + item.averageConfidence, 0) / modelConfidence.length * 100).toFixed(1)}%`
-                      }
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
-                  <CardHeader>
-                    <CardTitle>Diagnosis History</CardTitle>
-                    <CardDescription>Number of cases over time</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={diagnosisHistory}>
-                          <defs>
-                            <linearGradient id="total" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Area
-                            type="monotone"
-                            dataKey="totalCases"
-                            stroke="#8b5cf6"
-                            strokeWidth={2}
-                            fill="url(#total)"
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="severeCases"
-                            stroke="#ef4444"
-                            strokeWidth={2}
-                            fill="url(#severe)"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="col-span-3">
-                  <CardHeader>
-                    <CardTitle>Age Distribution</CardTitle>
-                    <CardDescription>Cases by age group</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={ageDistribution}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="ageRange" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="count" fill="#8b5cf6" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Treatment Effectiveness</CardTitle>
-                    <CardDescription>Success rate by treatment type</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={treatmentEffectiveness} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis dataKey="type" type="category" />
-                          <Tooltip />
-                          <Bar dataKey="effectiveness" fill="#8b5cf6" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Geographical Distribution</CardTitle>
-                    <CardDescription>Cases by region</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={geoDistribution}
-                            dataKey="count"
-                            nameKey="location"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label
-                          >
-                            {geoDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Health Metrics Tab */}
-            <TabsContent value="health-metrics" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Eczema Symptom Progression</CardTitle>
-                  <CardDescription>Track how your symptoms have changed over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={healthMetricsData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                        <XAxis dataKey="date" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "white",
-                            borderColor: "#e2e8f0",
-                            borderRadius: "0.5rem",
-                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                          }}
-                        />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="severity"
-                          name="Overall Severity"
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 8, strokeWidth: 2, fill: "white" }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="itching"
-                          name="Itching"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 8, strokeWidth: 2, fill: "white" }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="redness"
-                          name="Redness"
-                          stroke="#ef4444"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 8, strokeWidth: 2, fill: "white" }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="dryness"
-                          name="Dryness"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 8, strokeWidth: 2, fill: "white" }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Affected Body Areas</CardTitle>
-                    <CardDescription>Current distribution of eczema on your body</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Arms</span>
-                          <span className="text-sm font-medium">35%</span>
-                        </div>
-                        <Progress value={35} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Legs</span>
-                          <span className="text-sm font-medium">25%</span>
-                        </div>
-                        <Progress value={25} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Neck</span>
-                          <span className="text-sm font-medium">15%</span>
-                        </div>
-                        <Progress value={15} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Face</span>
-                          <span className="text-sm font-medium">10%</span>
-                        </div>
-                        <Progress value={10} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Hands</span>
-                          <span className="text-sm font-medium">15%</span>
-                        </div>
-                        <Progress value={15} className="h-2" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Medication Adherence</CardTitle>
-                    <CardDescription>How consistently you've followed your medication plan</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={medicationAdherenceData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorAdherence" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <XAxis dataKey="date" />
-                          <YAxis domain={[0, 100]} />
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <Tooltip />
-                          <Area
-                            type="monotone"
-                            dataKey="adherence"
-                            stroke="#3b82f6"
-                            fillOpacity={1}
-                            fill="url(#colorAdherence)"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Appointments Tab */}
-            <TabsContent value="appointments" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Appointment History</CardTitle>
-                  <CardDescription>Record of your past and upcoming doctor visits</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-12 bg-slate-50 dark:bg-slate-800 p-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                      <div className="col-span-2">Date</div>
-                      <div className="col-span-2">Doctor</div>
-                      <div className="col-span-3">Type</div>
-                      <div className="col-span-1">Status</div>
-                      <div className="col-span-4">Notes</div>
-                    </div>
-                    <div className="divide-y">
-                      {appointmentData.map((appointment) => (
-                        <div key={appointment.id} className="grid grid-cols-12 p-4 text-sm">
-                          <div className="col-span-2 font-medium">{appointment.date}</div>
-                          <div className="col-span-2">{appointment.doctor}</div>
-                          <div className="col-span-3">{appointment.type}</div>
-                          <div className="col-span-1">
-                            {appointment.status === "Completed" ? (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                Completed
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                                Upcoming
-                              </span>
-                            )}
-                          </div>
-                          <div className="col-span-4 text-slate-500 dark:text-slate-400">
-                            {appointment.notes || "No notes available"}
-                          </div>
-                        </div>
+                      {severityDist.map((entry) => (
+                        <Cell key={entry._id} fill={COLORS[entry._id as keyof typeof COLORS] || COLORS.primary} />
                       ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Appointment Frequency</CardTitle>
-                    <CardDescription>Number of appointments by month</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={[
-                            { month: "Oct", count: 1 },
-                            { month: "Nov", count: 1 },
-                            { month: "Dec", count: 1 },
-                            { month: "Jan", count: 1 },
-                            { month: "Feb", count: 1 },
-                            { month: "Mar", count: 1 },
-                          ]}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="month" />
-                          <YAxis allowDecimals={false} />
-                          <Tooltip />
-                          <Bar dataKey="count" name="Appointments" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* Body Part Frequency */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Body Part Distribution</CardTitle>
+              <CardDescription>Frequency of affected body parts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={bodyPartFreq}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bodyPart" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill={COLORS.primary}>
+                      {bodyPartFreq.map((entry, index) => (
+                        <Cell key={entry.bodyPart} fill={COLORS[Object.keys(COLORS)[index % 6] as keyof typeof COLORS]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Appointment Types</CardTitle>
-                    <CardDescription>Distribution of appointment types</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={[
-                              { name: "Regular Checkup", value: 2 },
-                              { name: "Dermatology Consultation", value: 2 },
-                              { name: "Follow-up", value: 1 },
-                              { name: "Allergy Testing", value: 1 },
-                            ]}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {[
-                              { name: "Regular Checkup", value: 2 },
-                              { name: "Dermatology Consultation", value: 2 },
-                              { name: "Follow-up", value: 1 },
-                              { name: "Allergy Testing", value: 1 },
-                            ].map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+          {/* Confidence Trend */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Model Confidence Trend</CardTitle>
+              <CardDescription>AI model confidence over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={confidenceTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 1]} tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                    <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(1)}%`} />
+                    <Area type="monotone" dataKey="confidence" fill={COLORS.primary} stroke={COLORS.primary} fillOpacity={0.2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Treatment Plan Tab */}
-            <TabsContent value="treatment" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Treatment Plan Progress</CardTitle>
-                  <CardDescription>Track your progress with prescribed treatments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {treatmentData.map((treatment, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <h4 className="font-medium">{treatment.name}</h4>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{treatment.status}</p>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-medium">{treatment.progress}%</span>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              {treatment.status === "Completed" ? "Completed" : "In Progress"}
-                            </p>
-                          </div>
-                        </div>
-                        <Progress
-                          value={treatment.progress}
-                          className={`h-2 ${treatment.status === "Completed" ? "[&>div]:bg-green-500" : "[&>div]:bg-blue-500"}`}
-                        />
-                      </div>
+          {/* Average Confidence by Severity */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Confidence by Severity</CardTitle>
+              <CardDescription>Average model confidence for each severity level</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={avgConfBySeverity} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" domain={[0, 1]} tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                    <YAxis dataKey="_id" type="category" />
+                    <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(1)}%`} />
+                    <Bar dataKey="avgConfidence" fill={COLORS.secondary}>
+                      {avgConfBySeverity.map((entry) => (
+                        <Cell key={entry._id} fill={COLORS[entry._id as keyof typeof COLORS] || COLORS.secondary} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Diagnoses Table */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Recent Diagnoses</CardTitle>
+            <CardDescription>Your latest diagnosis records</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : recentDiagnoses.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b dark:border-gray-700">
+                      <th className="px-4 py-3 text-left">Date</th>
+                      <th className="px-4 py-3 text-left">Body Part</th>
+                      <th className="px-4 py-3 text-left">Severity</th>
+                      <th className="px-4 py-3 text-left">Confidence</th>
+                      <th className="px-4 py-3 text-left">Status</th>
+                      <th className="px-4 py-3 text-left">Doctor Review</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentDiagnoses.map((diagnosis) => (
+                      <tr key={diagnosis.diagnosisId} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="px-4 py-3">{new Date(diagnosis.createdAt).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">{diagnosis.bodyPart}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            diagnosis.severity === 'severe' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            diagnosis.severity === 'moderate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          }`}>
+                            {diagnosis.severity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{(diagnosis.confidence * 100).toFixed(1)}%</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            diagnosis.status === 'reviewed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                          }`}>
+                            {diagnosis.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {diagnosis.doctorReview?.updatedSeverity ? (
+                            <span className="text-blue-600 dark:text-blue-400">
+                              Updated to {diagnosis.doctorReview.updatedSeverity}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Treatment Effectiveness</CardTitle>
-                    <CardDescription>How each treatment has contributed to your improvement</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          layout="vertical"
-                          data={[
-                            { name: "Topical Steroids", effectiveness: 75 },
-                            { name: "Moisturizing", effectiveness: 85 },
-                            { name: "Trigger Avoidance", effectiveness: 70 },
-                            { name: "Dietary Changes", effectiveness: 60 },
-                            { name: "Antihistamines", effectiveness: 65 },
-                          ]}
-                          margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
-                          <XAxis type="number" domain={[0, 100]} />
-                          <YAxis dataKey="name" type="category" />
-                          <Tooltip />
-                          <Bar dataKey="effectiveness" name="Effectiveness %" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Treatment Timeline</CardTitle>
-                    <CardDescription>When treatments were started and completed</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Oct 2023</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Topical Steroids</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Oct 2023</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Moisturizing Routine</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Nov 2023</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Antihistamines</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Dec 2023</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Trigger Avoidance</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Jan 2024</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Dietary Changes</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Jan 2024</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-green-500"></div>
-                        <div className="ml-2 text-sm">Completed Antihistamines</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Feb 2024</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-blue-500"></div>
-                        <div className="ml-2 text-sm">Started Light Therapy</div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-12 text-xs text-slate-500 dark:text-slate-400">Mar 2024</div>
-                        <div className="ml-2 h-4 w-4 rounded-full bg-green-500"></div>
-                        <div className="ml-2 text-sm">Completed Light Therapy</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </tbody>
+                </table>
               </div>
-            </TabsContent>
-
-            {/* Triggers Tab */}
-            <TabsContent value="triggers" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Identified Triggers</CardTitle>
-                  <CardDescription>Factors that may contribute to your eczema flare-ups</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={triggerData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={true}
-                          outerRadius={150}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {triggerData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value) => [`${value}%`, "Contribution"]}
-                          contentStyle={{
-                            backgroundColor: "white",
-                            borderColor: "#e2e8f0",
-                            borderRadius: "0.5rem",
-                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                          }}
-                        />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Stress Correlation</CardTitle>
-                    <CardDescription>Relationship between stress levels and symptom severity</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[250px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={[
-                            { date: "Week 1", stress: 7, severity: 7.5 },
-                            { date: "Week 2", stress: 8, severity: 8.0 },
-                            { date: "Week 3", stress: 6, severity: 6.5 },
-                            { date: "Week 4", stress: 5, severity: 5.8 },
-                            { date: "Week 5", stress: 7, severity: 7.2 },
-                            { date: "Week 6", stress: 4, severity: 4.5 },
-                            { date: "Week 7", stress: 3, severity: 3.8 },
-                            { date: "Week 8", stress: 2, severity: 3.0 },
-                          ]}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                          <XAxis dataKey="date" />
-                          <YAxis domain={[0, 10]} />
-                          <Tooltip />
-                          <Legend />
-                          <Line type="monotone" dataKey="stress" name="Stress Level" stroke="#8b5cf6" strokeWidth={2} />
-                          <Line
-                            type="monotone"
-                            dataKey="severity"
-                            name="Symptom Severity"
-                            stroke="#ef4444"
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                      <p>
-                        Correlation coefficient:{" "}
-                        <span className="font-medium text-slate-700 dark:text-slate-300">0.92</span> (Strong positive
-                        correlation)
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Environmental Factors</CardTitle>
-                    <CardDescription>How environmental conditions affect your symptoms</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Humidity (Low)</span>
-                          <span className="text-sm font-medium">High Impact</span>
-                        </div>
-                        <Progress value={85} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Temperature (Hot)</span>
-                          <span className="text-sm font-medium">Medium Impact</span>
-                        </div>
-                        <Progress value={65} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Pollen</span>
-                          <span className="text-sm font-medium">Low Impact</span>
-                        </div>
-                        <Progress value={35} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Air Pollution</span>
-                          <span className="text-sm font-medium">Medium Impact</span>
-                        </div>
-                        <Progress value={55} className="h-2" />
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">Seasonal Changes</span>
-                          <span className="text-sm font-medium">High Impact</span>
-                        </div>
-                        <Progress value={80} className="h-2" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No recent diagnoses found
               </div>
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
+
+export default PatientAnalytics;

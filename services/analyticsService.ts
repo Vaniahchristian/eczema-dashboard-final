@@ -112,6 +112,40 @@ export interface UserActivity {
   appointments: number;
 }
 
+export interface PatientSummary {
+  totalDiagnoses: number;
+  averageModelConfidence: number;
+  mostCommonSeverity: string;
+}
+
+export interface BodyPartFrequency {
+  bodyPart: string;
+  count: number;
+}
+
+export interface ConfidenceTrend {
+  date: string;
+  confidence: number;
+}
+
+export interface RecentDiagnosis {
+  diagnosisId: string;
+  severity: string;
+  confidence: number;
+  bodyPart: string;
+  recommendations: string[];
+  needsDoctorReview: boolean;
+  imageUrl: string;
+  status: string;
+  createdAt: string;
+  doctorReview: {
+    updatedSeverity?: string;
+    review?: string;
+    reviewedAt?: string;
+    treatmentPlan?: string;
+  };
+}
+
 class AnalyticsService {
   private axiosInstance = axios.create({
     baseURL: `${API_URL}/analytics`,
@@ -391,6 +425,36 @@ class AnalyticsService {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  }
+
+  async getPatientSummary(): Promise<PatientSummary> {
+    const response = await this.axiosInstance.get('/me/summary');
+    return response.data.data;
+  }
+
+  async getPatientBodyPartFrequency(): Promise<BodyPartFrequency[]> {
+    const response = await this.axiosInstance.get('/me/body-part-frequency');
+    return response.data.data;
+  }
+
+  async getPatientModelConfidenceTrend(): Promise<ConfidenceTrend[]> {
+    const response = await this.axiosInstance.get('/me/model-confidence-trend');
+    return response.data.data;
+  }
+
+  async getPatientRecentDiagnoses(): Promise<RecentDiagnosis[]> {
+    const response = await this.axiosInstance.get('/me/recent-diagnoses');
+    return response.data.data;
+  }
+
+  async getPatientSeverityDistribution(): Promise<{ _id: string; count: number; }[]> {
+    const response = await this.axiosInstance.get('/me/severity-distribution');
+    return response.data.data;
+  }
+
+  async getPatientAvgConfidenceBySeverity(): Promise<{ _id: string; avgConfidence: number; count: number; }[]> {
+    const response = await this.axiosInstance.get('/me/avg-confidence-by-severity');
+    return response.data.data;
   }
 }
 
