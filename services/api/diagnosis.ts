@@ -20,29 +20,34 @@ export interface PostDiagnosisData {
 }
 
 export interface Diagnosis {
-  id: string;
   _id: string;
   patientId: string;
-  imageUrl: string;
-  severity: 'Mild' | 'Moderate' | 'Severe';
-  confidenceScore: number;
-  bodyPart: string;
-  isEczema: string;
-  recommendations: string[];
-  needsDoctorReview: boolean;
-  status: 'pending_review' | 'completed' | 'reviewed';
-  confidence: number;
-  bodyPartConfidence: number;
+  patient?: {
+    firstName: string;
+    lastName: string;
+    email?: string;
+    gender?: string;
+    dateOfBirth?: string;
+  };
+  severity: string;
+  status: string;
+  diagnosisId: string;
   createdAt: string;
-  preDiagnosisSurvey?: PreDiagnosisData;
-  postDiagnosisSurvey?: PostDiagnosisData;
+  imageUrl: string;
+  mlResults?: {
+    prediction: string;
+    severity: string;
+    confidence: number;
+    affectedAreas?: string[];
+  };
   doctorReview?: {
-    doctorId: string;
     review: string;
     reviewedAt: string;
-    updatedSeverity: 'Mild' | 'Moderate' | 'Severe';
+    updatedSeverity: string;
     treatmentPlan: string;
   };
+  preDiagnosisSurvey?: Record<string, any>;
+  postDiagnosisSurvey?: Record<string, any>;
 }
 
 export interface DiagnosisFeedback {

@@ -34,6 +34,20 @@ import { useAuth } from "@/lib/auth"
 import { useToast } from "@/components/ui/use-toast";
 import { io as socketIOClient, type Socket as IOSocket } from "socket.io-client";
 import { fetchConversations } from "@/services/chatService";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from 'recharts';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
 
@@ -71,6 +85,61 @@ export default function DoctorDashboard() {
     if (!reviewedDiagnosesCount) return 0;
     const total = reviewedDiagnosesCount + pendingDiagnoses.length;
     return total ? Math.round((reviewedDiagnosesCount / total) * 100) : 0;
+  };
+
+  const prepareAppointmentData = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayCount = new Array(7).fill(0);
+    
+    monthlyAppointments.forEach(apt => {
+      if (apt.appointment_date) {
+        const date = new Date(apt.appointment_date.replace(' ', 'T'));
+        dayCount[date.getDay()]++;
+      }
+    });
+    
+    return days.map((day, index) => ({
+      name: day.slice(0, 3),
+      appointments: dayCount[index]
+    }));
+  };
+
+  const COLORS = ['#4f46e5', '#e11d48', '#84cc16', '#eab308'];
+
+  const preparePieData = () => {
+    const completed = reviewedDiagnosesCount;
+    const pending = pendingDiagnoses.length;
+    return [
+      { name: 'Completed', value: completed },
+      { name: 'Pending', value: pending }
+    ];
+  };
+
+  const prepareSeverityData = () => {
+    const severityCounts = reviewedDiagnoses.reduce((acc, diag) => {
+      // Use doctor's updated severity if available, otherwise use ML severity
+      const severity = (diag.doctorReview?.updatedSeverity || diag.mlResults?.severity || 'Unknown')
+        .charAt(0).toUpperCase() + (diag.doctorReview?.updatedSeverity || diag.mlResults?.severity || 'Unknown').slice(1).toLowerCase();
+      
+      acc[severity] = (acc[severity] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Sort by severity level
+    const severityOrder = ['Mild', 'Moderate', 'Severe'];
+    return Object.entries(severityCounts)
+      .sort((a, b) => {
+        const aIndex = severityOrder.indexOf(a[0]);
+        const bIndex = severityOrder.indexOf(b[0]);
+        if (aIndex === -1 && bIndex === -1) return 0;
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      })
+      .map(([severity, count]) => ({
+        name: severity,
+        count
+      }));
   };
 
   useEffect(() => {
@@ -325,7 +394,7 @@ export default function DoctorDashboard() {
             <TabsTrigger value="completed-reviews">Completed Reviews</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-4">
             {/* Quick Stats */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card className="hover:shadow-lg transition-shadow">
@@ -377,6 +446,115 @@ export default function DoctorDashboard() {
                 <CardContent>
                   <div className="text-2xl font-bold">{monthlyAppointments.length}</div>
                   <p className="text-xs text-muted-foreground">This month's appointments</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Review Status Chart */}
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg">Review Status</CardTitle>
+                  <CardDescription>Distribution of reviews</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={preparePieData()}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {preparePieData().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      {preparePieData().map((entry, index) => (
+                        <div key={entry.name} className="flex items-center gap-2 justify-center">
+                          <div className="h-4 w-4 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{entry.name}</span>
+                            <span className="text-xs text-muted-foreground">{entry.value}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Severity Distribution */}
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg">Severity Distribution</CardTitle>
+                  <CardDescription>Cases by severity level</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={prepareSeverityData()}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="count"
+                          nameKey="name"
+                        >
+                          {prepareSeverityData().map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      {prepareSeverityData().map((entry, index) => (
+                        <div key={entry.name} className="flex items-center gap-2 justify-center">
+                          <div className="h-4 w-4 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{entry.name}</span>
+                            <span className="text-xs text-muted-foreground">{entry.count}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Weekly Appointment Distribution */}
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg">Weekly Schedule</CardTitle>
+                  <CardDescription>Appointments by day</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={prepareAppointmentData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="appointments" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
             </div>
