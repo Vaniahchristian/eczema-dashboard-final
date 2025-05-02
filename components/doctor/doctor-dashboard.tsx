@@ -50,6 +50,7 @@ export default function DoctorDashboard() {
   const [notificationBadge, setNotificationBadge] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [reviewedDiagnosesCount, setReviewedDiagnosesCount] = useState<number>(0);
+  const [reviewedDiagnoses, setReviewedDiagnoses] = useState<Diagnosis[]>([]);
   const socketRef = useRef<IOSocket | null>(null);
 
   useEffect(() => {
@@ -187,7 +188,8 @@ export default function DoctorDashboard() {
     const fetchReviewedDiagnoses = async () => {
       try {
         const response = await diagnosisApi.getReviewedDiagnosesByDoctor();
-        setReviewedDiagnosesCount(Array.isArray(response.data) ? response.data.length : 0);
+        setReviewedDiagnoses(response.data);
+        setReviewedDiagnosesCount(response.data.length);
       } catch (error) {
         setReviewedDiagnosesCount(0);
       }
@@ -556,6 +558,55 @@ export default function DoctorDashboard() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed-reviews" className="space-y-4">
+            {reviewedDiagnosesCount === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No completed reviews found.</div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {Array.isArray(reviewedDiagnoses) && reviewedDiagnoses.length > 0 ? reviewedDiagnoses.map((diag) => {
+                  const patient = diag.patient;
+                  return (
+                    <Card key={diag._id} className="shadow-md border border-muted">
+                      <CardContent className="py-4">
+                        <div className="flex items-center gap-4 mb-2">
+                          <User className="w-5 h-5 text-primary" />
+                          <div>
+                            <div className="font-semibold">{patient ? `${patient.firstName} ${patient.lastName}` : diag.patientId}</div>
+                            <div className="text-xs text-muted-foreground">{patient?.email}</div>
+                            <div className="text-xs text-muted-foreground">{patient?.gender} | {patient?.dateOfBirth && new Date(patient.dateOfBirth).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          <Badge variant="outline">{diag.severity}</Badge>
+                        </div>
+                        <div className="text-sm mb-2">
+                          <b>Status:</b> {diag.status}
+                        </div>
+                        <div className="text-sm mb-2">
+                          <b>Diagnosis ID:</b> {diag.diagnosisId}
+                        </div>
+                        <div className="text-sm mb-2">
+                          <b>Reviewed At:</b> {diag.doctorReview?.reviewedAt && new Date(diag.doctorReview.reviewedAt).toLocaleString()}
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <a href={diag.imageUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline flex items-center">
+                            <Eye className="w-4 h-4 mr-1" /> View Image
+                          </a>
+                        </div>
+                        {diag.doctorReview?.review && (
+                          <div className="mb-2 p-2 bg-slate-50 rounded border border-slate-200">
+                            <div className="font-semibold mb-1 text-sm text-indigo-700">Doctor Review</div>
+                            <div className="text-xs text-muted-foreground">{diag.doctorReview.review}</div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                }) : null}
+              </div>
             )}
           </TabsContent>
         </Tabs>
