@@ -59,14 +59,6 @@ export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
         )}
 
         <button
-          className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
-
-        <button
           className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           aria-label="Toggle theme"

@@ -49,6 +49,7 @@ export default function DoctorDashboard() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [notificationBadge, setNotificationBadge] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [reviewedDiagnosesCount, setReviewedDiagnosesCount] = useState<number>(0);
   const socketRef = useRef<IOSocket | null>(null);
 
   useEffect(() => {
@@ -183,6 +184,18 @@ export default function DoctorDashboard() {
   }, [user]);
 
   useEffect(() => {
+    const fetchReviewedDiagnoses = async () => {
+      try {
+        const response = await diagnosisApi.getReviewedDiagnosesByDoctor();
+        setReviewedDiagnosesCount(Array.isArray(response.data) ? response.data.length : 0);
+      } catch (error) {
+        setReviewedDiagnosesCount(0);
+      }
+    };
+    if (user?.id) fetchReviewedDiagnoses();
+  }, [user]);
+
+  useEffect(() => {
     console.log('[DoctorDashboard] notificationBadge changed:', notificationBadge);
   }, [notificationBadge]);
 
@@ -286,8 +299,8 @@ export default function DoctorDashboard() {
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="reviews">Previous Reviews</TabsTrigger>
-            <TabsTrigger value="alerts">Alerts</TabsTrigger>
+            <TabsTrigger value="reviews">Pending Reviews</TabsTrigger>
+            <TabsTrigger value="completed-reviews">Completed Reviews</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -304,32 +317,12 @@ export default function DoctorDashboard() {
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
-                  <Bell className="h-4 w-4 text-indigo-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">4</div>
-                  <p className="text-xs text-muted-foreground">Urgent alerts</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Reviews Completed</CardTitle>
                   <CheckCircle2 className="h-4 w-4 text-indigo-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">56</div>
+                  <div className="text-2xl font-bold">{reviewedDiagnosesCount}</div>
                   <p className="text-xs text-muted-foreground">Total reviews completed</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Patient Satisfaction</CardTitle>
-                  <Users className="h-4 w-4 text-indigo-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">92%</div>
-                  <p className="text-xs text-muted-foreground">Based on feedback</p>
                 </CardContent>
               </Card>
             </div>
@@ -369,173 +362,6 @@ export default function DoctorDashboard() {
                     View All Appointments
                   </Button>
                 </CardFooter>
-              </Card>
-
-              <Card className="lg:col-span-3">
-                <CardHeader>
-                  <CardTitle>Patient Alerts</CardTitle>
-                  <CardDescription>Patients requiring immediate attention</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-0">
-                  {[
-                    { patient: "Robert Smith", issue: "Severe flare-up reported", priority: "High" },
-                    { patient: "Jennifer Lee", issue: "Medication side effects", priority: "Medium" },
-                    { patient: "Thomas Wilson", issue: "Missed follow-up", priority: "Low" },
-                  ].map((alert, i) => (
-                    <div key={i} className="flex items-center justify-between py-4 border-b last:border-0">
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            alert.priority === "High"
-                              ? "bg-red-100 dark:bg-red-900"
-                              : alert.priority === "Medium"
-                                ? "bg-amber-100 dark:bg-amber-900"
-                                : "bg-green-100 dark:bg-green-900"
-                          }`}
-                        >
-                          <AlertTriangle
-                            className={`h-5 w-5 ${
-                              alert.priority === "High"
-                                ? "text-red-600 dark:text-red-300"
-                                : alert.priority === "Medium"
-                                  ? "text-amber-600 dark:text-amber-300"
-                                  : "text-green-600 dark:text-green-300"
-                            }`}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{alert.patient}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">{alert.issue}</p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          alert.priority === "High"
-                            ? "destructive"
-                            : alert.priority === "Medium"
-                              ? "outline"
-                              : "secondary"
-                        }
-                      >
-                        {alert.priority}
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full">
-                    View All Alerts
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Treatment Success Rate</CardTitle>
-                  <CardDescription>Last 30 days</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center py-8">
-                  <div className="relative h-40 w-40">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-3xl font-bold">78%</div>
-                    </div>
-                    <svg className="h-full w-full" viewBox="0 0 100 100">
-                      <circle
-                        className="stroke-slate-200 dark:stroke-slate-700"
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        strokeWidth="10"
-                      />
-                      <circle
-                        className="stroke-indigo-500"
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        strokeWidth="10"
-                        strokeDasharray="251.2"
-                        strokeDashoffset="55.264"
-                        transform="rotate(-90 50 50)"
-                      />
-                    </svg>
-                  </div>
-                </CardContent>
-                <CardFooter className="justify-center">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-500">+5% from previous month</span>
-                  </div>
-                </CardFooter>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Patient Satisfaction</CardTitle>
-                  <CardDescription>Based on feedback</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center py-8">
-                  <div className="relative h-40 w-40">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-3xl font-bold">92%</div>
-                    </div>
-                    <svg className="h-full w-full" viewBox="0 0 100 100">
-                      <circle
-                        className="stroke-slate-200 dark:stroke-slate-700"
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        strokeWidth="10"
-                      />
-                      <circle
-                        className="stroke-indigo-500"
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        strokeWidth="10"
-                        strokeDasharray="251.2"
-                        strokeDashoffset="20.096"
-                        transform="rotate(-90 50 50)"
-                      />
-                    </svg>
-                  </div>
-                </CardContent>
-                <CardFooter className="justify-center">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-500">Excellent</span>
-                  </div>
-                </CardFooter>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                  <CardDescription>Common tasks</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Schedule Appointment
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Create Treatment Plan
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Send Message
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
-                    Add New Patient
-                  </Button>
-                </CardContent>
               </Card>
             </div>
           </TabsContent>
@@ -731,18 +557,6 @@ export default function DoctorDashboard() {
                 </DialogContent>
               </Dialog>
             )}
-          </TabsContent>
-
-          <TabsContent value="alerts" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Alerts</CardTitle>
-                <CardDescription>Important notifications requiring your attention</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>Alerts content will go here</p>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
