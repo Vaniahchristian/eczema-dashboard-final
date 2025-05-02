@@ -15,6 +15,13 @@ import {
   CheckCircle2,
   User,
   Eye,
+  BarChart2,
+  Clock3,
+  CalendarDays,
+  MessageCircle,
+  Activity,
+  UserCheck,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,6 +59,19 @@ export default function DoctorDashboard() {
   const [reviewedDiagnosesCount, setReviewedDiagnosesCount] = useState<number>(0);
   const [reviewedDiagnoses, setReviewedDiagnoses] = useState<Diagnosis[]>([]);
   const socketRef = useRef<IOSocket | null>(null);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const calculateCompletionRate = () => {
+    if (!reviewedDiagnosesCount) return 0;
+    const total = reviewedDiagnosesCount + pendingDiagnoses.length;
+    return total ? Math.round((reviewedDiagnosesCount / total) * 100) : 0;
+  };
 
   useEffect(() => {
     console.log('[DoctorDashboard] Mounting. User:', user);
@@ -249,8 +269,8 @@ export default function DoctorDashboard() {
                 Back to Login
               </Button>
             </Link>
-            <h1 className="text-3xl font-bold text-indigo-800 dark:text-indigo-300">Doctor Dashboard</h1>
-            <p className="text-slate-600 dark:text-slate-400">Welcome back, Dr. Johnson</p>
+            <h1 className="text-3xl font-bold tracking-tight text-indigo-800 dark:text-indigo-300">{getGreeting()}, Dr. {user?.name || 'Doctor'}</h1>
+            <p className="text-slate-600 dark:text-slate-400">Here's what's happening with your patients today</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -305,65 +325,138 @@ export default function DoctorDashboard() {
             <TabsTrigger value="completed-reviews">Completed Reviews</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-6">
+            {/* Quick Stats */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Doctor Reviews</CardTitle>
-                  <FileText className="h-4 w-4 text-indigo-600" />
+                  <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+                  <CalendarDays className="h-4 w-4 text-indigo-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{pendingDiagnoses.length}</div>
-                  <p className="text-xs text-muted-foreground">Diagnoses waiting for your review</p>
+                  <div className="text-2xl font-bold">{todayAppointments.length}</div>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock3 className="mr-1 h-3 w-3" />
+                    <span>Next: {todayAppointments[0]?.appointment_date ? 
+                      new Date(todayAppointments[0].appointment_date.replace(' ', 'T')).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+                      : 'No appointments'}</span>
+                  </div>
                 </CardContent>
               </Card>
-              <Card>
+
+              <Card className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Reviews Completed</CardTitle>
-                  <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+                  <CardTitle className="text-sm font-medium">Review Completion</CardTitle>
+                  <Activity className="h-4 w-4 text-indigo-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{reviewedDiagnosesCount}</div>
-                  <p className="text-xs text-muted-foreground">Total reviews completed</p>
+                  <div className="text-2xl font-bold">{calculateCompletionRate()}%</div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Completed: {reviewedDiagnosesCount}</span>
+                    <span>Pending: {pendingDiagnoses.length}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+                  <MessageCircle className="h-4 w-4 text-indigo-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{notificationBadge}</div>
+                  <p className="text-xs text-muted-foreground">From {notifications.length} conversations</p>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Monthly Patients</CardTitle>
+                  <UserCheck className="h-4 w-4 text-indigo-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{monthlyAppointments.length}</div>
+                  <p className="text-xs text-muted-foreground">This month's appointments</p>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="lg:col-span-4">
+            {/* Quick Actions */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Recent Activity */}
+              <Card className="md:col-span-1">
                 <CardHeader>
-                  <CardTitle>Upcoming Appointments</CardTitle>
-                  <CardDescription>
-                    {`You have ${monthlyAppointments.length} appointments scheduled for this month`}
-                  </CardDescription>
+                  <CardTitle className="text-lg">Quick Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-0">
-                  {monthlyAppointments.map((appointment) => (
-                    <Card key={appointment.id}>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          {appointment.patient ? `${appointment.patient.first_name} ${appointment.patient.last_name}` : "Patient"}
-                        </CardTitle>
-                        <Calendar className="h-4 w-4 text-indigo-600" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm text-muted-foreground">
-                            {appointment.appointment_date ? new Date(appointment.appointment_date.replace(' ', 'T')).toLocaleString() : "No date"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {appointment.reason}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full">
-                    View All Appointments
+                <CardContent className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between" 
+                    onClick={() => setActiveTab('reviews')}
+                  >
+                    <span className="flex items-center">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Review Pending Diagnoses
+                    </span>
+                    <Badge variant="secondary">{pendingDiagnoses.length}</Badge>
                   </Button>
-                </CardFooter>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between"
+                    onClick={() => setActiveTab('appointments')}
+                  >
+                    <span className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4" />
+                      View Today's Schedule
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between"
+                    onClick={() => window.location.href = '/messages'}
+                  >
+                    <span className="flex items-center">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Check Messages
+                    </span>
+                    {notificationBadge > 0 && <Badge>{notificationBadge}</Badge>}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Recent Reviews */}
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-lg">Recent Reviews</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {reviewedDiagnoses.slice(0, 3).map((diag) => (
+                    <div key={diag._id} className="flex items-center space-x-4 border-b pb-2 last:border-0">
+                      <div className="rounded-full bg-slate-100 p-2">
+                        <User className="h-4 w-4 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {diag.patient ? `${diag.patient.firstName} ${diag.patient.lastName}` : 'Patient'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Reviewed {diag.doctorReview?.reviewedAt && new Date(diag.doctorReview.reviewedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{diag.severity}</Badge>
+                    </div>
+                  ))}
+                  {reviewedDiagnoses.length > 3 && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-indigo-600"
+                      onClick={() => setActiveTab('completed-reviews')}
+                    >
+                      View all reviews
+                    </Button>
+                  )}
+                </CardContent>
               </Card>
             </div>
           </TabsContent>
