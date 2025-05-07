@@ -1,6 +1,52 @@
 "use client"
 
-import { useState } from "react"
+// --- Interfaces for admin user management ---
+export interface DoctorProfile {
+  id: string;
+  user_id: string;
+  specialty: string;
+  bio: string;
+  rating: number;
+  experience_years: number;
+  clinic_name: string;
+  clinic_address: string;
+  consultation_fee: number;
+  available_hours: Record<string, string[]>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PatientProfile {
+  id: string;
+  user_id: string;
+  date_of_birth: string;
+  gender: string;
+  medical_history: string;
+  allergies: string;
+  region: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: 'admin' | 'doctor' | 'patient' | string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  gender: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+  status?: string; // Optional, if available
+  last_active?: string; // Optional, if available
+  doctor_profile?: DoctorProfile | null;
+  patient?: PatientProfile | null;
+}
+
+// --- Use the interface in the component ---
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowUpDown,
@@ -36,113 +82,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-// Sample user data
-const users = [
-  {
-    id: "u1",
-    name: "Dr. Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    role: "doctor",
-    status: "active",
-    lastActive: "2 hours ago",
-    createdAt: "Jan 15, 2023",
-  },
-  {
-    id: "u2",
-    name: "Michael Chen",
-    email: "michael.chen@example.com",
-    role: "patient",
-    status: "active",
-    lastActive: "1 day ago",
-    createdAt: "Feb 3, 2023",
-  },
-  {
-    id: "u3",
-    name: "Emily Rodriguez",
-    email: "emily.rodriguez@example.com",
-    role: "doctor",
-    status: "inactive",
-    lastActive: "2 weeks ago",
-    createdAt: "Mar 20, 2023",
-  },
-  {
-    id: "u4",
-    name: "James Wilson",
-    email: "james.wilson@example.com",
-    role: "patient",
-    status: "active",
-    lastActive: "3 hours ago",
-    createdAt: "Apr 12, 2023",
-  },
-  {
-    id: "u5",
-    name: "Sophia Lee",
-    email: "sophia.lee@example.com",
-    role: "admin",
-    status: "active",
-    lastActive: "Just now",
-    createdAt: "May 5, 2023",
-  },
-  {
-    id: "u6",
-    name: "Robert Taylor",
-    email: "robert.taylor@example.com",
-    role: "patient",
-    status: "suspended",
-    lastActive: "1 month ago",
-    createdAt: "Jun 18, 2023",
-  },
-  {
-    id: "u7",
-    name: "Dr. David Brown",
-    email: "david.brown@example.com",
-    role: "doctor",
-    status: "active",
-    lastActive: "5 hours ago",
-    createdAt: "Jul 22, 2023",
-  },
-  {
-    id: "u8",
-    name: "Jennifer Martinez",
-    email: "jennifer.martinez@example.com",
-    role: "patient",
-    status: "active",
-    lastActive: "Yesterday",
-    createdAt: "Aug 9, 2023",
-  },
-  {
-    id: "u9",
-    name: "Dr. Lisa Wang",
-    email: "lisa.wang@example.com",
-    role: "doctor",
-    status: "active",
-    lastActive: "4 days ago",
-    createdAt: "Sep 14, 2023",
-  },
-  {
-    id: "u10",
-    name: "Daniel Garcia",
-    email: "daniel.garcia@example.com",
-    role: "patient",
-    status: "inactive",
-    lastActive: "3 weeks ago",
-    createdAt: "Oct 30, 2023",
-  },
-]
+import { adminService } from "@/services/adminService"
 
 export default function UserManagement() {
+  const [users, setUsers] = useState<AdminUser[]>([])
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddUserDialog, setShowAddUserDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [currentTab, setCurrentTab] = useState("all")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedUser, setSelectedUser] = useState<AdminUser|null>(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [editUser, setEditUser] = useState<AdminUser|null>(null)
+  const [showEdit, setShowEdit] = useState(false)
+
+  // Fetch users from backend
+  useEffect(() => {
+    setLoading(true)
+    adminService.getUsers()
+      .then(res => setUsers(res.users || res.data || []))
+      .catch(e => setError("Failed to fetch users"))
+      .finally(() => setLoading(false))
+  }, [])
 
   // Filter users based on search query and current tab
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
 
     if (currentTab === "all") return matchesSearch
     if (currentTab === "patients") return matchesSearch && user.role === "patient"
@@ -197,6 +167,154 @@ export default function UserManagement() {
         return <Badge>{status}</Badge>
     }
   }
+
+  // Add user
+  const handleAddUser = async (userData: any) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await adminService.registerUser(userData)
+      const res = await adminService.getUsers()
+      setUsers(res.users || res.data || [])
+      setShowAddUserDialog(false)
+    } catch (e) {
+      setError("Failed to add user")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Update user
+  const handleUpdateUser = async (id: string, updates: any) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await adminService.updateUser(id, updates)
+      const res = await adminService.getUsers()
+      setUsers(res.users || res.data || [])
+    } catch (e) {
+      setError("Failed to update user")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Delete user(s)
+  const handleDeleteUsers = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      await Promise.all(selectedUsers.map(id => adminService.deleteUser(id)))
+      const res = await adminService.getUsers()
+      setUsers(res.users || res.data || [])
+      setSelectedUsers([])
+      setShowDeleteDialog(false)
+    } catch (e) {
+      setError("Failed to delete user(s)")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Show details modal
+  const handleShowDetails = (user: AdminUser) => {
+    setSelectedUser(user)
+    setShowDetails(true)
+  }
+
+  // Show edit modal
+  const handleShowEdit = (user: AdminUser) => {
+    setEditUser(user)
+    setShowEdit(true)
+  }
+
+  // Render details modal
+  const renderDetailsModal = () => (
+    <Dialog open={showDetails} onOpenChange={setShowDetails}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>User Details</DialogTitle>
+        </DialogHeader>
+        {selectedUser && (
+          <div>
+            <div><b>Name:</b> {selectedUser.first_name} {selectedUser.last_name}</div>
+            <div><b>Email:</b> {selectedUser.email}</div>
+            <div><b>Role:</b> {selectedUser.role}</div>
+            <div><b>Status:</b> {selectedUser.status ?? "-"}</div>
+            <div><b>Created:</b> {selectedUser.created_at}</div>
+            {selectedUser.doctor_profile && (
+              <div style={{marginTop:8}}>
+                <b>Doctor Profile:</b>
+                <div>Specialty: {selectedUser.doctor_profile.specialty}</div>
+                <div>Clinic: {selectedUser.doctor_profile.clinic_name}</div>
+                <div>Experience: {selectedUser.doctor_profile.experience_years} yrs</div>
+                <div>Rating: {selectedUser.doctor_profile.rating}</div>
+              </div>
+            )}
+            {selectedUser.patient && (
+              <div style={{marginTop:8}}>
+                <b>Patient Profile:</b>
+                <div>Medical History: {selectedUser.patient.medical_history}</div>
+                <div>Allergies: {selectedUser.patient.allergies}</div>
+                <div>Region: {selectedUser.patient.region}</div>
+              </div>
+            )}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setShowDetails(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // Render edit/create modal (type-safe form)
+  const renderEditModal = () => (
+    <Dialog open={showEdit} onOpenChange={setShowEdit}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editUser ? "Edit User" : "Create User"}</DialogTitle>
+        </DialogHeader>
+        <form /* onSubmit={handleSaveUser} */>
+          <div className="grid gap-4 py-4">
+            <Input
+              label="First Name"
+              value={editUser?.first_name ?? ""}
+              onChange={e => setEditUser(editUser ? { ...editUser, first_name: e.target.value } : null)}
+              required
+            />
+            <Input
+              label="Last Name"
+              value={editUser?.last_name ?? ""}
+              onChange={e => setEditUser(editUser ? { ...editUser, last_name: e.target.value } : null)}
+              required
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={editUser?.email ?? ""}
+              onChange={e => setEditUser(editUser ? { ...editUser, email: e.target.value } : null)}
+              required
+            />
+            <Select
+              label="Role"
+              value={editUser?.role ?? "patient"}
+              onValueChange={role => setEditUser(editUser ? { ...editUser, role } : null)}
+            >
+              <SelectItem value="patient">Patient</SelectItem>
+              <SelectItem value="doctor">Doctor</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </Select>
+            {/* Add more fields as needed, e.g. gender, date_of_birth, etc. */}
+          </div>
+          <DialogFooter>
+            <Button type="submit">Save</Button>
+            <Button variant="outline" onClick={()=>setShowEdit(false)}>Cancel</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
 
   return (
     <div className="p-6 space-y-6">
@@ -357,15 +475,15 @@ export default function UserManagement() {
                           <Checkbox
                             checked={selectedUsers.includes(user.id)}
                             onCheckedChange={() => toggleSelectUser(user.id)}
-                            aria-label={`Select ${user.name}`}
+                            aria-label={`Select ${user.first_name} ${user.last_name}`}
                           />
                         </td>
-                        <td className="px-6 py-4 font-medium">{user.name}</td>
+                        <td className="px-6 py-4 font-medium">{user.first_name} {user.last_name}</td>
                         <td className="px-6 py-4">{user.email}</td>
                         <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
                         <td className="px-6 py-4">{getStatusBadge(user.status)}</td>
-                        <td className="px-6 py-4">{user.lastActive}</td>
-                        <td className="px-6 py-4">{user.createdAt}</td>
+                        <td className="px-6 py-4">{user.last_active}</td>
+                        <td className="px-6 py-4">{user.created_at}</td>
                         <td className="px-6 py-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -381,7 +499,8 @@ export default function UserManagement() {
                                   View Profile
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem>Edit User</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleShowDetails(user)}>View Details</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleShowEdit(user)}>Edit User</DropdownMenuItem>
                               <DropdownMenuItem>Manage Permissions</DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem className="text-red-600">Delete User</DropdownMenuItem>
@@ -440,10 +559,16 @@ export default function UserManagement() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <label htmlFor="name" className="text-right text-sm font-medium">
-                Name
+              <label htmlFor="first_name" className="text-right text-sm font-medium">
+                First Name
               </label>
-              <Input id="name" className="col-span-3" />
+              <Input id="first_name" className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="last_name" className="text-right text-sm font-medium">
+                Last Name
+              </label>
+              <Input id="last_name" className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label htmlFor="email" className="text-right text-sm font-medium">
@@ -477,7 +602,9 @@ export default function UserManagement() {
             <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create User</Button>
+            <Button type="submit" onClick={handleAddUser}>
+              Create User
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -495,14 +622,28 @@ export default function UserManagement() {
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive">
+            <Button variant="destructive" onClick={handleDeleteUsers}>
               <Trash className="h-4 w-4 mr-2" />
               Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {renderDetailsModal()}
+      {renderEditModal()}
+
+      {loading && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-50 flex items-center justify-center">
+          <div className="text-lg font-bold text-white">Loading...</div>
+        </div>
+      )}
+
+      {error && (
+        <div className="fixed top-0 left-0 w-full h-full bg-red-500 bg-opacity-50 flex items-center justify-center">
+          <div className="text-lg font-bold text-white">{error}</div>
+        </div>
+      )}
     </div>
   )
 }
-

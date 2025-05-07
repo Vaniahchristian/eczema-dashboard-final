@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Activity,
@@ -16,9 +16,52 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { adminService } from "@/services/adminService"
 
 export default function AdminDashboard() {
-  const [timeRange, setTimeRange] = useState("today")
+  const [totalUsers, setTotalUsers] = useState<number|null>(null)
+  const [systemUptime, setSystemUptime] = useState<string|null>(null)
+  const [activeSessions, setActiveSessions] = useState<number|null>(null)
+  const [errorRate, setErrorRate] = useState<number|null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([
+      adminService.getTotalUsers(),
+      adminService.getSystemUptime(),
+      adminService.getActiveSessions(),
+      adminService.getErrorRate()
+    ])
+      .then(([usersRes, uptimeRes, sessionsRes, errorRateRes]) => {
+        setTotalUsers(usersRes.totalUsers || usersRes.count || 0)
+        setSystemUptime(uptimeRes.uptime || uptimeRes.data || "-")
+        setActiveSessions(sessionsRes.activeSessions || sessionsRes.count || 0)
+        setErrorRate(errorRateRes.errorRate || errorRateRes.data || 0)
+      })
+      .catch(() => setError("Failed to load dashboard stats"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Export analytics report
+  const handleExport = async () => {
+    setLoading(true)
+    try {
+      const blob = await adminService.exportAnalyticsReport()
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'analytics_report.pdf')
+      document.body.appendChild(link)
+      link.click()
+      link.parentNode?.removeChild(link)
+    } catch {
+      setError("Failed to export report")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -28,7 +71,7 @@ export default function AdminDashboard() {
           <p className="text-gray-500 dark:text-gray-400">System overview and management</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             Export Report
           </Button>
           <Button size="sm">System Settings</Button>
@@ -43,7 +86,7 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,456</div>
+            <div className="text-2xl font-bold">{totalUsers ?? "-"}</div>
             <p className="text-xs text-green-500 flex items-center">
               +12% <ArrowUpRight className="h-3 w-3 ml-1" />
               <span className="text-gray-500 dark:text-gray-400 ml-1">from last month</span>
@@ -56,7 +99,7 @@ export default function AdminDashboard() {
             <Server className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.98%</div>
+            <div className="text-2xl font-bold">{systemUptime ?? "-"}</div>
             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">Last 30 days</p>
           </CardContent>
         </Card>
@@ -66,7 +109,7 @@ export default function AdminDashboard() {
             <Activity className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">342</div>
+            <div className="text-2xl font-bold">{activeSessions ?? "-"}</div>
             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
               <Clock className="h-3 w-3 mr-1" /> Live count
             </p>
@@ -78,7 +121,7 @@ export default function AdminDashboard() {
             <AlertTriangle className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0.02%</div>
+            <div className="text-2xl font-bold">{errorRate ?? "-"}</div>
             <p className="text-xs text-green-500 flex items-center">
               -0.01% <ArrowUpRight className="h-3 w-3 ml-1 rotate-180" />
               <span className="text-gray-500 dark:text-gray-400 ml-1">from yesterday</span>
@@ -314,7 +357,8 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
+      {loading && <div>Loading...</div>}
+      {error && <div style={{ color: 'red' }}>{error}</div>}
     </div>
   )
 }
-

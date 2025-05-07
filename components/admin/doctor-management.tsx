@@ -1,133 +1,47 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronDown, Download, Edit, Filter, Search, Trash, UserPlus, X } from "lucide-react"
 import Image from "next/image"
+import { AdminUser, DoctorProfile } from "./user-management"
+import { adminService } from "@/services/adminService"
 
-// Sample data
-const doctorsData = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    specialty: "Dermatology",
-    patients: 156,
-    rating: 4.8,
-    status: "Active",
-    email: "sarah.johnson@eczemaai.com",
-    phone: "+1 (555) 123-4567",
-    location: "New York, NY",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Jan 15, 2023",
-  },
-  {
-    id: 2,
-    name: "Dr. Michael Chen",
-    specialty: "Pediatric Dermatology",
-    patients: 132,
-    rating: 4.9,
-    status: "Active",
-    email: "michael.chen@eczemaai.com",
-    phone: "+1 (555) 234-5678",
-    location: "San Francisco, CA",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Feb 3, 2023",
-  },
-  {
-    id: 3,
-    name: "Dr. Emily Rodriguez",
-    specialty: "Dermatology",
-    patients: 98,
-    rating: 4.7,
-    status: "On Leave",
-    email: "emily.rodriguez@eczemaai.com",
-    phone: "+1 (555) 345-6789",
-    location: "Chicago, IL",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Mar 22, 2023",
-  },
-  {
-    id: 4,
-    name: "Dr. James Wilson",
-    specialty: "Allergology",
-    patients: 112,
-    rating: 4.6,
-    status: "Active",
-    email: "james.wilson@eczemaai.com",
-    phone: "+1 (555) 456-7890",
-    location: "Boston, MA",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Apr 10, 2023",
-  },
-  {
-    id: 5,
-    name: "Dr. Olivia Kim",
-    specialty: "Dermatology",
-    patients: 145,
-    rating: 4.9,
-    status: "Active",
-    email: "olivia.kim@eczemaai.com",
-    phone: "+1 (555) 567-8901",
-    location: "Los Angeles, CA",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "May 5, 2023",
-  },
-  {
-    id: 6,
-    name: "Dr. Robert Taylor",
-    specialty: "Immunology",
-    patients: 87,
-    rating: 4.5,
-    status: "Inactive",
-    email: "robert.taylor@eczemaai.com",
-    phone: "+1 (555) 678-9012",
-    location: "Seattle, WA",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Jun 18, 2023",
-  },
-  {
-    id: 7,
-    name: "Dr. Sophia Martinez",
-    specialty: "Pediatric Dermatology",
-    patients: 124,
-    rating: 4.8,
-    status: "Active",
-    email: "sophia.martinez@eczemaai.com",
-    phone: "+1 (555) 789-0123",
-    location: "Miami, FL",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Jul 7, 2023",
-  },
-  {
-    id: 8,
-    name: "Dr. William Lee",
-    specialty: "Dermatology",
-    patients: 110,
-    rating: 4.7,
-    status: "Active",
-    email: "william.lee@eczemaai.com",
-    phone: "+1 (555) 890-1234",
-    location: "Houston, TX",
-    avatar: "/placeholder.svg?height=40&width=40",
-    joined: "Aug 14, 2023",
-  },
-]
+// Remove static doctors. We'll fetch from backend.
 
 export default function DoctorManagement() {
+  const [doctors, setDoctors] = useState<AdminUser[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string|null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
+  const [selectedDoctor, setSelectedDoctor] = useState<AdminUser|null>(null)
   const [isAddingDoctor, setIsAddingDoctor] = useState(false)
   const [isEditingDoctor, setIsEditingDoctor] = useState(false)
   const [statusFilter, setStatusFilter] = useState("All")
   const [specialtyFilter, setSpecialtyFilter] = useState("All")
 
-  const filteredDoctors = doctorsData.filter((doctor) => {
-    const matchesSearch =
-      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+  // Fetch doctors from backend
+  useEffect(() => {
+    setLoading(true)
+    adminService.getUsers()
+      .then(res => {
+        const users: AdminUser[] = res.users || res.data || []
+        setDoctors(users.filter(u => u.role === "doctor"))
+      })
+      .catch(() => setError("Failed to fetch doctors"))
+      .finally(() => setLoading(false))
+  }, [])
 
-    const matchesStatus = statusFilter === "All" || doctor.status === statusFilter
-    const matchesSpecialty = specialtyFilter === "All" || doctor.specialty === specialtyFilter
+  const filteredDoctors = doctors.filter((doctor) => {
+    const name = doctor.first_name && doctor.last_name ? `${doctor.first_name} ${doctor.last_name}` : doctor.email || ""
+    const specialty = doctor.doctor_profile?.specialty || ""
+    const status = doctor.status || "Active"
+    const matchesSearch =
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      specialty.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = statusFilter === "All" || status === statusFilter
+    const matchesSpecialty = specialtyFilter === "All" || specialty === specialtyFilter
 
     return matchesSearch && matchesStatus && matchesSpecialty
   })
@@ -222,70 +136,80 @@ export default function DoctorManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredDoctors.map((doctor) => (
-                <tr key={doctor.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <Image
-                          className="h-10 w-10 rounded-full"
-                          src={doctor.avatar || "/placeholder.svg"}
-                          alt={doctor.name}
-                          width={40}
-                          height={40}
-                        />
+              {filteredDoctors.map((doctor) => {
+                const name = doctor.first_name && doctor.last_name ? `${doctor.first_name} ${doctor.last_name}` : doctor.email || ""
+                const doctorProfile = doctor.doctor_profile as DoctorProfile | null
+                const specialty = doctorProfile?.specialty || "-"
+                const rating = doctorProfile?.rating ?? "-"
+                const patients = doctorProfile?.clinic_name ? undefined : "-" // You can fetch patients count if available
+                const status = doctor.status || "Active"
+                const avatar = doctor.image_url || "/placeholder.svg"
+                return (
+                  <tr key={doctor.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 flex-shrink-0">
+                          <Image
+                            className="h-10 w-10 rounded-full"
+                            src={avatar}
+                            alt={name}
+                            width={40}
+                            height={40}
+                          />
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium">{name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{doctor.email}</div>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium">{doctor.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{doctor.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{specialty}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{patients}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center">
+                        <span className="text-yellow-500">★</span>
+                        <span className="ml-1">{rating}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{doctor.specialty}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{doctor.patients}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center">
-                      <span className="text-yellow-500">★</span>
-                      <span className="ml-1">{doctor.rating}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        doctor.status === "Active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : doctor.status === "On Leave"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
-                    >
-                      {doctor.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                        onClick={() => handleViewDoctor(doctor)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          status === "Active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : status === "On Leave"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                        }`}
                       >
-                        View
-                      </button>
-                      <button
-                        className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                        onClick={() => {
-                          setSelectedDoctor(doctor)
-                          setIsEditingDoctor(true)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
-                        <Trash className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                          onClick={() => handleViewDoctor(doctor)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                          onClick={() => {
+                            setSelectedDoctor(doctor)
+                            setIsEditingDoctor(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        {/* TODO: Implement delete logic */}
+                        <button className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -293,7 +217,7 @@ export default function DoctorManagement() {
         <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Showing <span className="font-medium">{filteredDoctors.length}</span> of{" "}
-            <span className="font-medium">{doctorsData.length}</span> doctors
+            <span className="font-medium">{doctors.length}</span> doctors
           </div>
           <div className="flex items-center space-x-2">
             <button className="px-3 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm disabled:opacity-50">
@@ -321,16 +245,16 @@ export default function DoctorManagement() {
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex-shrink-0">
                   <Image
-                    src={selectedDoctor.avatar || "/placeholder.svg"}
-                    alt={selectedDoctor.name}
+                    src={selectedDoctor.image_url || "/placeholder.svg"}
+                    alt={selectedDoctor.first_name + " " + selectedDoctor.last_name}
                     width={120}
                     height={120}
                     className="rounded-xl"
                   />
                 </div>
                 <div className="flex-grow">
-                  <h3 className="text-2xl font-bold mb-2">{selectedDoctor.name}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">{selectedDoctor.specialty}</p>
+                  <h3 className="text-2xl font-bold mb-2">{selectedDoctor.first_name} {selectedDoctor.last_name}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">{selectedDoctor.doctor_profile?.specialty || "-"}</p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div>
@@ -339,32 +263,28 @@ export default function DoctorManagement() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
-                      <p>{selectedDoctor.phone}</p>
+                      <p>{selectedDoctor.doctor_profile?.clinic_name || "-"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
-                      <p>{selectedDoctor.location}</p>
+                      <p>{selectedDoctor.doctor_profile?.clinic_address || "-"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500 dark:text-gray-400">Joined</p>
-                      <p>{selectedDoctor.joined}</p>
+                      <p>{selectedDoctor.created_at ? new Date(selectedDoctor.created_at).toLocaleDateString() : "-"}</p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap gap-4 mb-6">
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Patients</p>
-                      <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                        {selectedDoctor.patients}
-                      </p>
-                    </div>
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
                       <p className="text-sm text-gray-500 dark:text-gray-400">Rating</p>
-                      <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{selectedDoctor.rating}</p>
+                      <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                        {selectedDoctor.doctor_profile?.rating ?? "-"}
+                      </p>
                     </div>
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                       <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{selectedDoctor.status}</p>
+                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{selectedDoctor.status || "Active"}</p>
                     </div>
                   </div>
                 </div>
@@ -386,6 +306,17 @@ export default function DoctorManagement() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="fixed top-0 left-0 w-full h-full bg-gray-500 bg-opacity-50 flex items-center justify-center">
+          <div className="text-lg font-bold text-white">Loading...</div>
+        </div>
+      )}
+      {error && (
+        <div className="fixed top-0 left-0 w-full h-full bg-red-500 bg-opacity-50 flex items-center justify-center">
+          <div className="text-lg font-bold text-white">{error}</div>
         </div>
       )}
 
