@@ -46,16 +46,12 @@ export default function AdminAnalytics() {
       adminService.getDiagnosesCount(),
       adminService.getSystemUptime(),
       adminService.getRecentActivity(),
-      // adminService.getPlatformUsage(),
-      // adminService.getDoctorPerformance(),
     ])
-      .then(([usersRes, diagnosesRes, uptimeRes, activityRes, platformRes, performanceRes]) => {
-        setTotalUsers(usersRes.totalUsers || usersRes.count || 0)
-        setDiagnoses(diagnosesRes.count || 0)
-        setSystemUptime(uptimeRes.systemUptime || uptimeRes.data || 0)
-        setUserActivityData(activityRes.activities || activityRes.data || [])
-        setPlatformUsageData(platformRes.usage || platformRes.data || [])
-        setDoctorPerformanceData(performanceRes.performance || performanceRes.data || [])
+      .then(([usersRes, diagnosesRes, uptimeRes, activityRes]) => {
+        setTotalUsers(usersRes.totalUsers ?? 0)
+        setDiagnoses(diagnosesRes.count ?? 0)
+        setSystemUptime(uptimeRes.systemUptime ?? 0)
+        setUserActivityData(activityRes.activities ?? [])
       })
       .catch(() => setError("Failed to load analytics"))
       .finally(() => setLoading(false))
