@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { resetPassword } from "@/lib/auth";
 
 interface ResetPasswordFormProps {
@@ -8,6 +9,7 @@ interface ResetPasswordFormProps {
 }
 
 const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
+  const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,11 @@ const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ token }) => {
     try {
       const res = await resetPassword(token, newPassword);
       setMessage(res.message);
+      if (res.success) {
+        setTimeout(() => {
+          router.push("/login");
+        }, 5000); // 2 seconds delay so user can see the success message
+      }
     } catch (err: any) {
       setError(err?.message || "Something went wrong");
     } finally {
