@@ -15,9 +15,18 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   console.log("Middleware - Current path:", pathname)
   
-  // Allow public paths
-  if (publicPaths.includes(pathname)) {
-    console.log("Middleware - Public path, allowing access")
+  // Allow public paths and static assets
+  if (
+    publicPaths.includes(pathname) ||
+    pathname.startsWith('/manifest.json') ||
+    pathname.startsWith('/service-worker.js') ||
+    pathname.startsWith('/sw.js') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/icons') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static')
+  ) {
+    console.log("Middleware - Public or static asset path, allowing access")
     return NextResponse.next()
   }
 
