@@ -185,23 +185,26 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
       }
     },
     apiResponseTimes: {
-      overall: { averageResponseTime: 0, totalRequests: 0 },
+      overall: {
+        averageResponseTime: 0,
+        totalRequests: 0
+      },
       endpointStats: {}
     },
     logs: []
-  }));
+  });
 
   const parseLogLine = (line: string): SystemData['logs'][0] | null => {
     try {
       const match = line.match(/\[(.*?)\]\s*\[(.*?)\]\s*\[(.*?)\]\s*(.*)$/);
       if (!match) return null;
-
+      
       const [_, timestamp, level, source, message] = match;
       return {
         timestamp,
         level,
-        message,
-        source
+        source,
+        message
       };
     } catch (error) {
       console.error('Error parsing log line:', error);
@@ -210,45 +213,6 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
   };
 
   const fetchSystemData = useCallback(async () => {
-    interface SystemMetrics {
-      totalUsers: number;
-      systemUptime: number;
-      activeSessions: number;
-      errorRate: number;
-      recentActivity: any[];
-      alerts: any[];
-      diagnosesCount: number;
-      cpuLoad: { usage: number; cores: number };
-      memoryUsage: {
-        heapTotal: number;
-        heapUsed: number;
-        rss: number;
-        external: number;
-      };
-      databaseStats: {
-        mysql: {
-          threads_connected: number;
-          max_used_connections: number;
-          queries: number;
-          table_count: number;
-          history: any[];
-        };
-        mongodb: {
-          collections: number;
-          objects: number;
-          avgObjSize: number;
-          dataSize: number;
-          storageSize: number;
-          indexes: number;
-          totalIndexSize: number;
-          history: any[];
-        };
-      };
-      apiResponseTimes: {
-        overall: { averageResponseTime: number; totalRequests: number };
-        endpointStats: Record<string, any>;
-      };
-    }
     try {
       setLoading(true);
       const [
@@ -259,7 +223,7 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
         activityResponse,
         alertsResponse,
         diagnosesResponse,
-        logsResponse
+        logsResponse,
       ] = await Promise.all([
         adminService.getTotalUsers(),
         adminService.getSystemUptime(),
@@ -268,10 +232,10 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
         adminService.getRecentActivity(),
         adminService.getAlerts(),
         adminService.getDiagnosesCount(),
-        adminService.getSystemLogs()
+        adminService.getSystemLogs(),
       ]);
-      
-      const data = {
+
+      const data: SystemData = {
         totalUsers: totalUsersResponse?.data?.count || 0,
         systemUptime: uptimeResponse?.data?.uptime || 0,
         activeSessions: sessionsResponse?.data?.count || 0,
@@ -284,7 +248,7 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
           heapTotal: 0,
           heapUsed: 0,
           rss: 0,
-          external: 0
+          external: 0,
         },
         databaseStats: {
           mysql: {
@@ -292,7 +256,7 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
             max_used_connections: 0,
             queries: 0,
             table_count: 0,
-            history: []
+            history: [],
           },
           mongodb: {
             collections: 0,
@@ -302,19 +266,19 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
             storageSize: 0,
             indexes: 0,
             totalIndexSize: 0,
-            history: []
-          }
+            history: [],
+          },
         },
         apiResponseTimes: {
           overall: { averageResponseTime: 0, totalRequests: 0 },
-          endpointStats: {}
+          endpointStats: {},
         },
-        logs: Array.isArray(logsResponse?.data?.logs) ? logsResponse.data.logs : []
+        logs: Array.isArray(logsResponse?.data?.logs) ? logsResponse.data.logs : [],
       };
-      
-      setSystemData(prevData => ({ ...prevData, ...data }));
+
+      setSystemData((prevData) => ({ ...prevData, ...data }));
     } catch (error) {
-      console.error("Error fetching system data:", error);
+      console.error('Error fetching system data:', error);
     } finally {
       setLoading(false);
     }
@@ -333,6 +297,19 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
     const interval = setInterval(() => void fetchData(), refreshInterval);
     return () => clearInterval(interval);
   }, [refreshInterval, fetchSystemData]);
+
+  const getLogLevelBadge = (level: string) => {
+    switch (level.toLowerCase()) {
+      case "info":
+        return <Badge className="bg-blue-500">Info</Badge>;
+      case "warn":
+        return <Badge className="bg-yellow-500">Warning</Badge>;
+      case "error":
+        return <Badge className="bg-red-500">Error</Badge>;
+      default:
+        return <Badge className="bg-gray-500">Unknown</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -610,30 +587,6 @@ export default function SystemMonitoring({}: SystemMonitoringProps) {
         </Tabs>
       </div>
     )
-}
-
-
-    }, 30000)
-      case "error":
-        return <Badge className="bg-red-500">Error</Badge>
-      default:
-        return <Badge className="bg-gray-500">Unknown</Badge>
-    }
-  }
-
-  const getLogLevelBadge = (level: string) => {
-    switch (level) {
-      case "error":
-        return <Badge className="bg-red-500">Error</Badge>
-      case "warning":
-        return <Badge className="bg-yellow-500">Warning</Badge>
-      case "info":
-        return <Badge className="bg-blue-500">Info</Badge>
-      default:
-        return <Badge>{level}</Badge>
-    }
-  }
-
 
 
   return (

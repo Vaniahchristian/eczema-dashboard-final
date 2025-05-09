@@ -85,6 +85,19 @@ export default function LoginForm() {
             required
           />
         </div>
+        <div className="flex items-center justify-between">
+          <Link 
+            href="/reset-password" 
+            className="text-sm text-teal-500 hover:text-teal-600"
+            onClick={(e) => {
+              console.log("[Forgot password?] link clicked");
+              console.log("Current location:", window.location.pathname);
+              console.log("Intended href: /reset-password");
+            }}
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Button className="w-full" type="submit" disabled={isLoading}>
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>

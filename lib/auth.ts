@@ -3,6 +3,34 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, JSX, useEffect } from "react"
 import { API_URL } from "./config"
 
+// Forgot Password
+export async function forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return response.json();
+}
+
+// Context-usable wrapper for forgot password
+const requestPasswordReset = async (email: string) => {
+  const res = await forgotPassword(email);
+  if (!res.success) throw new Error(res.message || 'Failed to send reset instructions');
+};
+
+
+// Reset Password
+export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+  });
+  return response.json();
+}
+
+
 
  
 
@@ -35,6 +63,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>
   logout: () => Promise<void>
   clearError: () => void
+  requestPasswordReset: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -191,6 +220,23 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
   }, [])
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const result = await forgotPassword(email)
+      if (!result.success) {
+        throw new Error(result.message || "Failed to send reset instructions")
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send reset instructions")
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const contextValue: AuthContextType = {
     user,
     loading,
@@ -199,6 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     register,
     logout,
     clearError,
+    requestPasswordReset,
   }
 
   return React.createElement(AuthContext.Provider, { value: contextValue }, children)
