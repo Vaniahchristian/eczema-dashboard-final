@@ -17,6 +17,7 @@ export default function RegisterForm() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState("");
   const [role, setRole] = useState("");
@@ -44,6 +45,17 @@ export default function RegisterForm() {
     };
   }, []);
 
+  // Password strength validation
+  function isStrongPassword(pw: string) {
+    return (
+      pw.length >= 8 &&
+      /[A-Z]/.test(pw) &&
+      /[a-z]/.test(pw) &&
+      /[0-9]/.test(pw) &&
+      /[^A-Za-z0-9]/.test(pw)
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     try {
       console.log('Form submission triggered');
@@ -55,7 +67,14 @@ export default function RegisterForm() {
         toast.error("Please agree to the terms and conditions");
         return;
       }
-
+      // Password validation
+      if (!isStrongPassword(password)) {
+        setPasswordError("Password must be at least 8 characters, include uppercase, lowercase, number, and special character.");
+        toast.error("Password is too weak.");
+        return;
+      } else {
+        setPasswordError(null);
+      }
       setIsLoading(true);
       console.log('Set isLoading to true');
       
@@ -147,6 +166,13 @@ export default function RegisterForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <ul className="text-xs text-gray-500 mt-1">
+            <li>• At least 8 characters</li>
+            <li>• Uppercase and lowercase letters</li>
+            <li>• At least one number</li>
+            <li>• At least one special character</li>
+          </ul>
+          {passwordError && <div className="text-red-600 text-xs mt-1">{passwordError}</div>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="dateOfBirth">Date of Birth</Label>
