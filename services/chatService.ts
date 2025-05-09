@@ -1,6 +1,6 @@
 import { getAuthHeaders } from '../lib/auth';
 
-const API_URL =  'http://localhost:5000/api/messages';
+const API_URL =  'https://eczema-backend.onrender.com/api/messages';
 
 // Extensive logging helper
 function log(...args: any[]) {

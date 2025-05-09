@@ -28,6 +28,9 @@ export interface Message {
     updatedAt: Date;
 }
 
+
+const API_URL = 'https://eczema-backend.onrender.com';
+
 export interface Conversation {
     id: string;
     participants: Array<{
@@ -73,7 +76,7 @@ class MessageService {
     private initializeSocket() {
         if (!this.token) return;
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const apiUrl = 'https://eczema-backend.onrender.com';
         console.log(' Initializing WebSocket connection to:', apiUrl);
 
         this.socket = connect(apiUrl, {
@@ -197,7 +200,7 @@ class MessageService {
 
         try {
             const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations/${conversationId}/messages`,
+                `${API_URL}/api/messages/conversations/${conversationId}/messages`,
                 formData,
                 {
                     headers: {
@@ -224,7 +227,7 @@ class MessageService {
 
     async getConversations(): Promise<Conversation[]> {
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations`,
+            `${API_URL}/api/messages/conversations`,
             {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             }
@@ -237,7 +240,7 @@ class MessageService {
             console.log(' Creating new conversation with doctor:', doctorId);
             
             const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations`,
+                `${API_URL}/api/messages/conversations`,
                 { doctorId },
                 {
                     headers: {
@@ -271,7 +274,7 @@ class MessageService {
 
     async getMessages(conversationId: string): Promise<Message[]> {
         const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/messages/conversations/${conversationId}/messages`,
+            `${API_URL}/api/messages/conversations/${conversationId}/messages`,
             {
                 headers: { 'Authorization': `Bearer ${this.token}` }
             }
@@ -306,7 +309,7 @@ class MessageService {
 
         try {
             const response = await axios.put(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/messages/${messageId}/reaction`,
+                `${API_URL}/api/messages/${messageId}/reaction`,
                 { type },
                 {
                     headers: {

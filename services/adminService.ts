@@ -80,6 +80,32 @@ class AdminService {
     return response.data;
   }
 
+  // System Monitoring
+  async getCpuLoad() {
+    const response = await this.axiosInstance.get('/analytics/cpu-load');
+    return response.data;
+  }
+
+  async getMemoryUsage() {
+    const response = await this.axiosInstance.get('/analytics/memory-usage');
+    return response.data;
+  }
+
+  async getDatabaseStats() {
+    const response = await this.axiosInstance.get('/analytics/database-stats');
+    return response.data;
+  }
+
+  async getApiResponseTimes() {
+    const response = await this.axiosInstance.get('/analytics/api-response-times')
+    return response.data
+  }
+
+  async getSystemLogs() {
+    const response = await this.axiosInstance.get('/analytics/system-logs')
+    return response.data
+  }
+
   // HEALTH CHECK
   async healthCheck() {
     const response = await this.axiosInstance.get('/health');
