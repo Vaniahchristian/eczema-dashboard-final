@@ -51,7 +51,7 @@ const forumPosts = [
   },
   {
     id: "post-3",
-    title: "How accurate is the EczemaAI diagnosis tool?",
+    title: "How accurate is the EDAS diagnosis tool?",
     author: {
       name: "Sophia Williams",
       avatar: "/placeholder.svg?height=40&width=40",
@@ -115,7 +115,7 @@ export default function CommunitySupportSection() {
   const handleJoinCommunity = () => {
     toast({
       title: "Welcome to the community!",
-      description: "You've successfully joined the EczemaAI community",
+      description: "You've successfully joined the EDAS community",
       duration: 3000,
     })
   }
@@ -124,7 +124,7 @@ export default function CommunitySupportSection() {
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-semibold">EczemaAI Community</h2>
+          <h2 className="text-2xl font-semibold">EDAS Community</h2>
           <p className="text-muted-foreground">Connect with others, share experiences, and learn from the community</p>
         </div>
 
@@ -288,7 +288,7 @@ export default function CommunitySupportSection() {
         <Award className="h-10 w-10 mx-auto text-primary mb-4" />
         <h3 className="text-xl font-semibold mb-2">Become a Community Contributor</h3>
         <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-          Share your knowledge, help others, and earn recognition as a valued member of the EczemaAI community.
+          Share your knowledge, help others, and earn recognition as a valued member of the EDAS community.
         </p>
         <Button>Learn More</Button>
       </div>

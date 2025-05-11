@@ -1,7 +1,7 @@
 import TreatmentPlansPage from "@/components/doctor/treatment-plans"
 
 export const metadata = {
-  title: "Treatment Plans | EczemaAI MD",
+  title: "Treatment Plans | EDAS MD",
   description: "Create and manage patient treatment plans",
 }
 

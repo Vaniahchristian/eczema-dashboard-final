@@ -8,7 +8,7 @@ export default function LandingFooter() {
           <div className="col-span-2 lg:col-span-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600"></div>
-              <span className="text-xl font-bold">EczemaAI</span>
+              <span className="text-xl font-bold">EDAS</span>
             </Link>
             <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
               AI-powered eczema tracking, analysis, and treatment recommendations to help you manage your condition
@@ -154,7 +154,7 @@ export default function LandingFooter() {
         </div>
         <div className="mt-12 border-t border-gray-200 pt-8 dark:border-gray-800">
           <p className="text-center text-xs text-gray-500 dark:text-gray-400">
-            © {new Date().getFullYear()} EczemaAI. All rights reserved.
+            © {new Date().getFullYear()} EDAS. All rights reserved.
           </p>
         </div>
       </div>

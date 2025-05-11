@@ -1,7 +1,7 @@
 import DoctorSettingsPage from "@/components/doctor/doctor-settings"
 
 export const metadata = {
-  title: "Settings | EczemaAI MD",
+  title: "Settings | EDAS MD",
   description: "Configure your doctor profile and preferences",
 }
 

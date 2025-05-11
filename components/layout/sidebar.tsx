@@ -81,7 +81,7 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
           <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200 dark:border-gray-800">
             <Link href="/dashboard">
               <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-                EczemaAI
+                EDAS
               </span>
             </Link>
             {isMobile && (

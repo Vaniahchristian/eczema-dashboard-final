@@ -226,7 +226,7 @@ export default function DoctorSettingsPage() {
                       <Label htmlFor="email">Email Address</Label>
                       <div className="flex">
                         <Mail className="h-4 w-4 mr-2 mt-3 text-muted-foreground" />
-                        <Input id="email" type="email" defaultValue="dr.johnson@eczemaai.com" />
+                        <Input id="email" type="email" defaultValue="dr.johnson@EDAS.com" />
                       </div>
                     </div>
                     <div className="space-y-2">

@@ -137,7 +137,7 @@ export default function AdminSettings() {
                       <input
                         type="text"
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        defaultValue="EczemaAI Platform"
+                        defaultValue="EDAS Platform"
                         disabled={editingSection !== "system_info"}
                       />
                     </div>
@@ -205,7 +205,7 @@ export default function AdminSettings() {
                       <input
                         type="email"
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        defaultValue="support@eczemaai.com"
+                        defaultValue="support@EDAS.com"
                         disabled={editingSection !== "contact_info"}
                       />
                     </div>
@@ -214,7 +214,7 @@ export default function AdminSettings() {
                       <input
                         type="email"
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        defaultValue="admin@eczemaai.com"
+                        defaultValue="admin@EDAS.com"
                         disabled={editingSection !== "contact_info"}
                       />
                     </div>
@@ -232,7 +232,7 @@ export default function AdminSettings() {
                       <input
                         type="url"
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        defaultValue="https://eczemaai.com"
+                        defaultValue="https://EDAS.com"
                         disabled={editingSection !== "contact_info"}
                       />
                     </div>

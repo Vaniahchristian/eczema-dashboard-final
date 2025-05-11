@@ -7,7 +7,7 @@ export default function TestimonialsSection() {
             <div className="inline-block rounded-lg bg-teal-100 px-3 py-1 text-sm dark:bg-teal-900">Testimonials</div>
             <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">What Our Users Say</h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-              Hear from people who have transformed their eczema management with EczemaAI.
+              Hear from people who have transformed their eczema management with EDAS.
             </p>
           </div>
         </div>
@@ -30,7 +30,7 @@ export default function TestimonialsSection() {
                 ))}
               </div>
               <p className="text-gray-500 dark:text-gray-400">
-                "EczemaAI has completely changed how I manage my eczema. The AI analysis is incredibly accurate, and the
+                "EDAS has completely changed how I manage my eczema. The AI analysis is incredibly accurate, and the
                 personalized recommendations have made a huge difference."
               </p>
             </div>

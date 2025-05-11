@@ -31,7 +31,7 @@ const articles = [
         <li><strong>Stress:</strong> Emotional stress can trigger or worsen eczema</li>
         <li><strong>Food allergies:</strong> Dairy, eggs, nuts, seeds, soy, and wheat</li>
       </ul>
-      <p>Track your exposures and symptoms in the EczemaAI app to identify your personal triggers.</p>
+      <p>Track your exposures and symptoms in the EDAS app to identify your personal triggers.</p>
     `,
     helpful: 124,
     views: 1893,
@@ -69,13 +69,13 @@ const articles = [
   },
   {
     id: "article-3",
-    title: "Using the EczemaAI Tracking Features",
-    description: "Get the most out of the EczemaAI tracking tools",
+    title: "Using the EDAS Tracking Features",
+    description: "Get the most out of the EDAS tracking tools",
     category: "app-usage",
     tags: ["tracking", "app-features", "data"],
     content: `
-      <h3>Maximizing EczemaAI Tracking Features</h3>
-      <p>EczemaAI offers powerful tracking tools to help you manage your condition effectively.</p>
+      <h3>Maximizing EDAS Tracking Features</h3>
+      <p>EDAS offers powerful tracking tools to help you manage your condition effectively.</p>
       <h4>Key Tracking Features:</h4>
       <ul>
         <li><strong>Symptom Tracker:</strong> Log the severity, location, and appearance of your symptoms daily</li>
@@ -98,7 +98,7 @@ const articles = [
     tags: ["account", "login", "password"],
     content: `
       <h3>Resolving Account Login Issues</h3>
-      <p>If you're having trouble accessing your EczemaAI account, try these solutions:</p>
+      <p>If you're having trouble accessing your EDAS account, try these solutions:</p>
       <h4>Common Issues and Solutions:</h4>
       <ol>
         <li><strong>Forgotten Password:</strong> Use the "Forgot Password" link on the login screen to reset your password via email</li>
@@ -106,7 +106,7 @@ const articles = [
         <li><strong>Account Locked:</strong> After multiple failed login attempts, your account may be temporarily locked. Wait 30 minutes and try again</li>
         <li><strong>App  your account may be temporarily locked. Wait 30 minutes and try again</li>
         <li><strong>App Crashes:</strong> Update to the latest version of the app, or try uninstalling and reinstalling</li>
-        <li><strong>Device Compatibility:</strong> Ensure your device meets the minimum requirements for running EczemaAI</li>
+        <li><strong>Device Compatibility:</strong> Ensure your device meets the minimum requirements for running EDAS</li>
       </ol>
       <p>If you continue to experience issues, please contact our support team through the Support Channels tab.</p>
     `,
@@ -134,13 +134,13 @@ const faqs = [
     id: "faq-3",
     question: "How accurate is the AI diagnosis?",
     answer:
-      "EczemaAI provides a preliminary assessment with approximately 90% accuracy compared to dermatologist diagnoses. However, it's not a replacement for professional medical advice. Always consult with a healthcare provider for official diagnosis and treatment recommendations.",
+      "EDAS provides a preliminary assessment with approximately 90% accuracy compared to dermatologist diagnoses. However, it's not a replacement for professional medical advice. Always consult with a healthcare provider for official diagnosis and treatment recommendations.",
   },
   {
     id: "faq-4",
     question: "Is my health data secure?",
     answer:
-      "Absolutely. EczemaAI uses end-to-end encryption and follows HIPAA compliance standards. Your data is stored securely and is never shared with third parties without your explicit consent. You can review our privacy policy in Settings > Privacy.",
+      "Absolutely. EDAS uses end-to-end encryption and follows HIPAA compliance standards. Your data is stored securely and is never shared with third parties without your explicit consent. You can review our privacy policy in Settings > Privacy.",
   },
   {
     id: "faq-5",

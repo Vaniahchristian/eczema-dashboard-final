@@ -420,7 +420,7 @@ export default function SecurityManagement() {
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                         <tr>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">Failed login attempt</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@eczemaai.com</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@EDAS.com</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">192.168.1.1</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">2023-08-15 14:32:45</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -431,7 +431,7 @@ export default function SecurityManagement() {
                         </tr>
                         <tr>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">Password changed</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">dr.johnson@eczemaai.com</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">dr.johnson@EDAS.com</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">172.16.254.1</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">2023-08-14 09:15:22</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -442,7 +442,7 @@ export default function SecurityManagement() {
                         </tr>
                         <tr>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">Role permission changed</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@eczemaai.com</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@EDAS.com</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">192.168.1.1</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">2023-08-13 16:45:10</td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -453,7 +453,7 @@ export default function SecurityManagement() {
                         </tr>
                         <tr>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">New user created</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@eczemaai.com</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">admin@EDAS.com</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">192.168.1.1</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">2023-08-12 11:20:33</td>
                           <td className="px-6 py-4 whitespace-nowrap">

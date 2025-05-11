@@ -60,7 +60,7 @@ export default function LoginForm() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-emerald-600">
           <div className="h-8 w-8 rounded-full bg-white/90"></div>
         </div>
-        <h1 className="text-2xl font-bold">Welcome back to EczemaAI</h1>
+        <h1 className="text-2xl font-bold">Welcome back to EDAS</h1>
         <p className="text-gray-500 dark:text-gray-400">Enter your credentials to access your account</p>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">

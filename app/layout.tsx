@@ -11,7 +11,7 @@ import InstallPWAButton from "@/components/InstallPWAButton";
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "EczemaAI - Smart Eczema Management",
+  title: "EDAS - Smart Eczema Management",
   description: "AI-powered eczema diagnosis and management platform",
   generator: 'vc',
   viewport: {
@@ -37,7 +37,7 @@ export default function RootLayout({
         {/* iOS support */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="EczemaAI" />
+        <meta name="apple-mobile-web-app-title" content="EDAS" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         {/* Android support */}
         <link rel="manifest" href="/manifest.json" />

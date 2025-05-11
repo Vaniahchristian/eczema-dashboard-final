@@ -21,7 +21,7 @@ type Message = {
 // Predefined responses for the AI assistant
 const aiResponses: Record<string, string> = {
   default: "I'm here to help with your eczema management questions. Could you provide more details about your concern?",
-  greeting: "Hello! I'm your EczemaAI support assistant. How can I help you today with your eczema management?",
+  greeting: "Hello! I'm your EDAS support assistant. How can I help you today with your eczema management?",
   treatment:
     "For treatment questions, I recommend checking our treatment tracker in the app. You can also schedule a consultation with a dermatologist through our appointments page.",
   flare:
@@ -145,7 +145,7 @@ export default function SupportAssistant() {
             <Sparkles className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold">EczemaAI Support Assistant</h2>
+            <h2 className="text-xl font-semibold">EDAS Support Assistant</h2>
             <p className="text-sm text-muted-foreground">Powered by advanced AI to help with your questions</p>
           </div>
         </div>

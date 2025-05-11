@@ -39,7 +39,7 @@ export default function FeedbackSection() {
 
       toast({
         title: "Feedback submitted",
-        description: "Thank you for helping us improve EczemaAI",
+        description: "Thank you for helping us improve EDAS",
         duration: 3000,
       })
     }, 1500)
@@ -64,7 +64,7 @@ export default function FeedbackSection() {
         </div>
         <h2 className="text-2xl font-bold mb-2">Thank You for Your Feedback!</h2>
         <p className="text-muted-foreground mb-6 max-w-md">
-          Your feedback helps us improve EczemaAI for everyone. We appreciate you taking the time to share your
+          Your feedback helps us improve EDAS for everyone. We appreciate you taking the time to share your
           thoughts.
         </p>
         <Button onClick={handleReset}>Submit Another Response</Button>
@@ -76,13 +76,13 @@ export default function FeedbackSection() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-2">Share Your Feedback</h2>
-        <p className="text-muted-foreground">Your feedback helps us improve EczemaAI. Let us know what you think!</p>
+        <p className="text-muted-foreground">Your feedback helps us improve EDAS. Let us know what you think!</p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <div>
-            <Label className="text-base">How would you rate your experience with EczemaAI?</Label>
+            <Label className="text-base">How would you rate your experience with EDAS?</Label>
             <div className="flex justify-center my-6">
               {[1, 2, 3, 4, 5].map((value) => (
                 <motion.button
@@ -121,7 +121,7 @@ export default function FeedbackSection() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-base">What aspects of EczemaAI are you providing feedback on?</Label>
+            <Label className="text-base">What aspects of EDAS are you providing feedback on?</Label>
             <RadioGroup defaultValue="overall">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div className="flex items-center space-x-2">

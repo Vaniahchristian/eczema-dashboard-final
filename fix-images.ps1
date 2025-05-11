@@ -39,11 +39,11 @@ function Create-PlaceholderImage {
 }
 
 # Create icons
-Create-PlaceholderImage -OutputPath "public\icons\icon-192x192.png" -Width 192 -Height 192 -Text "EczemaAI"
-Create-PlaceholderImage -OutputPath "public\icons\icon-512x512.png" -Width 512 -Height 512 -Text "EczemaAI"
+Create-PlaceholderImage -OutputPath "public\icons\icon-192x192.png" -Width 192 -Height 192 -Text "EDAS"
+Create-PlaceholderImage -OutputPath "public\icons\icon-512x512.png" -Width 512 -Height 512 -Text "EDAS"
 
 # Create screenshots
-Create-PlaceholderImage -OutputPath "public\screenshots\desktop.png" -Width 1920 -Height 1080 -Text "EczemaAI Desktop View"
-Create-PlaceholderImage -OutputPath "public\screenshots\mobile.png" -Width 750 -Height 1334 -Text "EczemaAI Mobile View"
+Create-PlaceholderImage -OutputPath "public\screenshots\desktop.png" -Width 1920 -Height 1080 -Text "EDAS Desktop View"
+Create-PlaceholderImage -OutputPath "public\screenshots\mobile.png" -Width 750 -Height 1334 -Text "EDAS Mobile View"
 
 Write-Host "Created all placeholder images"

@@ -26,7 +26,7 @@ export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
         </button>
         <Link href="/doctor" className="flex items-center">
           <span className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
-            EczemaAI <span className="text-sm font-medium ml-1">MD</span>
+            EDAS <span className="text-sm font-medium ml-1">MD</span>
           </span>
         </Link>
       </div>

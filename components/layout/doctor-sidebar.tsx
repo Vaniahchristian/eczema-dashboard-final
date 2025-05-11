@@ -82,7 +82,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 h-16 border-b border-gray-200 dark:border-gray-800">
             <span className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
-              EczemaAI MD
+              EDAS MD
             </span>
             {isMobile && (
               <button

@@ -1,7 +1,7 @@
 import DoctorAnalyticsPage from "@/components/doctor/doctor-analytics"
 
 export const metadata = {
-  title: "Analytics | EczemaAI MD",
+  title: "Analytics | EDAS MD",
   description: "View patient and practice analytics",
 }
 

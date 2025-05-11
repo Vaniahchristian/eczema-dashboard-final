@@ -50,7 +50,7 @@ export default function Navbar({
         </button>
         <div className="hidden md:flex">
           <span className="text-xl font-bold bg-gradient-to-r from-sky-500 to-teal-500 bg-clip-text text-transparent">
-            EczemaAI
+            EDAS
           </span>
         </div>
         <div className="flex items-center space-x-4 ml-auto">

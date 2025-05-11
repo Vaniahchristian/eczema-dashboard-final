@@ -9,7 +9,7 @@ export default function HowItWorksSection() {
               Simple Steps to Better Eczema Management
             </h2>
             <p className="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed dark:text-gray-400">
-              EczemaAI makes it easy to track, analyze, and manage your eczema with just a few simple steps.
+              EDAS makes it easy to track, analyze, and manage your eczema with just a few simple steps.
             </p>
           </div>
         </div>

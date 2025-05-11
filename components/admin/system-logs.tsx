@@ -10,7 +10,7 @@ const logEntries = [
     timestamp: "2023-08-15 14:32:45",
     level: "ERROR",
     source: "Authentication Service",
-    message: "Failed login attempt for user admin@eczemaai.com from IP 192.168.1.1",
+    message: "Failed login attempt for user admin@EDAS.com from IP 192.168.1.1",
     details: "Multiple failed attempts detected. Account temporarily locked.",
   },
   {
@@ -18,7 +18,7 @@ const logEntries = [
     timestamp: "2023-08-15 14:30:12",
     level: "INFO",
     source: "User Service",
-    message: "User profile updated for dr.johnson@eczemaai.com",
+    message: "User profile updated for dr.johnson@EDAS.com",
     details: "Fields changed: phone_number, address",
   },
   {

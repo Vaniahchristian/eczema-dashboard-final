@@ -11,7 +11,7 @@ export default function CtaSection() {
               Start Managing Your Eczema Smarter Today
             </h2>
             <p className="max-w-[900px] text-teal-50 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Join thousands of users who have transformed their eczema management with EczemaAI.
+              Join thousands of users who have transformed their eczema management with EDAS.
             </p>
           </div>
           <div className="flex flex-col gap-2 min-[400px]:flex-row">

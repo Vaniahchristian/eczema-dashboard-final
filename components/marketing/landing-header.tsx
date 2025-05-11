@@ -14,7 +14,7 @@ export default function LandingHeader() {
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600"></div>
-            <span className="text-xl font-bold">EczemaAI</span>
+            <span className="text-xl font-bold">EDAS</span>
           </Link>
           <nav className="hidden md:flex md:gap-6 md:ml-10">
             <Link href="#features" className="text-sm font-medium hover:text-teal-600 dark:hover:text-teal-400">
