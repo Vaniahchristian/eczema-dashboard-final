@@ -82,6 +82,7 @@ export default function AppointmentsPage() {
   
   if (loading) {
     return (
+      <DashboardLayout>
       <div className="flex flex-col items-center justify-center h-96">
         <svg className="animate-spin h-10 w-10 text-sky-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -89,6 +90,7 @@ export default function AppointmentsPage() {
         </svg>
         <span className="text-sky-700 dark:text-sky-300 text-lg font-medium">Loading your appointments...</span>
       </div>
+      </DashboardLayout>
     )
   }
  
@@ -99,7 +101,7 @@ export default function AppointmentsPage() {
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Appointments</h1>
         <div className="flex items-center gap-4">
           <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-            <Button
+            {/* <Button
               variant={activeView === "calendar" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setActiveView("calendar")}
@@ -114,7 +116,7 @@ export default function AppointmentsPage() {
             >
               <List className="h-4 w-4 mr-2" />
               List
-            </Button>
+            </Button> */}
           </div>
           <Button onClick={() => setShowScheduleModal(true)}>Schedule Appointment</Button>
         </div>
