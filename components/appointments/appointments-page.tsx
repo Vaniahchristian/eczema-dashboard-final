@@ -96,41 +96,50 @@ export default function AppointmentsPage() {
  
   return (
     <DashboardLayout>
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">My Appointments</h1>
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-            {/* <Button
-              variant={activeView === "calendar" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActiveView("calendar")}
+      <div className="container mx-auto py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">My Appointments</h1>
+              <p className="text-slate-600 dark:text-slate-400 max-w-xl">
+                Schedule and manage your consultations with dermatology specialists. Regular check-ups help monitor your eczema condition effectively.
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowScheduleModal(true)}
+              className="bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
             >
-              <Calendar className="h-4 w-4 mr-2" />
-              Calendar
+              Schedule Appointment
             </Button>
-            <Button
-              variant={activeView === "list" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActiveView("list")}
-            >
-              <List className="h-4 w-4 mr-2" />
-              List
-            </Button> */}
           </div>
-          <Button onClick={() => setShowScheduleModal(true)}>Schedule Appointment</Button>
+
+          <div className="bg-white dark:bg-slate-800/50 rounded-lg p-6 mb-8 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                <span>Upcoming</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-slate-500"></div>
+                <span>Past</span>
+              </div>
+            </div>
+          </div>
+
+          <AppointmentsList appointments={appointments} onRefresh={loadAppointments} />
+
+          <ScheduleAppointment
+            isOpen={showScheduleModal}
+            onClose={() => setShowScheduleModal(false)}
+            doctors={doctors}
+            onSubmit={handleScheduleAppointment}
+          />
         </div>
       </div>
-
-      <AppointmentsList appointments={appointments} onRefresh={loadAppointments} />
-
-      <ScheduleAppointment
-        isOpen={showScheduleModal}
-        onClose={() => setShowScheduleModal(false)}
-        doctors={doctors}
-        onSubmit={handleScheduleAppointment}
-      />
-    </div>
     </DashboardLayout>
   )
 }
