@@ -19,7 +19,7 @@ export default function SupportPage() {
           </div>
 
           <div className="w-full max-w-3xl mt-8">
-            
+            <div className=" dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden">
               <iframe
                 src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
                 className="w-full min-h-[800px] md:min-h-[1000px] lg:min-h-[1200px]"
@@ -30,7 +30,7 @@ export default function SupportPage() {
               >
                 Loading…
               </iframe>
-            
+            </div>
           </div>
         </motion.div>
       </div>
