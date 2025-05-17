@@ -16,20 +16,19 @@ export default function SupportPage() {
         >
           <SupportHeader />
 
-          <div className=" md:grid md:grid-cols-3 gap-8 mt-8 justify-center">
-           
-  <iframe
-    src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
-    width="100%"
-    height="1663"
-    frameBorder="0"
-    marginHeight={0}
-    marginWidth={0}
-    title="Eczema Diagnosis and Advisory System Support Form"
-  >
-    Loading…
-  </iframe>
-
+          <div className="max-w-4xl mx-auto mt-8 w-full">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden">
+              <iframe
+                src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
+                className="w-full min-h-[800px] md:min-h-[1000px] lg:min-h-[1200px]"
+                frameBorder="0"
+                marginHeight={0}
+                marginWidth={0}
+                title="Eczema Diagnosis and Advisory System Support Form"
+              >
+                Loading…
+              </iframe>
+            </div>
           </div>
         </motion.div>
       </div>
