@@ -8,13 +8,11 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+    <div className="min-h-screen bg-background">
+      <main className="container flex items-center justify-center min-h-screen py-8">
+        {children}
+      </main>
+    </div>
   )
 }
 
