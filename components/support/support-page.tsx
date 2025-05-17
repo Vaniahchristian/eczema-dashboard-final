@@ -7,16 +7,18 @@ import SupportHeader from "@/components/support/support-header"
 export default function SupportPage() {
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-8 mx-auto max-w-screen-2xl w-full">  
+      <div className="container mx-auto px-4 py-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full mx-auto"
+          className="flex flex-col items-center"
         >
-          <SupportHeader />
+          <div className="w-full max-w-3xl">
+            <SupportHeader />
+          </div>
 
-          <div className="max-w-4xl mx-auto mt-8 w-full">
+          <div className="w-full max-w-3xl mt-8">
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg overflow-hidden">
               <iframe
                 src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
