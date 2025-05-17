@@ -26,7 +26,19 @@ export default function SupportPage() {
             <div className="md:col-span-2 space-y-8">
               <div className="mx-auto w-full max-w-2xl"><SupportAssistant /></div>
               <div className="mx-auto w-full max-w-2xl"><SupportTicket /></div>
-              <div className="mx-auto w-full max-w-2xl"><FeedbackSection /></div>
+              <div className="mx-auto w-full max-w-2xl">
+  <iframe
+    src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
+    width="100%"
+    height="1663"
+    frameBorder="0"
+    marginHeight={0}
+    marginWidth={0}
+    title="Eczema Diagnosis and Advisory System Support Form"
+  >
+    Loading…
+  </iframe>
+</div>
             </div>
           </div>
         </motion.div>
