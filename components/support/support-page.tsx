@@ -2,13 +2,7 @@
 import { motion } from "framer-motion"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import SupportHeader from "@/components/support/support-header"
-import SupportChannels from "@/components/support/support-channels"
-import SupportAssistant from "@/components/support/support-assistant"
-import KnowledgeBase from "@/components/support/knowledge-base"
-import SupportTicket from "@/components/support/support-ticket"
-import CommunitySupport from "@/components/support/community-support"
-import SupportStatus from "@/components/support/support-status"
-import FeedbackSection from "@/components/support/feedback-section"
+
 
 export default function SupportPage() {
   return (
@@ -23,10 +17,7 @@ export default function SupportPage() {
           <SupportHeader />
 
           <div className=" md:grid md:grid-cols-3 gap-8 mt-8 justify-center">
-            <div className="md:col-span-2 space-y-8">
-              <div className="mx-auto w-full max-w-2xl"><SupportAssistant /></div>
-              <div className="mx-auto w-full max-w-2xl"><SupportTicket /></div>
-              <div className="mx-auto w-full max-w-2xl">
+           
   <iframe
     src="https://docs.google.com/forms/d/e/1FAIpQLSdAxTrxFJD1wkqcgbEUXTJbai1Nv2jfQn2Jnl8gDMM9QPccWw/viewform?embedded=true"
     width="100%"
@@ -38,8 +29,7 @@ export default function SupportPage() {
   >
     Loading…
   </iframe>
-</div>
-            </div>
+
           </div>
         </motion.div>
       </div>
