@@ -111,8 +111,12 @@ export default function MedicalRecords() {
                         </TableCell>
                         <TableCell>
                           <Badge color={rec.mlResults.severity === "severe" ? "destructive" : rec.mlResults.severity === "moderate" ? "warning" : "success"}>
-                            {rec.mlResults.severity.charAt(0).toUpperCase() + rec.mlResults.severity.slice(1)}
-                          </Badge>
+  {rec.mlResults.severity ? (
+    rec.mlResults.severity.charAt(0).toUpperCase() + rec.mlResults.severity.slice(1)
+  ) : (
+    "-"
+  )}
+</Badge>
                         </TableCell>
                         <TableCell>{rec.reviewedAt ? new Date(rec.reviewedAt).toLocaleString() : "-"}</TableCell>
                         <TableCell>

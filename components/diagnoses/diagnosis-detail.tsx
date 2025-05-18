@@ -38,13 +38,15 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
     fetchDiagnosis();
   }, [diagnosisId]);
 
-  const getSeverityColor = (severity: string) => {
-    const normalizedSeverity = severity.toLowerCase();
-    switch (normalizedSeverity) {
+  // Dashboard pattern: default to emerald, handle null/undefined
+  const getSeverityColor = (severity: string | null | undefined): string => {
+    if (!severity) return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+    switch (severity.toLowerCase()) {
       case "mild": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
       case "moderate": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
       case "severe": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-      default: return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
+      case "unknown": return "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400";
+      default: return "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400";
     }
   };
 
@@ -107,8 +109,8 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
             </div>
           </div>
           <div className="mt-4 md:mt-0">
-            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getSeverityColor(diagnosis.severity)}`}>
-              {diagnosis.severity.charAt(0).toUpperCase() + diagnosis.severity.slice(1)}
+            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getSeverityColor(diagnosis.mlResults?.severity || diagnosis.severity || null)}`}>
+              {(diagnosis.mlResults?.severity || diagnosis.severity) || 'Unknown'}
             </span>
           </div>
         </div>
@@ -121,10 +123,10 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
                 <h3 className="font-medium">Affected Area</h3>
               </div>
               <p className="text-slate-700 dark:text-slate-300">
-                {diagnosis.bodyPart}
-                {diagnosis.bodyPartConfidence && (
+                {diagnosis.bodyPart || diagnosis.mlResults?.bodyPart || 'Unknown'}
+                {(diagnosis.bodyPartConfidence || diagnosis.mlResults?.bodyPartConfidence) && (
                   <span className="text-sm text-slate-500 ml-2">
-                    (Confidence: {Math.round(diagnosis.bodyPartConfidence * 100)}%)
+                    (Confidence: {Math.round((diagnosis.bodyPartConfidence || diagnosis.mlResults?.bodyPartConfidence) * 100)}%)
                   </span>
                 )}
               </p>

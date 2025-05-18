@@ -29,14 +29,14 @@ export interface Diagnosis {
     gender?: string;
     dateOfBirth?: string;
   };
-  severity: string;
+  severity: string | null;
   status: string;
   diagnosisId: string;
   createdAt: string;
   imageUrl: string;
   mlResults?: {
     prediction: string;
-    severity: string;
+    severity: string | null;
     confidence: number;
     affectedAreas?: string[];
   };

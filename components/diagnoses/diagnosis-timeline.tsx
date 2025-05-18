@@ -31,6 +31,7 @@ export default function DiagnosisTimeline({
       case "completed": return "Analysis Complete";
       case "pending_review": return "Pending Doctor Review";
       case "reviewed": return "Doctor Reviewed";
+      case "not_reviewed": return "Not Reviewed";
       default: return "Unknown Status";
     }
   };
@@ -81,7 +82,8 @@ export default function DiagnosisTimeline({
                     diagnosis.status === "completed" ? "text-emerald-700 dark:text-emerald-400" :
                       diagnosis.status === "pending_review" ? "text-amber-700 dark:text-amber-400" :
                         diagnosis.status === "reviewed" ? "text-sky-700 dark:text-sky-400" :
-                          "text-red-700 dark:text-red-400"
+                          diagnosis.status === "not_reviewed" ? "text-red-700 dark:text-red-400" :
+                            "text-red-700 dark:text-red-400" 
                   }
                 >
                   {getStatusText(diagnosis)}
@@ -105,12 +107,12 @@ export default function DiagnosisTimeline({
                 </div> */}
 
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  diagnosis.isEczema === 'Eczema' 
-                    ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400"
-                    : "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400"
-                }`}>
-                  {diagnosis.isEczema}
-                </span>
+  diagnosis.isEczema === 'Eczema' 
+    ? "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400"
+    : "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400"
+}`}>
+  {diagnosis.isEczema}
+</span>
                 {diagnosis.confidence && (
                   <span className={`text-xs px-2 py-1 rounded-full ${
                     diagnosis.isEczema === 'Eczema'

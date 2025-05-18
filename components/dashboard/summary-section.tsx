@@ -14,7 +14,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-function getSeverityIcon(severity: string) {
+function getSeverityIcon(severity: string | undefined | null) {
+  if (!severity) return <CheckCircle className="h-5 w-5 text-emerald-500" />;
   switch (severity.toLowerCase()) {
     case "mild": return <CheckCircle className="h-5 w-5 text-emerald-500" />;
     case "moderate": return <AlertCircle className="h-5 w-5 text-amber-500" />;
@@ -23,7 +24,8 @@ function getSeverityIcon(severity: string) {
   }
 }
 
-function getSeverityColor(severity: string) {
+function getSeverityColor(severity: string | undefined | null) {
+  if (!severity) return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
   switch (severity.toLowerCase()) {
     case "mild": return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400";
     case "moderate": return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
@@ -61,12 +63,23 @@ export default function SummarySection() {
   const [activeTab, setActiveTab] = useState("latest");
 
   useEffect(() => {
+    console.log('Fetching diagnoses...');
     diagnosisApi.getAllDiagnoses()
       .then(res => {
-        setDiagnoses(res.data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        console.log('Received diagnoses response:', res);
+        if (!res.data) {
+          console.error('No data in response');
+          setError('No data received from server');
+          setLoading(false);
+          return;
+        }
+        const sortedDiagnoses = res.data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        console.log('Sorted diagnoses:', sortedDiagnoses);
+        setDiagnoses(sortedDiagnoses);
         setLoading(false);
       })
       .catch(err => {
+        console.error('Error fetching diagnoses:', err);
         setError(err.message || 'Failed to load diagnosis');
         setLoading(false);
       });
@@ -198,12 +211,20 @@ export default function SummarySection() {
                   {diagnoses.map((diagnosis, index) => (
                     <div key={diagnosis._id} 
                       className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                      {/* Severity indicator */}
+                      {console.log('Diagnosis severity:', diagnosis.severity)}
                       <div className={cn(
                         "w-2 h-2 rounded-full",
+                        !diagnosis.severity || diagnosis.severity === 'unknown' ? "bg-gray-500" :
                         diagnosis.severity.toLowerCase() === 'mild' ? "bg-emerald-500" :
                         diagnosis.severity.toLowerCase() === 'moderate' ? "bg-amber-500" :
                         "bg-red-500"
                       )} />
+                      <div className="text-sm text-slate-600">
+                        {!diagnosis.severity || diagnosis.severity === 'unknown' ? 'Severity: Unknown' : 
+                         `Severity: ${diagnosis.severity.charAt(0).toUpperCase() + diagnosis.severity.slice(1)}`
+                        }
+                      </div>
                       <div className="min-w-[120px]">
                         <div className="text-sm font-medium">{formatDate(diagnosis.createdAt)}</div>
                         <div className="text-xs text-slate-500">{formatTime(diagnosis.createdAt)}</div>
