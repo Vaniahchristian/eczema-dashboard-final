@@ -19,7 +19,8 @@ export default function UploadSection() {
   const [preDiagnosisData, setPreDiagnosisData] = useState<PreDiagnosisData | null>(null);
   const [showPostSurvey, setShowPostSurvey] = useState(false);
   const [diagnosisId, setDiagnosisId] = useState<string | null>(null);
-
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -72,11 +73,12 @@ export default function UploadSection() {
         ...data,
         preDiagnosisData: preDiagnosisData!,
       });
+      setShowSuccessMessage(true);
     } catch (error) {
       console.error('Failed to submit feedback:', error);
     }
     setShowPostSurvey(false);
-    router.push(`/diagnoses/${diagnosisId}`);
+    //router.push(`/diagnoses/${diagnosisId}`);
   };
 
   const analyzeImage = async () => {
@@ -100,6 +102,17 @@ export default function UploadSection() {
 
   return (
     <>
+      {showSuccessMessage && (
+        <div className="mb-4 p-4 rounded bg-green-100 text-green-800 flex items-center justify-between">
+          <span>Feedback submitted successfully!</span>
+          <button
+            className="ml-4 px-2 py-1 bg-green-200 rounded hover:bg-green-300"
+            onClick={() => setShowSuccessMessage(false)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border-none shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30 h-full">
         <div className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white p-6">
           <h2 className="text-xl font-semibold flex items-center">
