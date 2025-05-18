@@ -38,21 +38,21 @@ function formatDate(date: string | undefined) {
   if (!date) return 'N/A';
   try {
     const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) return 'Invalid Date';
+    if (isNaN(parsedDate.getTime())) return 'Unset Date';
     return format(parsedDate, 'PPP');
   } catch (error) {
-    return 'Invalid Date';
+    return 'Unset Date';
   }
 }
 
 function formatTime(date: string | undefined) {
-  if (!date) return 'N/A';
+  if (!date) return 'Unset Time';
   try {
     const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) return 'Invalid Time';
+    if (isNaN(parsedDate.getTime())) return 'Unset Time';
     return format(parsedDate, 'p');
   } catch (error) {
-    return 'Invalid Time';
+    return 'Unset Time';
   }
 }
 
@@ -122,8 +122,8 @@ export default function SummarySection() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {getSeverityIcon(latest.severity)}
-                    <Badge variant="outline" className={cn("font-semibold", getSeverityColor(latest.severity))}>
-                      {latest.severity}
+                    <Badge variant="outline" className={cn("font-semibold", getSeverityColor(latest.isEczema === 'Eczema' ? latest.severity : undefined))}>
+                      {latest.isEczema === 'Eczema' ? latest.severity : 'Unknown'}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -221,10 +221,10 @@ export default function SummarySection() {
                         "bg-red-500"
                       )} />
                       <div className="text-sm text-slate-600">
-                        {!diagnosis.severity || diagnosis.severity === 'unknown' ? 'Severity: Unknown' : 
-                         `Severity: ${diagnosis.severity.charAt(0).toUpperCase() + diagnosis.severity.slice(1)}`
-                        }
-                      </div>
+  {diagnosis.isEczema === 'Eczema' ?
+    (!diagnosis.severity || diagnosis.severity === 'unknown' ? 'Severity: Unknown' : `Severity: ${diagnosis.severity.charAt(0).toUpperCase() + diagnosis.severity.slice(1)}`)
+    : 'Severity: Unknown'}
+</div>
                       <div className="min-w-[120px]">
                         <div className="text-sm font-medium">{formatDate(diagnosis.createdAt)}</div>
                         <div className="text-xs text-slate-500">{formatTime(diagnosis.createdAt)}</div>
@@ -232,9 +232,9 @@ export default function SummarySection() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{diagnosis.isEczema}</span>
-                          <Badge variant="outline" className={cn("text-xs", getSeverityColor(diagnosis.severity))}>
-                            {diagnosis.severity}
-                          </Badge>
+                          <Badge variant="outline" className={cn("text-xs", getSeverityColor(diagnosis.isEczema === 'Eczema' ? diagnosis.severity : undefined))}>
+  {diagnosis.isEczema === 'Eczema' ? diagnosis.severity : 'Unknown'}
+</Badge>
                         </div>
                         <div className="text-sm text-slate-500">{diagnosis.bodyPart}</div>
                       </div>
@@ -258,27 +258,29 @@ export default function SummarySection() {
                   </CardHeader>
                   <CardContent>
                     {Object.entries(
-                      diagnoses.reduce((acc, d) => {
-                        acc[d.severity] = (acc[d.severity] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>)
-                    ).map(([severity, count]) => (
-                      <div key={severity} className="mb-4">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-medium">{severity}</span>
-                          <span className="text-sm text-slate-500">{count} diagnoses</span>
-                        </div>
-                        <Progress 
-                          value={(count / diagnoses.length) * 100} 
-                          className={cn(
-                            "h-2",
-                            severity.toLowerCase() === 'mild' ? "bg-emerald-100" :
-                            severity.toLowerCase() === 'moderate' ? "bg-amber-100" :
-                            "bg-red-100"
-                          )}
-                        />
-                      </div>
-                    ))}
+  diagnoses.reduce((acc, d) => {
+    const key = d.isEczema === 'Eczema' ? (d.severity || 'Unknown') : 'Unknown';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>)
+).map(([severity, count]) => (
+  <div key={severity} className="mb-4">
+    <div className="flex justify-between mb-1">
+      <span className="text-sm font-medium">{severity}</span>
+      <span className="text-sm text-slate-500">{count} diagnoses</span>
+    </div>
+    <Progress 
+      value={(count / diagnoses.length) * 100} 
+      className={cn(
+        "h-2",
+        severity.toLowerCase() === 'mild' ? "bg-emerald-100" :
+        severity.toLowerCase() === 'moderate' ? "bg-amber-100" :
+        severity.toLowerCase() === 'severe' ? "bg-red-100" :
+        "bg-gray-200"
+      )}
+    />
+  </div>
+))}
                   </CardContent>
                 </Card>
 
