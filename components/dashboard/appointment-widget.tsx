@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Clock, MessageSquare, User, Video } from "lucide-react"
+import { Calendar, Clock, MessageSquare, User, Video, ChevronRight, Loader2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, DatePicker } from "@/components/ui"
 import { toast } from "@/components/ui/use-toast"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
+import { motion, AnimatePresence } from "framer-motion"
 import { patientAppointmentService, type Doctor, type PatientAppointment, type AppointmentType, type AppointmentStatus } from "@/services/patientAppointmentService"
 import { useAuth } from "@/lib/auth"
 
@@ -198,15 +200,60 @@ export default function AppointmentWidget() {
     }
   }
 
+  const steps = [
+    { id: 'doctor', title: 'Select Doctor', icon: User },
+    { id: 'datetime', title: 'Date & Time', icon: Calendar },
+    { id: 'details', title: 'Visit Details', icon: MessageSquare }
+  ]
+
+  const currentStep = !formData.doctorId ? 0 : !formData.date || !formData.timeSlot ? 1 : 2
+
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-slate-900/30"
+    >
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-6">
         <h2 className="text-xl font-semibold">Schedule Appointment</h2>
         <p className="text-sm text-white/80 mt-1">Book a consultation with our specialists</p>
+        
+        <div className="mt-6 flex items-center justify-between">
+          {steps.map((step, index) => (
+            <div key={step.id} className="flex items-center">
+              <div className={cn(
+                "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
+                index <= currentStep ? "bg-white text-indigo-500" : "bg-white/20 text-white/50"
+              )}>
+                <step.icon className="w-4 h-4" />
+              </div>
+              <div className={cn(
+                "ml-3 hidden sm:block transition-colors",
+                index <= currentStep ? "text-white" : "text-white/50"
+              )}>
+                <p className="text-sm font-medium">{step.title}</p>
+              </div>
+              {index < steps.length - 1 && (
+                <ChevronRight className="w-4 h-4 mx-4 text-white/30" />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="p-6">
-        <div className="space-y-5">
+        <AnimatePresence mode="wait">
+        <motion.div 
+          key={currentStep}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="space-y-5">
+        {loading && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm flex items-center justify-center z-10">
+            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          </div>
+        )}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center">
               <User className="mr-2 h-4 w-4 text-indigo-500" />
@@ -302,15 +349,33 @@ export default function AppointmentWidget() {
             </Select>
           </div>
 
-          <button
-            className="w-full mt-6 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+              "w-full mt-6 py-3 px-4 rounded-xl text-white shadow-md transition-all",
+              "bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-indigo-500 disabled:hover:to-violet-500",
+              "flex items-center justify-center space-x-2"
+            )}
             onClick={handleSubmit}
             disabled={loading || !formData.doctorId || !formData.date || !formData.timeSlot || !formData.reason}
           >
-            {loading ? "Scheduling..." : "Schedule Appointment"}
-          </button>
-        </div>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Scheduling...</span>
+              </>
+            ) : (
+              <>
+                <Calendar className="w-4 h-4" />
+                <span>Schedule Appointment</span>
+              </>
+            )}
+          </motion.button>
+        </motion.div>
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   )
 }
