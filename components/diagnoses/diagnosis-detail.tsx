@@ -219,7 +219,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
               <ul className="list-disc list-inside text-slate-700 dark:text-slate-300 text-sm space-y-2">
                 {Array.isArray(diagnosis.recommendations) && diagnosis.recommendations.length > 0
                   ? diagnosis.recommendations.map((rec, index) => (
-                      <li key={index} className="leading-relaxed">{rec}</li>
+                      <li key={index} className={`leading-relaxed ${rec.startsWith('Disclaimer:') ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}`}>{rec}</li>
                     ))
                   : <li>No recommendations available</li>
                 }
