@@ -251,12 +251,12 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
                     <div className="mt-4 flex justify-end space-x-3">
                       {['pending', 'confirmed'].includes(appointment.status) && (
                         <>
-                          <button 
+                          {/* <button 
                             onClick={() => handleReschedule(appointment.id)}
                             className="px-3 py-1.5 text-sm rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                           >
                             Reschedule
-                          </button>
+                          </button> */}
                           <button 
                             onClick={() => handleCancel(appointment.id)}
                             className="px-3 py-1.5 text-sm rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
