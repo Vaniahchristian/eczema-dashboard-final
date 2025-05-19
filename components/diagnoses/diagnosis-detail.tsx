@@ -89,7 +89,7 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div id="print-section" className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -295,7 +295,22 @@ export default function DiagnosisDetail({ diagnosisId }: DiagnosisDetailProps) {
           )}
           <button
             className="px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-200 dark:border-slate-700"
-            onClick={() => window.print()}
+            onClick={() => {
+              const printContents = document.getElementById('print-section')?.innerHTML;
+              if (!printContents) return window.print();
+              const printWindow = window.open('', '', 'height=800,width=800');
+              if (printWindow) {
+                printWindow.document.write('<html><head><title>Diagnosis Report</title>');
+                printWindow.document.write('<style>@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } }</style>');
+                printWindow.document.write('</head><body>');
+                printWindow.document.write(printContents);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+              }
+            }}
           >
             Print Report
           </button>
