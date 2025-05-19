@@ -65,7 +65,7 @@ export default function Navbar({
             {isDarkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-slate-700" />}
             <span className="sr-only">Toggle theme</span>
           </button>
-
+{/* 
           <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
@@ -76,7 +76,7 @@ export default function Navbar({
             <MessageSquare className="h-5 w-5" />
             <span className="sr-only">Messages</span>
 
-          </button>
+          </button> */}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
