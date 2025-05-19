@@ -55,11 +55,16 @@ export default function AppointmentsManagement() {
   useEffect(() => {
     if (user?.id) {
       loadAppointments()
+    } else {
+      console.log("[AppointmentsManagement] user is not defined or missing id:", user);
     }
   }, [selectedDate, view, statusFilter, user?.id])
 
   const loadAppointments = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log("[AppointmentsManagement] Skipping loadAppointments because user?.id is missing:", user);
+      return;
+    }
     try {
       setLoading(true)
       const startDate = new Date(selectedDate)
@@ -82,7 +87,9 @@ export default function AppointmentsManagement() {
         filters.status = statusFilter
       }
 
+      console.log("[AppointmentsManagement] Loading appointments with filters:", filters, "userId:", user.id);
       const response = await appointmentService.getDoctorAppointments(user.id, filters)
+      console.log("[AppointmentsManagement] API response:", response);
       setAppointments(response.data)
     } catch (error) {
       console.error("Error loading appointments:", error)

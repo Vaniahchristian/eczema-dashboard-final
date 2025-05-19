@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { getAuthHeaders } from '@/lib/auth'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://eczema-backend.onrender.com/api'
 
 export interface DoctorProfile {
   id: string
