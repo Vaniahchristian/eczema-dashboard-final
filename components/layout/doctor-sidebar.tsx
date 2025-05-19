@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Stethoscope,
   User,
+  MessageSquare,
 } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 
@@ -52,7 +53,9 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     { name: "Analytics", href: "/doctor/analytics", icon: PieChart },
     { name: "Messages", href: "/doctor/messages", icon: Users },
     { name: "Profile", href: "/doctor/profile", icon: User },
+    {name: "Feedback", href: "/doctor/feedback", icon: MessageSquare},
     { name: "Settings", href: "/doctor/settings", icon: Settings },
+    
   ]
 
   const sidebarVariants = {
@@ -125,10 +128,13 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Need assistance with the platform or medical questions?
               </p>
-              <button className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-center">
+              <Link
+                href="/doctor/feedback"
+                className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white py-2 px-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-center"
+              >
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Get Help
-              </button>
+              </Link>
             </div>
           </div>
         </div>

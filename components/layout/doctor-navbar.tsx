@@ -58,17 +58,6 @@ export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
             <span className="sr-only">Toggle theme</span>
           </button>
 
-          {/* <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Notifications</span>
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-          </button> */}
-
-          {/* <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <MessageSquare className="h-5 w-5" />
-            <span className="sr-only">Messages</span>
-          </button> */}
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-sky-200 dark:border-sky-900 hover:border-sky-300 dark:hover:border-sky-700 transition-colors">
@@ -94,13 +83,13 @@ export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>
-            <DropdownMenuItem
+            {/* <DropdownMenuItem
               className="rounded-lg cursor-pointer"
               onClick={() => router.push("/doctor/support")}
             >
               <MessageSquare className="mr-2 h-4 w-4" />
               Support
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuItem
               className="rounded-lg cursor-pointer"
               onClick={() => {
