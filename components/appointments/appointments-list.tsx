@@ -271,11 +271,12 @@ export default function AppointmentsList({ appointments, onRefresh }: Appointmen
                           </button>
                         </>
                       )}
-                      {appointment.status === "completed" && (
+                      {/* {appointment.status === "completed" && (
                         <button className="px-3 py-1.5 text-sm rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-900/50 transition-colors">
                           View Summary
                         </button>
-                      )}
+                      )
+                      } */}
                     </div>
                   </div>
                 </div>
