@@ -138,7 +138,7 @@ export default function DoctorProfile() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 mb-4">
+        {/* <div className="flex justify-end gap-2 mb-4">
           <Button size="sm" variant="outline">
             <Share2 className="h-4 w-4 mr-2" />
             Share Profile
@@ -147,7 +147,7 @@ export default function DoctorProfile() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Profile
           </Button>
-        </div>
+        </div> */}
 
         {/* Doctor Info */}
         <div className="mt-12 space-y-6">
