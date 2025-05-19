@@ -718,7 +718,7 @@ export default function DoctorDashboard() {
                               </Badge>
                             </div>
                             <div className="text-sm mb-2">
-                              <b>Confidence:</b> {diag.mlResults?.confidence}
+                              <b>Confidence:</b> {diag.mlResults?.confidence !== undefined ? (Number(diag.mlResults.confidence) * 100).toFixed(1) + '%' : '-'}
                             </div>
                             <div className="text-sm mb-2">
                               <b>Affected Areas:</b> {diag.mlResults?.affectedAreas?.join(", ")}
