@@ -43,6 +43,7 @@ export default function MessagesPage() {
   const [messageInput, setMessageInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConversations, setShowConversations] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const [doctorSearch, setDoctorSearch] = useState("");
   const [doctorResults, setDoctorResults] = useState<any[]>([]);
@@ -270,10 +271,30 @@ export default function MessagesPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-4rem)] bg-white dark:bg-slate-900">
+      <div className="relative flex h-[calc(100vh-4rem)] bg-white dark:bg-slate-900 overflow-hidden">
+        {/* Mobile Menu Toggle */}
+        <button
+          onClick={() => setShowConversations(prev => !prev)}
+          className="lg:hidden fixed bottom-4 right-4 z-50 bg-emerald-500 text-white p-3 rounded-full shadow-lg"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375"
+            />
+          </svg>
+        </button>
         {/* Conversations List */}
-        <ScrollArea className="flex-none w-80 border-r border-gray-200 dark:border-gray-800">
-          <div className="p-4">
+        <ScrollArea className={`fixed inset-y-0 left-0 z-30 lg:relative lg:z-0 flex-none w-80 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900 transition-transform duration-300 transform ${showConversations ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+          <div className="p-3 sm:p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-lg">Chats</h2>
               <Button
@@ -328,11 +349,11 @@ export default function MessagesPage() {
         </ScrollArea>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col w-full lg:w-auto">
           {selectedConversation ? (
             <>
               {/* Header */}
-              <div className="border-b border-gray-200 dark:border-gray-800 p-4">
+              <div className="border-b border-gray-200 dark:border-gray-800 p-3 sm:p-4">
                 <div className="flex items-center gap-3">
                   <Avatar src={selectedConversationObj?.participantImage} name={selectedConversationObj?.participantName} />
                   <div>
@@ -342,7 +363,7 @@ export default function MessagesPage() {
                 </div>
               </div>
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-3 sm:p-4">
                 {Object.entries(typingUsers).map(([uid, isTyping]) =>
                   isTyping && uid !== user.id ? (
                     <div key={uid} className="text-xs text-gray-500 italic mb-2">
@@ -381,7 +402,7 @@ export default function MessagesPage() {
               </ScrollArea>
               {/* Input */}
               <form
-                className="flex items-center p-4 border-t border-gray-200 dark:border-gray-800"
+                className="flex items-center p-3 sm:p-4 border-t border-gray-200 dark:border-gray-800"
                 onSubmit={handleSend}
               >
                 <Input
@@ -406,7 +427,7 @@ export default function MessagesPage() {
         {/* New Chat Modal */}
         {showNewChat && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <Card className="bg-white dark:bg-slate-900 rounded-lg shadow-lg w-full max-w-md p-6">
+            <Card className="bg-white dark:bg-slate-900 rounded-lg shadow-lg w-[90%] sm:w-full max-w-md p-4 sm:p-6 mx-4">
               <CardContent className="p-0">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Start New Chat</h3>
@@ -427,10 +448,13 @@ export default function MessagesPage() {
                 {doctorLoading ? (
                   <div className="text-gray-500">Searching...</div>
                 ) : (
-                  <ScrollArea className="max-h-60">
+                  <ScrollArea className="h-[50vh] lg:h-[40vh] pr-4 -mr-4">
                     {doctorResults.map(doc => (
-                      <div key={doc.id} className="py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
-                        <span>{doc.name} <span className="text-xs text-gray-400">({doc.email})</span></span>
+                      <div key={doc.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-gray-200 dark:border-gray-800">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{doc.name}</span>
+                          <span className="text-xs text-gray-400">{doc.email}</span>
+                        </div>
                         <Button
                           onClick={() => handleStartChat(doc)}
                           className="ml-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full"
