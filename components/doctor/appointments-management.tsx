@@ -124,7 +124,7 @@ export default function AppointmentsManagement() {
 
   const handleReschedule = async (appointmentId: string, newDate: string) => {
     try {
-      await appointmentService.rescheduleAppointment(appointmentId, newDate)
+      await appointmentService.updateAppointment(appointmentId, { appointment_date: newDate })
       toast({
         title: "Success",
         description: "Appointment rescheduled successfully."
