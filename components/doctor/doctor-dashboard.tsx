@@ -332,13 +332,13 @@ export default function DoctorDashboard() {
       <div className="container px-4 py-6 md:px-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/login">
+            {/* <Link href="/login">
               <Button variant="outline" size="sm" className="mb-2">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Login
               </Button>
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight text-indigo-800 dark:text-indigo-300">{getGreeting()}, Dr. {user?.name || 'Doctor'}</h1>
+            </Link> */}
+            <h1 className="text-3xl font-bold tracking-tight text-indigo-800 dark:text-indigo-300">{getGreeting()}, Dr. {user?.firstName || ''} {user?.lastName || 'Doctor'}</h1>
             <p className="text-slate-600 dark:text-slate-400">Here's what's happening with your patients today</p>
           </div>
           <div className="flex items-center space-x-4">
