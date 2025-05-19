@@ -68,9 +68,11 @@ export default function DoctorAnalyticsPage() {
 
   const { user } = useAuth();
   const doctorId = user?.role === "doctor" ? user.id : null;
+  console.log('[DoctorAnalytics] doctorId:', doctorId);
 
   useEffect(() => {
     async function fetchAllAnalytics() {
+      console.log('[DoctorAnalytics] Fetching analytics for doctorId:', doctorId, 'and timeRange:', timeRange);
       setLoading(true);
       setError(null);
       try {
@@ -80,6 +82,10 @@ export default function DoctorAnalyticsPage() {
           analyticsService.getSurveyAnalyticsNew({ doctorId, timeRange }),
           getDoctorReviewedDiagnoses(doctorId)
         ]);
+        console.log('[DoctorAnalytics] getDoctorPerformance:', perfRes);
+        console.log('[DoctorAnalytics] getAppointmentAnalytics:', apptRes);
+        console.log('[DoctorAnalytics] getSurveyAnalyticsNew:', surveyRes);
+        console.log('[DoctorAnalytics] getDoctorReviewedDiagnoses:', reviewedRes);
 
         // Set doctor performance data
         setDoctorPerformance({
@@ -112,6 +118,7 @@ export default function DoctorAnalyticsPage() {
 
         setReviewedDiagnoses(reviewedRes || []);
       } catch (err: any) {
+        console.error('[DoctorAnalytics] Error fetching analytics:', err);
         setError(err.message || "Failed to load analytics");
       } finally {
         setLoading(false);
