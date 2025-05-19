@@ -2,9 +2,19 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Bell, Menu, Moon, Search, Sun, User } from "lucide-react"
+import { Bell, Menu, Moon, Sun, User, LogOut, Settings, MessageSquare } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/lib/auth"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface NavbarProps {
   onMenuClick: () => void
@@ -12,71 +22,101 @@ interface NavbarProps {
 
 export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
   const { theme, setTheme } = useTheme()
-  const [searchOpen, setSearchOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-30 flex items-center justify-between px-4">
-      <div className="flex items-center">
+    <motion.header
+      className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex h-16 items-center px-4 md:px-6">
         <button
-          className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 mr-2"
+          className="md:hidden mr-2 p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           onClick={onMenuClick}
-          aria-label="Toggle menu"
         >
           <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle menu</span>
         </button>
-        <Link href="/doctor" className="flex items-center">
+        <div className="hidden md:flex">
           <span className="text-xl font-bold bg-gradient-to-r from-indigo-500 to-blue-500 bg-clip-text text-transparent">
             EDAS <span className="text-sm font-medium ml-1">MD</span>
           </span>
-        </Link>
-      </div>
+        </div>
 
-      <div className="flex items-center space-x-2">
-        {searchOpen ? (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 200, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            className="relative"
-          >
-            <input
-              type="text"
-              placeholder="Search patients..."
-              className="w-full py-1.5 px-3 rounded-full bg-slate-100 dark:bg-slate-800 text-sm focus:outline-none"
-              autoFocus
-              onBlur={() => setSearchOpen(false)}
-            />
-            <Search className="absolute right-2 top-1.5 h-4 w-4 text-slate-400" />
-          </motion.div>
-        ) : (
+        <div className="flex items-center space-x-4 ml-auto">
+
+
           <button
             className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-            onClick={() => setSearchOpen(true)}
-            aria-label="Search"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
-            <Search className="h-5 w-5" />
+            {theme === "dark" ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-slate-700" />}
+            <span className="sr-only">Toggle theme</span>
           </button>
-        )}
 
-        <button
-          className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
+          {/* <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 relative">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Notifications</span>
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+          </button> */}
 
-        <Link
-          href="/doctor/profile"
-          className="flex items-center space-x-2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 flex items-center justify-center text-white">
-            <User className="h-4 w-4" />
-          </div>
-          <span className="text-sm font-medium hidden md:block">Dr. Johnson</span>
-        </Link>
+          {/* <button className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <MessageSquare className="h-5 w-5" />
+            <span className="sr-only">Messages</span>
+          </button> */}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="relative h-10 w-10 rounded-full p-0 overflow-hidden border-2 border-sky-200 dark:border-sky-900 hover:border-sky-300 dark:hover:border-sky-700 transition-colors">
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+                  <AvatarFallback>{user?.firstName?.[0]}{user?.lastName?.[0]}</AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuItem
+              className="rounded-lg cursor-pointer"
+              onClick={() => router.push("/doctor/profile")}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-lg cursor-pointer"
+              onClick={() => router.push("/doctor/settings")}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-lg cursor-pointer"
+              onClick={() => router.push("/doctor/support")}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Support
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-lg cursor-pointer"
+              onClick={() => {
+                // Optionally clear auth or call logout logic
+                localStorage.removeItem("token")
+                router.push("/login")
+              }}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        </div>
       </div>
-    </header>
+    </motion.header>
   )
 }
 
