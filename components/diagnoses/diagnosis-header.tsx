@@ -85,6 +85,8 @@ export default function DiagnosisHeader({ onNewDiagnosis }: DiagnosisHeaderProps
       const response = await diagnosisApi.uploadImage(file, preData);
       if (response.success) {
         setDiagnosisId(response.data.diagnosisId);
+        // Add a 2-second delay before showing the post-diagnosis survey
+        await new Promise(resolve => setTimeout(resolve, 30000));
         setShowPostSurvey(true);
         onNewDiagnosis?.(response.data.diagnosisId);
       } else {
