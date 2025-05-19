@@ -48,7 +48,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     { name: "Dashboard", href: "/doctor", icon: Home },
     { name: "Appointments", href: "/doctor/appointments", icon: Calendar },
     { name: "Medical Records", href: "/doctor/records", icon: FileText },
-    { name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },
+    // { name: "Treatment Plans", href: "/doctor/treatments", icon: ClipboardList },
     { name: "Analytics", href: "/doctor/analytics", icon: PieChart },
     { name: "Messages", href: "/doctor/messages", icon: Users },
     { name: "Profile", href: "/doctor/profile", icon: User },
