@@ -50,7 +50,8 @@ export default function Sidebar({ open, setOpen }: SidebarProps) {
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Analytics", href: "/analytics", icon: PieChart },
     { name: "Profile", href: "/profile", icon: User },
-    { name: "Settings", href: "/settings", icon: Settings },
+  //   { name: "Settings", href: "/settings", icon: Settings },
+  // 
   ]
 
   const sidebarVariants = {

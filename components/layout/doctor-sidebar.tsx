@@ -54,7 +54,7 @@ export default function DoctorSidebar({ open, setOpen }: SidebarProps) {
     { name: "Messages", href: "/doctor/messages", icon: Users },
     { name: "Profile", href: "/doctor/profile", icon: User },
     {name: "Feedback", href: "/doctor/feedback", icon: MessageSquare},
-    { name: "Settings", href: "/doctor/settings", icon: Settings },
+    // { name: "Settings", href: "/doctor/settings", icon: Settings },
     
   ]
 

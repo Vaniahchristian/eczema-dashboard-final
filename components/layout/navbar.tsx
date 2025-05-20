@@ -98,12 +98,12 @@ export default function Navbar({
                 Profile
               </DropdownMenuItem>
 
-              <DropdownMenuItem
+              {/* <DropdownMenuItem
                 className="rounded-lg cursor-pointer"
                 onClick={() => router.push("/settings")}
               >
                 Settings
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
 
               <DropdownMenuItem
                 className="rounded-lg cursor-pointer"

@@ -76,13 +76,13 @@ export default function DoctorNavbar({ onMenuClick }: NavbarProps) {
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem
+            {/* <DropdownMenuItem
               className="rounded-lg cursor-pointer"
               onClick={() => router.push("/doctor/settings")}
             >
               <Settings className="mr-2 h-4 w-4" />
               Settings
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             {/* <DropdownMenuItem
               className="rounded-lg cursor-pointer"
               onClick={() => router.push("/doctor/support")}
